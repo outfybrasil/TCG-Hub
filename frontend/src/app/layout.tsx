@@ -1,0 +1,77 @@
+import type { Metadata } from "next";
+import { Inter, Playfair_Display } from "next/font/google";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+
+export const metadata: Metadata = {
+  title: "TCGHub | Digital Asset Management",
+  description: "Plataforma moderna de gestão e certificação de ativos Pokémon TCG.",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="pt-BR" className={`light scroll-smooth ${inter.variable}`}>
+      <body className="font-sans bg-[#F8F9FA] text-[#0F172A] antialiased selection:bg-[#3B82F6] selection:text-white">
+
+        <main className="min-h-screen">
+          {/* Pro Branding Bar */}
+          <div className="bg-rose-600 text-white py-2 px-6 text-[10px] font-black tracking-[0.2em] uppercase text-center">
+            Envio Grátis para todo o Brasil em compras acima de R$ 200
+          </div>
+
+          <nav className="border-b border-slate-100 bg-white/90 backdrop-blur-md sticky top-0 z-[100]">
+            <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+              <div className="flex items-center space-x-10">
+                <a href="/" className="flex items-center group transition-opacity hover:opacity-80">
+                  <div className="h-10 w-10 bg-rose-600 rounded-xl flex items-center justify-center text-white text-xl mr-3 shadow-lg shadow-rose-500/20">
+                    <span>⚡</span>
+                  </div>
+                  <span className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
+                    TCG<span className="text-rose-600">STORE</span>
+                  </span>
+                </a>
+
+                <div className="hidden lg:flex items-center space-x-10">
+                  <a href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Loja</a>
+                  <a href="/estoque" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Admin</a>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <a href="/suporte" className="hidden sm:block text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-rose-600 transition-colors">
+                  Suporte
+                </a>
+                <a href="/membro" className="h-11 px-6 bg-slate-100 text-slate-900 flex items-center text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all rounded-xl">
+                  Meus Pedidos
+                </a>
+              </div>
+            </div>
+          </nav>
+
+          <div className="relative">
+            {children}
+          </div>
+
+          <footer className="mt-32 pt-20 pb-10 border-t border-slate-100 bg-white">
+            <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-16">
+              <div className="space-y-4">
+                <h3 className="text-xl font-black tracking-tighter text-slate-900 uppercase">TCG<span className="text-rose-600">STORE</span></h3>
+                <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest leading-relaxed max-w-xs">
+                  Sua fonte exclusiva para cartas Pokémon de alta raridade e coleções certificadas.
+                </p>
+              </div>
+            </div>
+            <div className="mt-20 text-center text-[10px] font-bold uppercase tracking-widest text-zinc-400">
+              © 2026 TCGHub. Todos os direitos reservados.
+            </div>
+          </footer>
+        </main>
+      </body>
+    </html>
+  );
+}

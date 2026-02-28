@@ -1,0 +1,10 @@
+fastapi[standard]
+torch
+torchvision
+onnxruntime
+numpy
+opencv-python
+pillow
+python-multipart
+pydantic-settings
+python-dotenv

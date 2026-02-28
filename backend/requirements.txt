@@ -1,0 +1,10 @@
+fastapi[standard]
+sqlalchemy
+alembic
+psycopg2-binary
+redis
+python-multipart
+pydantic-settings
+passlib[bcrypt]
+python-jose[cryptography]
+python-dotenv
