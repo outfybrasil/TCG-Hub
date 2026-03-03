@@ -21,8 +21,13 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
+# Instala o curl para o healthcheck do Coolify
+RUN apk add --no-cache curl
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+RUN apk add --no-cache curl
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
