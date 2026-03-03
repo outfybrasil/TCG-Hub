@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui;
+  --font-serif: var(--font-playfair), serif;
+  --font-mono: ui-monospace, "Geist Mono", monospace;
+
+  --color-primary: #E11D48;
+  /* Poke Red */
+  --color-secondary: #FACC15;
+  /* Pikachu Yellow */
+  --color-accent: #FFFFFF;
+
+  --animate-fade-up: fade-up 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #0F172A;
+  --primary: #E11D48;
+  --secondary: #FACC15;
+  --muted: #F8FAFC;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .text-prestige {
+    letter-spacing: -0.02em;
+    font-weight: 800;
+  }
+
+  .bg-parchment {
+    background-color: #F8F6F0;
+  }
+
+  .border-soft {
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .shadow-elegant {
+    shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08);
+  }
+}
