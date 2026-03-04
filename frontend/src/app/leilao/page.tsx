@@ -84,7 +84,7 @@ export default function AuctionPage() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {active.map(a => <AuctionCard key={a.$id} auction={a} />)}
+                    {active.map(a => <AuctionCard key={a.id} auction={a} />)}
                 </div>
             )}
 
@@ -96,7 +96,7 @@ export default function AuctionPage() {
                         <div className="h-[1px] flex-1 bg-slate-100" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {ended.map(a => <AuctionCard key={a.$id} auction={a} />)}
+                        {ended.map(a => <AuctionCard key={a.id} auction={a} />)}
                     </div>
                 </div>
             )}

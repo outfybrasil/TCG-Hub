@@ -16,7 +16,7 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
     const isEnded = auction.status === 'ended' || new Date(auction.endsAt) <= new Date();
 
     return (
-        <Link href={`/leilao/${auction.$id}`} className="group block">
+        <Link href={`/leilao/${auction.id}`} className="group block">
             <div className={`bg-white border rounded-[30px] shadow-sm overflow-hidden transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl ${isEnded ? 'border-slate-100 opacity-60' : 'border-slate-200 hover:border-rose-500/40'}`}>
                 {/* Card Image */}
                 <div className="relative aspect-square overflow-hidden bg-slate-50 rounded-t-[24px]">
