@@ -2,8 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import AuctionCard from '@/components/AuctionCard';
+import { supabase } from '@/lib/supabase';
 import { useAuctions } from '@/hooks/useAuctions';
+import AuctionCard from '@/components/AuctionCard';
 
 function AuctionSkeleton() {
     return (
@@ -20,6 +21,14 @@ function AuctionSkeleton() {
 
 export default function AuctionPage() {
     const { auctions, loading } = useAuctions();
+    const [user, setUser] = React.useState<any>(null);
+
+    React.useEffect(() => {
+        supabase.auth.getUser().then(({ data: { user } }) => {
+            setUser(user);
+        });
+    }, []);
+
     const active = auctions.filter(a => a.status === 'active' && new Date(a.endsAt) > new Date());
     const ended = auctions.filter(a => a.status === 'ended' || new Date(a.endsAt) <= new Date());
 
@@ -43,11 +52,13 @@ export default function AuctionPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-4">
-                        <Link href="/leilao/criar">
-                            <button className="h-12 px-8 bg-slate-900 text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg hover:bg-rose-600 transition-all transform hover:-translate-y-1">
-                                Criar Pregão
-                            </button>
-                        </Link>
+                        {user?.email === 'admin@tcghub.com.br' && (
+                            <Link href="/leilao/criar">
+                                <button className="h-12 px-8 bg-slate-900 text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg hover:bg-rose-600 transition-all transform hover:-translate-y-1">
+                                    Criar Pregão
+                                </button>
+                            </Link>
+                        )}
                         <button className="h-12 px-8 bg-white border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-slate-50 transition-all">
                             Regras Gerais
                         </button>
@@ -76,15 +87,17 @@ export default function AuctionPage() {
             ) : active.length === 0 ? (
                 <div className="text-center py-32 border border-dashed border-slate-200 rounded-[40px]">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum pregão ativo no momento</p>
-                    <Link href="/leilao/criar">
-                        <button className="mt-8 h-12 px-8 bg-slate-900 text-white font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-rose-600 transition-all">
-                            Iniciar o Primeiro Pregão
-                        </button>
-                    </Link>
+                    {user?.email === 'admin@tcghub.com.br' && (
+                        <Link href="/leilao/criar">
+                            <button className="mt-8 h-12 px-8 bg-slate-900 text-white font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-rose-600 transition-all">
+                                Iniciar o Primeiro Pregão
+                            </button>
+                        </Link>
+                    )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {active.map(a => <AuctionCard key={a.$id} auction={a} />)}
+                    {active.map(a => <AuctionCard key={a.id} auction={a} />)}
                 </div>
             )}
 
@@ -96,7 +109,7 @@ export default function AuctionPage() {
                         <div className="h-[1px] flex-1 bg-slate-100" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        {ended.map(a => <AuctionCard key={a.$id} auction={a} />)}
+                        {ended.map(a => <AuctionCard key={a.id} auction={a} />)}
                     </div>
                 </div>
             )}

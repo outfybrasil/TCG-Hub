@@ -17,6 +17,7 @@ const durationOptions = [
 
 export default function CreateAuctionPage() {
     const router = useRouter();
+    const [user, setUser] = useState<any>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [cardName, setCardName] = useState('');
     const [cardSet, setCardSet] = useState('');
@@ -29,15 +30,22 @@ export default function CreateAuctionPage() {
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        supabase.auth.getUser()
-            .then(({ data: { user } }) => {
-                if (!user) {
-                    router.push('/auth/login');
+        const checkSession = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    setUser(user);
                 } else {
-                    setAuthLoading(false);
+                    router.push('/auth/login');
                 }
-            })
-            .catch(() => router.push('/auth/login'));
+            } catch (error) {
+                router.push('/auth/login');
+            } finally {
+                setAuthLoading(false);
+            }
+        };
+
+        checkSession();
     }, [router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -79,6 +87,20 @@ export default function CreateAuctionPage() {
         return (
             <div className="flex items-center justify-center py-44">
                 <div className="h-10 w-10 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (!user || user.email !== 'admin@tcghub.com.br') {
+        return (
+            <div className="max-w-7xl mx-auto px-6 py-32 text-center animate-fade-up">
+                <div className="max-w-md mx-auto space-y-8 bg-white p-12 rounded-[32px] border border-slate-200 shadow-sm">
+                    <div className="h-16 w-16 bg-rose-50 rounded-2xl flex items-center justify-center text-3xl mx-auto border border-rose-100">🔒</div>
+                    <div className="space-y-4">
+                        <h2 className="text-3xl font-black tracking-tighter text-slate-900 leading-none">Acesso Restrito ao <span className="text-rose-600">Admin</span></h2>
+                        <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-relaxed">Apenas o administrador da TCG Mega Store pode criar leilões.</p>
+                    </div>
+                </div>
             </div>
         );
     }

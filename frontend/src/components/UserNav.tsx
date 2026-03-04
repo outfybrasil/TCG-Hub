@@ -70,6 +70,12 @@ export default function UserNav() {
                 )}
             </button>
 
+            {user && (
+                <Link href="/minha-conta/pedidos" className="hidden sm:flex h-11 px-4 bg-slate-50 text-slate-600 items-center text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all rounded-xl border border-slate-100">
+                    Pedidos
+                </Link>
+            )}
+
             <Link href="/membro" className="h-11 px-6 bg-slate-100 text-slate-900 flex items-center text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all rounded-xl">
                 {user ? 'Minha Conta' : 'Entrar'}
             </Link>

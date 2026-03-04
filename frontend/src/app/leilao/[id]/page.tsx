@@ -18,7 +18,6 @@ export default function AuctionDetailPage() {
     const router = useRouter();
     const { auction, bids, loading, refetch } = useAuction(id);
     const [user, setUser] = useState<{ id: string; name: string } | null>(null);
-    const [bidAmount, setBidAmount] = useState('');
     const [bidding, setBidding] = useState(false);
     const [bidError, setBidError] = useState('');
     const [bidSuccess, setBidSuccess] = useState(false);
@@ -36,22 +35,16 @@ export default function AuctionDetailPage() {
     }, []);
 
     const isExpired = auction ? new Date(auction.endsAt) <= new Date() : false;
-    const minBid = auction ? auction.currentBid + 1 : 0;
 
-    const handleBid = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleBid = async (increment: number) => {
         setBidError('');
         setBidSuccess(false);
-        const amount = parseFloat(bidAmount);
 
         if (!user) { router.push('/auth/login'); return; }
         if (!auction) return;
-        if (amount <= auction.currentBid) {
-            setBidError(`O lance deve ser superior a ${formatBRL(auction.currentBid)}.`);
-            return;
-        }
 
-        setBidding(true);
+        const amount = auction.currentBid + increment;
+
         try {
             // Register bid
             const { error: bidError } = await supabase.from('bids').insert({
@@ -73,7 +66,6 @@ export default function AuctionDetailPage() {
             if (auctionError) throw auctionError;
 
             setBidSuccess(true);
-            setBidAmount('');
             refetch();
         } catch (err) {
             console.error(err);
@@ -238,21 +230,24 @@ export default function AuctionDetailPage() {
                                     </button>
                                 </div>
                             ) : (
-                                <form onSubmit={handleBid} className="space-y-4">
+                                <div className="space-y-4">
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                                            Seu Lance (Mín: {formatBRL(minBid)})
+                                            Lances Rápidos (Soma ao Atual)
                                         </label>
-                                        <input
-                                            required
-                                            type="number"
-                                            min={minBid}
-                                            step="0.01"
-                                            value={bidAmount}
-                                            onChange={e => { setBidAmount(e.target.value); setBidError(''); setBidSuccess(false); }}
-                                            placeholder={String(minBid)}
-                                            className="w-full h-16 px-6 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-black text-2xl text-slate-900"
-                                        />
+                                        <div className="grid grid-cols-3 gap-2">
+                                            {[5, 10, 20, 50, 100, 200].map(val => (
+                                                <button
+                                                    key={val}
+                                                    type="button"
+                                                    disabled={bidding}
+                                                    onClick={() => handleBid(val)}
+                                                    className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl hover:bg-rose-50 hover:border-rose-100 hover:text-rose-600 transition-all font-black text-sm text-slate-900 disabled:opacity-50"
+                                                >
+                                                    + {formatBRL(val)}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     {bidError && (
@@ -269,18 +264,10 @@ export default function AuctionDetailPage() {
                                         </div>
                                     )}
 
-                                    <button
-                                        type="submit"
-                                        disabled={bidding}
-                                        className="w-full h-16 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-lg shadow-rose-500/20 hover:bg-rose-700 transition-all transform hover:-translate-y-0.5 disabled:opacity-50"
-                                    >
-                                        {bidding ? 'Registrando Lance...' : 'Confirmar Lance →'}
-                                    </button>
-
-                                    <p className="text-center text-[8px] font-black text-slate-400 uppercase tracking-widest opacity-50">
+                                    <p className="text-center text-[8px] font-black text-slate-400 uppercase tracking-widest opacity-50 mt-4">
                                         Participando como: {user.name}
                                     </p>
-                                </form>
+                                </div>
                             )}
                         </div>
                     )}

@@ -30,7 +30,7 @@ export default function SupportPage() {
                         <span className="text-4xl text-rose-500">✉️</span>
                         <div className="space-y-1">
                             <h3 className="text-white text-[10px] font-black uppercase tracking-[0.2em] opacity-50">E-mail de Contato</h3>
-                            <p className="text-rose-500 font-black text-lg tracking-tight uppercase">suporte@tcgstore.com</p>
+                            <p className="text-rose-500 font-black text-lg tracking-tight uppercase">suporte@tcgmegastore.com</p>
                         </div>
                     </div>
                 </div>

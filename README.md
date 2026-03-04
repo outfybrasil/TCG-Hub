@@ -18,6 +18,30 @@ Como o ambiente local não possui Docker configurado, utilize o script de inicia
 2.  Abra o terminal na pasta raiz.
 3.  Execute: `.\run_dev.ps1`
 
+## 🚀 Deploy em VPS (Docker)
+
+1.  Na raiz `TCG-Hub`, crie o arquivo de ambiente:
+    - `cp .env.example .env`
+2.  Edite o `.env` com seus valores reais:
+    - `NEXT_PUBLIC_API_URL`
+    - `NEXT_PUBLIC_SUPABASE_URL`
+    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+    - `MP_ACCESS_TOKEN`
+3.  Suba os serviços:
+    - `docker compose up -d --build`
+4.  Verifique os logs:
+    - `docker compose logs -f frontend backend`
+5.  Teste saúde:
+    - API: `http://SEU_IP:8000/health`
+    - Frontend: `http://SEU_IP:3000`
+
+### Erros comuns na VPS
+
+- `Property '$id' does not exist on type 'Auction'`: corrigido no frontend.
+- `Cannot find module 'appwrite'`: dependência adicionada no `package.json`.
+- `supabaseUrl is required`: agora há fallback para build, mas em produção você deve configurar as variáveis do Supabase no `.env`.
+- Build Docker muito lento: adicionado `.dockerignore` para reduzir contexto.
+
 ## 🛠️ Tecnologias
 
 - **Frontend**: Next.js 14, TailwindCSS, Lucide React.

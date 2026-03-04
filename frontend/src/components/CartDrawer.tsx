@@ -5,7 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 
 export default function CartDrawer() {
-    const { items, removeItem, total, isOpen, setIsOpen } = useCart();
+    const { items, removeItem, updateQuantity, total, isOpen, setIsOpen } = useCart();
     const router = useRouter();
 
     if (!isOpen) return null;
@@ -34,12 +34,37 @@ export default function CartDrawer() {
                                 <div className="h-20 w-16 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
                                     <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                                 </div>
-                                <div className="flex-1 space-y-1">
+                                <div className="flex-1 space-y-2">
                                     <h4 className="font-bold text-sm text-slate-900 leading-tight">{item.name}</h4>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Qtd: {item.quantity}</p>
+
+                                    {/* Quantidade Control */}
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center bg-slate-50 rounded-lg p-1 border border-slate-100">
+                                            <button
+                                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                                className="h-6 w-6 flex items-center justify-center hover:bg-white rounded-md transition-colors text-slate-400 font-bold"
+                                            >
+                                                -
+                                            </button>
+                                            <span className="w-8 text-center text-xs font-black text-slate-900">{item.quantity}</span>
+                                            <button
+                                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                disabled={item.maxStock !== undefined && item.quantity >= item.maxStock}
+                                                className="h-6 w-6 flex items-center justify-center hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent rounded-md transition-colors text-slate-400 font-bold"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        {item.maxStock !== undefined && (
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                                Máx: {item.maxStock}
+                                            </span>
+                                        )}
+                                    </div>
+
                                     <p className="font-black text-rose-600">R$ {item.price.toFixed(2).replace('.', ',')}</p>
                                 </div>
-                                <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-500 p-2" title="Remover">
+                                <button onClick={() => removeItem(item.id)} className="text-slate-300 hover:text-red-500 p-2 h-fit" title="Remover">
                                     🗑️
                                 </button>
                             </div>
@@ -68,3 +93,4 @@ export default function CartDrawer() {
         </div>
     );
 }
+

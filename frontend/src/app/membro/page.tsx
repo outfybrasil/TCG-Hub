@@ -3,28 +3,60 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
+interface Purchase {
+    id: string;
+    created_at: string;
+    items: { id: string; name: string; price: number; quantity: number }[];
+    total_amount: number;
+    discount_amount: number;
+    status: string;
+    payment_method: string;
+    mp_payment_id: string;
+}
+
+const STATUS_LABEL: Record<string, { label: string; style: string }> = {
+    approved: { label: 'Aprovado', style: 'bg-emerald-50 text-emerald-700 border border-emerald-100' },
+    pending: { label: 'Pendente', style: 'bg-yellow-50 text-yellow-700 border border-yellow-100' },
+    rejected: { label: 'Recusado', style: 'bg-red-50 text-red-600 border border-red-100' },
+};
+
+const formatCurrency = (v: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+const formatDate = (iso: string) =>
+    new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(iso));
 
 export default function MemberAreaPage() {
     const [user, setUser] = useState<any>(null);
     const [walletBalance, setWalletBalance] = useState<number>(0);
+    const [purchases, setPurchases] = useState<Purchase[]>([]);
+    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
-                setUser({ id: user.id, name: user.user_metadata?.name || user.email });
-                // Fetch wallet balance
-                supabase.from('wallets').select('balance').eq('user_id', user.id).single()
-                    .then(({ data, error }) => {
-                        if (data) setWalletBalance(data.balance);
-                    });
-            } else {
-                router.push('/auth/login');
-            }
+        supabase.auth.getUser().then(async ({ data: { user } }) => {
+            if (!user) { router.push('/auth/login'); return; }
+
+            setUser({ id: user.id, name: user.user_metadata?.name || user.email });
+
+            const [walletRes, purchasesRes] = await Promise.all([
+                supabase.from('wallets').select('balance').eq('user_id', user.id).single(),
+                supabase.from('purchases').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5)
+            ]);
+
+            if (walletRes.data) setWalletBalance(walletRes.data.balance);
+            if (purchasesRes.data) setPurchases(purchasesRes.data);
+            setLoading(false);
         });
     }, [router]);
 
     if (!user) return null;
+
+    // Computed stats from real data
+    const totalInvested = purchases.reduce((acc, p) => acc + (p.total_amount - p.discount_amount), 0);
+    const totalItems = purchases.reduce((acc, p) => acc + (p.items || []).reduce((a, i) => a + i.quantity, 0), 0);
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-16 animate-fade-up">
@@ -35,89 +67,120 @@ export default function MemberAreaPage() {
                         <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Área do Cliente</span>
                     </div>
                     <h1 className="text-5xl font-black tracking-tighter text-slate-900">
-                        Meus <span className="text-rose-600 capitalize">Pedidos</span>
+                        Minha <span className="text-rose-600">Conta</span>
                     </h1>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Bem-vindo de volta, <span className="text-slate-900">{user.name.split(' ')[0]}</span></p>
+                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">
+                        Bem-vindo de volta, <span className="text-slate-900">{user.name.split(' ')[0]}</span>
+                    </p>
                 </div>
 
                 <div className="flex gap-3">
-                    <button onClick={() => supabase.auth.signOut().then(() => router.push('/'))} className="h-11 px-6 bg-white border border-slate-200 text-slate-400 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all">Sair</button>
-                    <button className="h-11 px-6 bg-slate-900 text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg hover:bg-rose-600 transition-all">Meu Perfil</button>
+                    <button
+                        onClick={() => supabase.auth.signOut().then(() => router.push('/'))}
+                        className="h-11 px-6 bg-white border border-slate-200 text-slate-400 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all"
+                    >
+                        Sair
+                    </button>
+                    <Link href="/minha-conta/pedidos" className="h-11 px-6 bg-slate-900 text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg hover:bg-rose-600 transition-all flex items-center">
+                        Ver Pedidos
+                    </Link>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 <div className="lg:col-span-2 space-y-10">
-                    {/* Stats de Compra & Carteira */}
+                    {/* Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Cashback */}
                         <div className="bg-gradient-to-br from-rose-500 to-rose-700 text-white p-8 rounded-3xl shadow-lg hover:shadow-xl transition-shadow relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-bl-full -mr-8 -mt-8 group-hover:bg-white/20 transition-all" />
-                            <span className="text-[10px] font-black text-rose-100 uppercase tracking-widest block mb-4 font-black">Carteira Cashback</span>
-                            <div className="flex items-baseline gap-3 relative z-10">
+                            <span className="text-[10px] font-black text-rose-100 uppercase tracking-widest block mb-4">Carteira Cashback</span>
+                            <div className="flex items-baseline gap-1 relative z-10">
+                                <span className="text-2xl font-black text-white">R$</span>
                                 <h2 className="text-4xl font-black tracking-tighter text-white">
-                                    <span className="text-2xl mr-1">R$</span>{walletBalance.toFixed(2).replace('.', ',')}
+                                    {walletBalance.toFixed(2).replace('.', ',')}
                                 </h2>
                             </div>
                         </div>
 
+                        {/* Total Invested - real data */}
                         <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-md transition-shadow group">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 font-black">Total Investido</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Total Investido</span>
                             <div className="flex items-baseline gap-3">
-                                <h2 className="text-4xl font-black tracking-tighter text-slate-900 group-hover:text-rose-600 transition-colors">R$ 12.850</h2>
-                                <span className="text-[9px] text-rose-600 font-black bg-rose-50 px-2 py-0.5 rounded-md">8 Itens</span>
+                                <h2 className="text-4xl font-black tracking-tighter text-slate-900 group-hover:text-rose-600 transition-colors">
+                                    {loading ? '...' : formatCurrency(totalInvested)}
+                                </h2>
+                                {!loading && totalItems > 0 && (
+                                    <span className="text-[9px] text-rose-600 font-black bg-rose-50 px-2 py-0.5 rounded-md">
+                                        {totalItems} iten{totalItems !== 1 ? 's' : ''}
+                                    </span>
+                                )}
                             </div>
                         </div>
 
+                        {/* Purchase count */}
                         <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4 font-black">Em Trânsito</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Pedidos</span>
                             <div className="flex items-baseline gap-3">
-                                <h2 className="text-4xl font-black tracking-tighter text-slate-900">02</h2>
-                                <span className="text-[9px] text-yellow-600 font-black bg-yellow-50 px-2 py-0.5 rounded-md">Transp.</span>
+                                <h2 className="text-4xl font-black tracking-tighter text-slate-900">
+                                    {loading ? '...' : String(purchases.length).padStart(2, '0')}
+                                </h2>
+                                <span className="text-[9px] text-slate-500 font-black bg-slate-50 px-2 py-0.5 rounded-md">Total</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Tabela de Pedidos */}
+                    {/* Recent Orders - real data */}
                     <div className="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden">
                         <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Histórico de Compras</h3>
-                            <button className="text-[9px] font-black text-rose-600 uppercase tracking-widest hover:underline">Ver Todos</button>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Últimas Compras</h3>
+                            <Link href="/minha-conta/pedidos" className="text-[9px] font-black text-rose-600 uppercase tracking-widest hover:underline">
+                                Ver Todos
+                            </Link>
                         </div>
 
                         <div className="divide-y divide-slate-50">
-                            {[
-                                { order: "#9821", item: "Charizard Base Set", date: "28 Fev, 2024", status: "EM TRANSITO", type: "active" },
-                                { order: "#9755", item: "Pikachu Illustrator (Proxy)", date: "15 Jan, 2024", status: "ENTREGUE", type: "done" },
-                                { order: "#9612", item: "Mewtwo Shadowless", date: "10 Dez, 2023", status: "ENTREGUE", type: "done" },
-                            ].map((act, i) => (
-                                <div key={i} className="flex justify-between items-center p-6 hover:bg-slate-50/30 transition-colors">
-                                    <div className="space-y-1">
-                                        <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">PEDIDO {act.order}</span>
-                                        <p className="font-black text-sm text-slate-900 tracking-tight">{act.item}</p>
-                                    </div>
-                                    <div className="text-right space-y-1">
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{act.date}</p>
-                                        <span className={`text-[8px] font-black px-2 py-1 rounded-md ${act.type === 'active' ? 'bg-yellow-50 text-yellow-600 border border-yellow-100' : 'bg-slate-100 text-slate-500'}`}>{act.status}</span>
-                                    </div>
+                            {loading ? (
+                                <div className="p-8 text-center text-slate-400 text-sm animate-pulse">Carregando...</div>
+                            ) : purchases.length === 0 ? (
+                                <div className="p-12 text-center space-y-2">
+                                    <div className="text-4xl">🛍️</div>
+                                    <p className="text-slate-400 font-bold text-sm">Ainda não há pedidos.</p>
+                                    <Link href="/marketplace" className="text-rose-600 font-black text-xs uppercase tracking-widest hover:underline">
+                                        Ir para a Loja →
+                                    </Link>
                                 </div>
-                            ))}
+                            ) : (
+                                purchases.map((p) => {
+                                    const firstItem = p.items?.[0];
+                                    const itemCount = (p.items || []).reduce((a, i) => a + i.quantity, 0);
+                                    const statusInfo = STATUS_LABEL[p.status] || STATUS_LABEL.pending;
+                                    return (
+                                        <div key={p.id} className="flex justify-between items-center p-6 hover:bg-slate-50/30 transition-colors">
+                                            <div className="space-y-1">
+                                                <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">
+                                                    {formatDate(p.created_at)}
+                                                </span>
+                                                <p className="font-black text-sm text-slate-900 tracking-tight">
+                                                    {firstItem?.name || 'Pedido'}
+                                                    {itemCount > 1 ? ` +${itemCount - 1} iten${itemCount - 1 !== 1 ? 's' : ''}` : ''}
+                                                </p>
+                                            </div>
+                                            <div className="text-right space-y-1">
+                                                <p className="text-[11px] font-black text-slate-900">{formatCurrency(p.total_amount - p.discount_amount)}</p>
+                                                <span className={`text-[8px] font-black px-2 py-1 rounded-md ${statusInfo.style}`}>
+                                                    {statusInfo.label}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-6">
-                    <div className="bg-rose-600 p-10 rounded-3xl shadow-xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -mr-16 -mt-16 group-hover:bg-white/20 transition-all" />
-                        <div className="space-y-8 relative z-10">
-                            <div className="h-14 w-14 rounded-2xl bg-white/10 flex items-center justify-center text-3xl">📦</div>
-                            <div className="space-y-2">
-                                <h3 className="text-white text-2xl font-black tracking-tighter leading-none">Rastreio em Tempo Real.</h3>
-                                <p className="text-rose-100 text-[10px] font-medium leading-relaxed uppercase tracking-wider">Acompanhe cada etapa do seu novo ativo até sua casa.</p>
-                            </div>
-                            <button className="w-full h-12 bg-white text-rose-600 text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-yellow-400 hover:text-slate-900 transition-all shadow-lg">Abrir Rastreamento</button>
-                        </div>
-                    </div>
-
                     <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm space-y-6">
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-900">Ajuda & Suporte</h3>
                         <div className="grid grid-cols-1 gap-3">
@@ -128,6 +191,10 @@ export default function MemberAreaPage() {
                             <a href="/marketplace" className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-100 rounded-xl hover:border-rose-500/50 hover:bg-white transition-all group">
                                 <span className="text-xl group-hover:scale-110 transition-transform">🛒</span>
                                 <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Voltar para a Loja</span>
+                            </a>
+                            <a href="/minha-conta/pedidos" className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-100 rounded-xl hover:border-rose-500/50 hover:bg-white transition-all group">
+                                <span className="text-xl group-hover:scale-110 transition-transform">📦</span>
+                                <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Histórico de Pedidos</span>
                             </a>
                         </div>
                     </div>

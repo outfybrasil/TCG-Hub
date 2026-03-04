@@ -18,7 +18,48 @@ export default function NewAssetPage() {
     const [imageUrl, setImageUrl] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // TCGdex Integration State
+    const [cardId, setCardId] = useState<string | null>(null);
+    const [showCardModal, setShowCardModal] = useState(false);
+    const [tcgSets, setTcgSets] = useState<any[]>([]);
+    const [selectedSet, setSelectedSet] = useState<string>('');
+    const [cards, setCards] = useState<any[]>([]);
+    const [cardSearchTerm, setCardSearchTerm] = useState('');
+    const [loadingCards, setLoadingCards] = useState(false);
+
     const router = useRouter();
+
+    // Fetch sets on mount
+    React.useEffect(() => {
+        const fetchSets = async () => {
+            const res = await fetch('https://api.tcgdex.net/v2/pt/sets');
+            const data = await res.json();
+            setTcgSets(data.reverse());
+        };
+        fetchSets();
+    }, []);
+
+    // Fetch cards when set is selected OR modal opens
+    const fetchCards = async (setId: string) => {
+        setLoadingCards(true);
+        const { data, error } = await supabase
+            .from('pokemon_cards')
+            .select('*')
+            .eq('set_id', setId)
+            .order('local_id', { ascending: true });
+
+        if (data) setCards(data);
+        setLoadingCards(false);
+    };
+
+    const handleSelectCard = (card: any) => {
+        setCardId(card.id);
+        setName(card.name);
+        setSet(card.set_name);
+        setNumber(card.local_id);
+        setImageUrl(card.image_url);
+        setShowCardModal(false);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,6 +70,7 @@ export default function NewAssetPage() {
 
             const { error } = await supabase.from('inventory').insert({
                 user_id: user.id,
+                card_id: cardId, // Novo campo link catalog
                 name,
                 set,
                 number,
@@ -70,7 +112,42 @@ export default function NewAssetPage() {
                 {/* Section 1: Identification */}
                 <div className="bg-white border border-slate-200 p-8 sm:p-12 rounded-3xl shadow-sm space-y-8">
                     <div className="flex items-center gap-4 mb-4">
-                        <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 whitespace-nowrap">Dados da Carta</h2>
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 whitespace-nowrap">Busca no Catálogo TCGdex</h2>
+                        <div className="h-[1px] flex-1 bg-slate-100"></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Coleção Oficial</label>
+                            <select
+                                value={selectedSet}
+                                onChange={e => {
+                                    setSelectedSet(e.target.value);
+                                    fetchCards(e.target.value);
+                                }}
+                                className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm appearance-none cursor-pointer"
+                            >
+                                <option value="">Selecione uma coleção...</option>
+                                {tcgSets.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="flex items-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowCardModal(true)}
+                                disabled={!selectedSet}
+                                className="w-full h-14 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-800 transition-all shadow-lg disabled:opacity-30 disabled:cursor-not-allowed"
+                            >
+                                {loadingCards ? 'Carregando Cards...' : '🔍 Buscar Carta na Coleção'}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 py-4">
+                        <div className="h-[1px] flex-1 bg-slate-100"></div>
+                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Ou preencha manualmente</span>
                         <div className="h-[1px] flex-1 bg-slate-100"></div>
                     </div>
 
@@ -96,8 +173,7 @@ export default function NewAssetPage() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Número da Carta <span className="text-rose-600">*</span></label>
-                            <input required value={number} onChange={e => setNumber(e.target.value)} placeholder="021/094" pattern="\d{1,3}/\d{1,3}" title="Formato: 021/094" className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm" />
-                            <p className="text-[9px] text-slate-400 font-bold ml-1">Formato: 021/094</p>
+                            <input required value={number} onChange={e => setNumber(e.target.value)} placeholder="021/094" className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm" />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idioma</label>
@@ -195,6 +271,69 @@ export default function NewAssetPage() {
                     <p className="text-center mt-8 text-[9px] font-black text-slate-400 uppercase tracking-widest opacity-50">Log de segurança: Item será visível no marketplace imediatamente após publicação.</p>
                 </div>
             </form>
+
+            {/* Selection Modal */}
+            {showCardModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/90 backdrop-blur-xl animate-fade-in">
+                    <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[40px] shadow-2xl flex flex-col overflow-hidden animate-zoom-in">
+                        {/* Modal Header */}
+                        <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-2xl font-black tracking-tighter text-slate-900">Selecione a Carta</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                                    Coleção: <span className="text-rose-600">{tcgSets.find(s => s.id === selectedSet)?.name}</span>
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setShowCardModal(false)}
+                                className="w-12 h-12 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all font-black"
+                            >✕</button>
+                        </div>
+
+                        {/* Search Bar */}
+                        <div className="p-6 bg-slate-50 border-b border-slate-100">
+                            <input
+                                type="text"
+                                value={cardSearchTerm}
+                                onChange={e => setCardSearchTerm(e.target.value)}
+                                placeholder="🔍 Buscar por nome ou número (ex: Pikachu ou 025)..."
+                                className="w-full h-14 px-6 bg-white border border-slate-200 rounded-2xl focus:border-rose-600 outline-none transition-all font-bold text-sm shadow-sm"
+                            />
+                        </div>
+
+                        {/* Card Grid */}
+                        <div className="flex-1 overflow-y-auto p-8">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                                {cards.filter(c =>
+                                    c.name.toLowerCase().includes(cardSearchTerm.toLowerCase()) ||
+                                    c.local_id.includes(cardSearchTerm)
+                                ).map(card => (
+                                    <div
+                                        key={card.id}
+                                        onClick={() => handleSelectCard(card)}
+                                        className="group cursor-pointer space-y-3"
+                                    >
+                                        <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-slate-100 relative shadow-md group-hover:shadow-xl group-hover:shadow-rose-500/20 transition-all group-hover:-translate-y-2">
+                                            <img
+                                                src={card.image_url}
+                                                alt={card.name}
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <div className="absolute inset-0 bg-rose-600/0 group-hover:bg-rose-600/20 transition-all flex items-center justify-center">
+                                                <span className="opacity-0 group-hover:opacity-100 bg-white text-rose-600 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl transform translate-y-4 group-hover:translate-y-0 transition-all">Selecionar</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-black text-slate-900 truncate">{card.name}</p>
+                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">#{card.local_id}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

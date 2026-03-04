@@ -1,18 +1,56 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import CardGallery from '@/components/CardGallery';
 import FilterSidebar from '@/components/FilterSidebar';
 
-const MOCK_CARDS = [
-    { id: '1', name: 'Charizard', set: 'Base Set', imageUrl: 'https://images.pokemontcg.io/base1/4.png', price: 12500, grade: '10', finish: 'Holo' },
-    { id: '2', name: 'Pikachu', set: 'Base Set', imageUrl: 'https://images.pokemontcg.io/base1/58.png', price: 450, grade: '9', isPromo: true },
-    { id: '3', name: 'Mewtwo', set: 'Base Set', imageUrl: 'https://images.pokemontcg.io/base1/10.png', price: 2800, grade: '8.5', finish: 'Holo' },
-    { id: '4', name: 'Blastoise', set: 'Base Set', imageUrl: 'https://images.pokemontcg.io/base1/2.png', price: 8900, grade: '7', finish: 'Holo' },
-];
-
 export default function MarketplacePage() {
     const [searchTerm, setSearchTerm] = useState('');
+    const [cards, setCards] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCards = async () => {
+            const { data, error } = await supabase
+                .from('enriched_inventory')
+                .select('*')
+                .order('price', { ascending: false });
+
+            if (data) setCards(data);
+            setLoading(false);
+        };
+
+        fetchCards();
+
+        // Real-time subscription for inventory changes
+        const channel = supabase
+            .channel('inventory-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, (payload) => {
+                if (payload.eventType === 'UPDATE') {
+                    setCards(prev => prev.map(card =>
+                        card.id === payload.new.id ? { ...card, ...payload.new } : card
+                    ));
+                } else if (payload.eventType === 'INSERT') {
+                    setCards(prev => [...prev, payload.new]);
+                } else if (payload.eventType === 'DELETE') {
+                    setCards(prev => prev.filter(card => card.id !== payload.old.id));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    const filteredCards = cards.filter(card =>
+        card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.set?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.official_set_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.local_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-12 animate-fade-up">
@@ -63,14 +101,32 @@ export default function MarketplacePage() {
                 {/* Results Area */}
                 <main className="flex-1 space-y-12">
                     <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 pb-6">
-                        <span>Exibindo 120 Ativos Premium</span>
+                        <span>Exibindo {filteredCards.length} Ativos Premium</span>
                         <div className="flex gap-6 items-center">
                             <span>Ordem: Valor (Maior)</span>
                             <span className="cursor-pointer text-rose-600 hover:text-rose-700">Alterar</span>
                         </div>
                     </div>
 
-                    <CardGallery cards={MOCK_CARDS} />
+                    {loading ? (
+                        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="h-96 bg-slate-50 animate-pulse rounded-2xl border border-slate-100" />
+                            ))}
+                        </div>
+                    ) : (
+                        <CardGallery cards={filteredCards.map(c => ({
+                            id: c.id,
+                            name: c.official_name || c.name,
+                            set: c.official_set_name || c.set || 'Desconhecido',
+                            imageUrl: c.official_image_url || c.image_url || 'https://images.pokemontcg.io/base1/1.png',
+                            price: c.price,
+                            grade: c.grade,
+                            finish: c.finish,
+                            isPromo: c.is_promo || c.isPromo,
+                            quantity: c.quantity ?? 1
+                        }))} />
+                    )}
 
                     <div className="pt-20 text-center">
                         <button className="h-14 px-12 border border-slate-200 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-900 hover:text-white transition-all">Carregar Mais Ativos</button>
@@ -80,3 +136,4 @@ export default function MarketplacePage() {
         </div>
     );
 }
+
