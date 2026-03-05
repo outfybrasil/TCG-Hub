@@ -13,7 +13,7 @@ export default function PagamentoPage() {
 
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<{ id: string; email?: string; name?: string } | null>(null);
     const [walletBalance, setWalletBalance] = useState<number>(0);
     const [useCashback, setUseCashback] = useState<boolean>(false);
     const [brickKey, setBrickKey] = useState(0); // forces brick remount when amount changes
@@ -45,7 +45,8 @@ export default function PagamentoPage() {
         amount: finalAmount || 0.10, // Must provide some amount to Brick
     };
 
-    const onSubmit = async ({ selectedPaymentMethod, formData }: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const onSubmit = async (formData: any) => {
         setLoading(true);
         console.log("Submit do Brick", formData);
 
@@ -56,18 +57,18 @@ export default function PagamentoPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     transactionAmount: formData.transaction_amount || finalAmount,
-                    token: formData.token,
+                    token: (formData as unknown as Record<string, unknown>).token,
                     description: `Compra de cartas - ${items.length} itens`,
-                    installments: formData.installments,
-                    paymentMethodId: formData.payment_method_id,
-                    issuerId: formData.issuer_id,
-                    payerEmail: formData.payer?.email || user?.email || 'teste@exemplo.com',
-                    payer: formData.payer,
+                    installments: (formData as unknown as Record<string, unknown>).installments,
+                    paymentMethodId: (formData as unknown as Record<string, unknown>).payment_method_id,
+                    issuerId: (formData as unknown as Record<string, unknown>).issuer_id,
+                    payerEmail: (formData as unknown as { payer?: { email?: string }; transaction_amount?: number }).payer?.email || user?.email || 'teste@exemplo.com',
+                    payer: (formData as unknown as Record<string, unknown>).payer,
                     userId: user?.id,
                     useCashback: useCashback,
                     discountAmount: discount,
                     totalAmount: total,
-                    items: items.map((i: any) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, imageUrl: i.imageUrl }))
+                    items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, imageUrl: i.imageUrl }))
                 }),
             });
             const res = await req.json();
@@ -75,14 +76,15 @@ export default function PagamentoPage() {
             alert(`Pedido finalizado com sucesso! (Mercado Pago ID: ${res.id})`);
             clearCart();
             router.push('/');
-        } catch (error: any) {
+        } catch (error) {
             console.error(error);
-            alert('Erro ao processar o pagamento: ' + error.message);
+            alert('Erro ao processar o pagamento: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
         } finally {
             setLoading(false);
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const onError = async (error: any) => {
         console.error(error);
     };

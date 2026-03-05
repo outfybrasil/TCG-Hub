@@ -22,7 +22,7 @@ export default function LoginPage() {
             if (signInError) throw signInError;
 
             router.push('/membro');
-        } catch (err: any) {
+        } catch (err) {
             console.error(err); // Changed from 'error' to 'err' to match catch block variable
             alert("Acesso negado. Verifique suas credenciais de acesso.");
         } finally {

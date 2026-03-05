@@ -4,6 +4,9 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
+interface TcgSet { id: string; name: string; }
+interface PokemonCard { id: string; name: string; set_name: string; local_id: string; image_url: string; }
+
 export default function NewAssetPage() {
     const [name, setName] = useState('');
     const [set, setSet] = useState('');
@@ -21,9 +24,9 @@ export default function NewAssetPage() {
     // TCGdex Integration State
     const [cardId, setCardId] = useState<string | null>(null);
     const [showCardModal, setShowCardModal] = useState(false);
-    const [tcgSets, setTcgSets] = useState<any[]>([]);
+    const [tcgSets, setTcgSets] = useState<TcgSet[]>([]);
     const [selectedSet, setSelectedSet] = useState<string>('');
-    const [cards, setCards] = useState<any[]>([]);
+    const [cards, setCards] = useState<PokemonCard[]>([]);
     const [cardSearchTerm, setCardSearchTerm] = useState('');
     const [loadingCards, setLoadingCards] = useState(false);
 
@@ -42,7 +45,7 @@ export default function NewAssetPage() {
     // Fetch cards when set is selected OR modal opens
     const fetchCards = async (setId: string) => {
         setLoadingCards(true);
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('pokemon_cards')
             .select('*')
             .eq('set_id', setId)
@@ -52,7 +55,7 @@ export default function NewAssetPage() {
         setLoadingCards(false);
     };
 
-    const handleSelectCard = (card: any) => {
+    const handleSelectCard = (card: PokemonCard) => {
         setCardId(card.id);
         setName(card.name);
         setSet(card.set_name);
@@ -87,8 +90,8 @@ export default function NewAssetPage() {
 
             if (error) throw error;
             router.push('/estoque');
-        } catch (error) {
-            console.error(error);
+        } catch (_error) {
+            console.error(_error);
             alert("Erro ao publicar item. Verifique a conexão.");
         } finally {
             setLoading(false);

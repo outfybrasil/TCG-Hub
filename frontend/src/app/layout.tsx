@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import UserNav from "@/components/UserNav";
 import { CartProvider } from "@/context/CartContext";
@@ -30,18 +31,18 @@ export default function RootLayout({
             <nav className="border-b border-slate-100 bg-white/90 backdrop-blur-md sticky top-0 z-[100]">
               <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
                 <div className="flex items-center space-x-10">
-                  <a href="/" className="flex items-center group transition-opacity hover:opacity-80">
+                  <Link href="/" className="flex items-center group transition-opacity hover:opacity-80">
                     <div className="h-10 w-10 bg-rose-600 rounded-xl flex items-center justify-center text-white text-xl mr-3 shadow-lg shadow-rose-500/20">
                       <span>⚡</span>
                     </div>
                     <span className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
                       TCG<span className="text-rose-600"> Mega Store</span>
                     </span>
-                  </a>
+                  </Link>
 
                   <div className="hidden lg:flex items-center space-x-10">
                     <a href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Loja</a>
-                    <a href="/leilao" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Leilões</a>
+                    <Link href="/leilao" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Leilões</Link>
                     <a href="/estoque" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Admin</a>
                   </div>
                 </div>

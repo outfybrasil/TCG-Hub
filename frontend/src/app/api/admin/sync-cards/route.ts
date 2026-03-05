@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 // TCGdex API Base URL
 const TCGDEX_API = 'https://api.tcgdex.net/v2/pt';
@@ -30,11 +30,12 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: true,
                 message: `Sincronizados ${totalSynced} cards dos últimos 5 sets.`,
-                setsSynced: setsToSync.map((s: any) => s.name)
+                setsSynced: setsToSync.map((s: { name: string }) => s.name)
             });
         }
-    } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+        return NextResponse.json({ success: false, error: msg }, { status: 500 });
     }
 }
 
@@ -46,7 +47,7 @@ async function syncSet(setId: string) {
         const setData = await response.json();
         const cards = setData.cards || [];
 
-        const cardsToInsert = cards.map((card: any) => ({
+        const cardsToInsert = cards.map((card: { id: string; localId: string; name: string; image?: string; rarity?: string }) => ({
             id: card.id,
             local_id: card.localId,
             name: card.name,
@@ -64,8 +65,9 @@ async function syncSet(setId: string) {
         if (error) throw error;
 
         return { success: true, count: cardsToInsert.length };
-    } catch (err: any) {
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Erro desconhecido';
         console.error(`Erro ao sincronizar set ${setId}:`, err);
-        return { success: false, error: err.message };
+        return { success: false, error: msg };
     }
 }

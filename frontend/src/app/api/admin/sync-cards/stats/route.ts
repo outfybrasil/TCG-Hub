@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 
 export async function GET() {
     try {
@@ -10,7 +10,8 @@ export async function GET() {
         if (error) throw error;
 
         return NextResponse.json({ success: true, count: count || 0 });
-    } catch (error: any) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+        return NextResponse.json({ success: false, error: msg }, { status: 500 });
     }
 }

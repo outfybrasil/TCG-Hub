@@ -29,7 +29,7 @@ const formatDate = (iso: string) =>
     new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(iso));
 
 export default function MemberAreaPage() {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<{ id: string; name: string } | null>(null);
     const [walletBalance, setWalletBalance] = useState<number>(0);
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [loading, setLoading] = useState(true);

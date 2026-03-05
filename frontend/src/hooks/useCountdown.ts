@@ -26,7 +26,7 @@ export function useCountdown(endsAt: string): CountdownResult {
     useEffect(() => {
         const interval = setInterval(() => setTimeLeft(getTimeLeft()), 1000);
         return () => clearInterval(interval);
-    }, [endsAt]);
+    }, [endsAt]); // getTimeLeft is stable for given endsAt
 
     return timeLeft;
 }

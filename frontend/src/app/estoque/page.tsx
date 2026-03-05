@@ -5,8 +5,8 @@ import CardGallery from '@/components/CardGallery';
 import { supabase } from '@/lib/supabase';
 
 export default function InventoryPage() {
-    const [user, setUser] = useState<any>(null);
-    const [cards, setCards] = useState<any[]>([]);
+    const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+    const [cards, setCards] = useState<{ id: string; name: string; set: string; imageUrl: string; price: number; grade: string; finish: string; isPromo: boolean }[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -20,7 +20,7 @@ export default function InventoryPage() {
                     console.log("No active session");
                     setLoading(false);
                 }
-            } catch (error) {
+            } catch (_error) {
                 console.log("No active session");
                 setLoading(false);
             }
@@ -31,7 +31,7 @@ export default function InventoryPage() {
                 const { data, error } = await supabase.from('inventory').select('*').eq('user_id', userId);
                 if (error) throw error;
 
-                setCards((data || []).map((doc: any) => ({
+                setCards((data || []).map((doc: { id: string; name?: string; set?: string; image_url?: string; price?: number; grade?: string; finish?: string; is_promo?: boolean }) => ({
                     id: doc.id,
                     name: doc.name || "Ativo Desconhecido",
                     set: doc.set || "Arquivo Nulo",
@@ -41,7 +41,7 @@ export default function InventoryPage() {
                     finish: doc.finish || "Normal",
                     isPromo: doc.is_promo || false
                 })));
-            } catch (error) {
+            } catch (_error) {
                 // Mock data for demo if fetch fails
                 setCards([
                     { id: "1", name: "Pikachu Illustrator", set: "Arquivo Promo", imageUrl: "https://images.pokemontcg.io/promo/1.png", price: 250000, grade: "10", isPromo: true, finish: "Holo" },

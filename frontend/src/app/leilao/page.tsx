@@ -21,7 +21,7 @@ function AuctionSkeleton() {
 
 export default function AuctionPage() {
     const { auctions, loading } = useAuctions();
-    const [user, setUser] = React.useState<any>(null);
+    const [user, setUser] = React.useState<{ id: string; email?: string } | null>(null);
 
     React.useEffect(() => {
         supabase.auth.getUser().then(({ data: { user } }) => {

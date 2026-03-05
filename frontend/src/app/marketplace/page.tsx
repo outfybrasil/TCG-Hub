@@ -5,14 +5,23 @@ import { supabase } from '@/lib/supabase';
 import CardGallery from '@/components/CardGallery';
 import FilterSidebar from '@/components/FilterSidebar';
 
+interface InventoryCard {
+    id: string; name?: string; set?: string;
+    official_name?: string; official_set_name?: string;
+    official_image_url?: string; image_url?: string;
+    price?: number; grade?: string; finish?: string;
+    is_promo?: boolean; isPromo?: boolean;
+    quantity?: number; number?: string; local_id?: string;
+}
+
 export default function MarketplacePage() {
     const [searchTerm, setSearchTerm] = useState('');
-    const [cards, setCards] = useState<any[]>([]);
+    const [cards, setCards] = useState<InventoryCard[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchCards = async () => {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('enriched_inventory')
                 .select('*')
                 .order('price', { ascending: false });
@@ -29,10 +38,10 @@ export default function MarketplacePage() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, (payload) => {
                 if (payload.eventType === 'UPDATE') {
                     setCards(prev => prev.map(card =>
-                        card.id === payload.new.id ? { ...card, ...payload.new } : card
+                        card.id === payload.new.id ? { ...card, ...(payload.new as InventoryCard) } : card
                     ));
                 } else if (payload.eventType === 'INSERT') {
-                    setCards(prev => [...prev, payload.new]);
+                    setCards(prev => [...prev, payload.new as InventoryCard]);
                 } else if (payload.eventType === 'DELETE') {
                     setCards(prev => prev.filter(card => card.id !== payload.old.id));
                 }
@@ -45,11 +54,11 @@ export default function MarketplacePage() {
     }, []);
 
     const filteredCards = cards.filter(card =>
-        card.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.set?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.official_set_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.local_id?.toLowerCase().includes(searchTerm.toLowerCase())
+        (card.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (card.set ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (card.official_set_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (card.number ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (card.local_id ?? '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -117,13 +126,13 @@ export default function MarketplacePage() {
                     ) : (
                         <CardGallery cards={filteredCards.map(c => ({
                             id: c.id,
-                            name: c.official_name || c.name,
-                            set: c.official_set_name || c.set || 'Desconhecido',
-                            imageUrl: c.official_image_url || c.image_url || 'https://images.pokemontcg.io/base1/1.png',
-                            price: c.price,
-                            grade: c.grade,
-                            finish: c.finish,
-                            isPromo: c.is_promo || c.isPromo,
+                            name: c.official_name ?? c.name ?? 'Desconhecido',
+                            set: c.official_set_name ?? c.set ?? 'Desconhecido',
+                            imageUrl: c.official_image_url ?? c.image_url ?? 'https://images.pokemontcg.io/base1/1.png',
+                            price: c.price ?? 0,
+                            grade: c.grade ?? 'NM',
+                            finish: c.finish ?? 'Normal',
+                            isPromo: c.is_promo ?? c.isPromo ?? false,
                             quantity: c.quantity ?? 1
                         }))} />
                     )}

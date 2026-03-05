@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import AIScanner from '@/components/AIScanner';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
 

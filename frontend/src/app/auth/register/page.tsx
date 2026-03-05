@@ -41,8 +41,8 @@ export default function RegisterPage() {
             if (signUpError) throw signUpError;
 
             router.push('/membro');
-        } catch (err: any) {
-            const msg = err?.message || '';
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : '';
             if (msg.includes('already registered')) {
                 setError('Este e-mail já está cadastrado. Faça login.');
             } else {

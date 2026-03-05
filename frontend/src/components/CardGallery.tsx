@@ -14,7 +14,7 @@ interface CardProps {
     isPromo?: boolean;
     finish?: string;
     quantity?: number;
-    addItem?: any;
+    addItem?: (item: { id: string; name: string; price: number; imageUrl: string; maxStock?: number }) => void;
 }
 
 const getGradeColor = (grade: string | undefined) => {
@@ -85,7 +85,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, grade, isPromo, finish, q
                 <div className="flex items-center justify-between">
                     <span className="text-2xl font-black tracking-tighter text-slate-900">R$ {price?.toLocaleString('pt-BR')}</span>
                     <button
-                        onClick={() => addItem({ id, name, price: price || 0, imageUrl, maxStock: quantity })}
+                        onClick={() => addItem?.({ id, name, price: price || 0, imageUrl, maxStock: quantity })}
                         disabled={isOutOfStock}
                         className={`h-10 px-6 ${isOutOfStock ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-slate-100 text-slate-900 hover:bg-yellow-400'} text-[9px] font-black uppercase tracking-widest rounded-xl transition-all`}
                     >

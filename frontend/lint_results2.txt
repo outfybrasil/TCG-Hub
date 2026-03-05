@@ -1,0 +1,65 @@
+﻿
+> frontend@0.1.0 lint
+> eslint
+
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\app\admin\sync\page.tsx
+   36:22  warning  '_err' is defined but never used                                                                                                                                                                                                                                                         @typescript-eslint/no-unused-vars
+  168:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\app\estoque\novo\page.tsx
+   48:23  warning  'error' is assigned a value but never used                                                                                                                                                                                                                                               @typescript-eslint/no-unused-vars
+  320:45  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\app\estoque\page.tsx
+  23:22  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+  44:22  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\app\leilao\[id]\page.tsx
+  114:25  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\app\leilao\criar\page.tsx
+  41:22  warning  '_error' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\app\minha-conta\pedidos\page.tsx
+  112:49  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\app\pagamento\page.tsx
+   16:38  error    Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+   17:27  warning  'setWalletBalance' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   19:12  warning  'brickKey' is assigned a value but never used          @typescript-eslint/no-unused-vars
+   19:22  warning  'setBrickKey' is assigned a value but never used       @typescript-eslint/no-unused-vars
+   48:31  warning  'selectedPaymentMethod' is defined but never used      @typescript-eslint/no-unused-vars
+   48:66  error    Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+   70:42  error    Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+   78:25  error    Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+   86:35  error    Unexpected any. Specify a different type               @typescript-eslint/no-explicit-any
+  166:47  warning  'res' is assigned a value but never used               @typescript-eslint/no-unused-vars
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\app\page.tsx
+    4:8   warning  'AIScanner' is defined but never used                                                                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   68:19  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  168:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\components\AuctionCard.tsx
+  23:21  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\components\CardGallery.tsx
+  17:15  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  70:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\components\CartDrawer.tsx
+  35:37  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\context\CartContext.tsx
+  41:58  warning  '_e' is defined but never used                                                                  @typescript-eslint/no-unused-vars
+  43:9   warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+  84:19  warning  'max' is assigned a value but never used                                                        @typescript-eslint/no-unused-vars
+
+C:\Users\Teste\Documents\Projetos\TCG Hub\frontend\src\hooks\useCountdown.ts
+  27:9  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/exhaustive-deps')
+  30:8  warning  React Hook useEffect has a missing dependency: 'getTimeLeft'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+Ô£û 31 problems (6 errors, 25 warnings)
+  0 errors and 2 warnings potentially fixable with the `--fix` option.
+

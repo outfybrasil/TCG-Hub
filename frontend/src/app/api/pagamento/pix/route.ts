@@ -78,8 +78,9 @@ export async function POST(req: Request) {
             qr_code_base64: result.point_of_interaction?.transaction_data?.qr_code_base64,
             ticket_url: result.point_of_interaction?.transaction_data?.ticket_url
         });
-    } catch (error: any) {
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Houve um erro no pagamento';
         console.error('Erro PIX:', error);
-        return NextResponse.json({ error: error.message || 'Houve um erro no pagamento' }, { status: 500 });
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
 }

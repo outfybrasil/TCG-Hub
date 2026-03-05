@@ -101,7 +101,7 @@ export async function POST(req: Request) {
 
                 // ATOMIC STOCK DECREMENT
                 const { error: stockError } = await supabase.rpc('purchase_items', {
-                    p_items: items.map((i: any) => ({ id: i.id, quantity: i.quantity }))
+                    p_items: items.map((i: { id: string; quantity: number }) => ({ id: i.id, quantity: i.quantity }))
                 });
                 if (stockError) {
                     console.error('Erro ao baixar estoque:', stockError);
@@ -116,8 +116,9 @@ export async function POST(req: Request) {
             status: result.status,
             status_detail: result.status_detail,
         });
-    } catch (error: any) {
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Houve um erro no pagamento';
         console.error('Erro Cartão MP:', error);
-        return NextResponse.json({ error: error.message || 'Houve um erro no pagamento' }, { status: 500 });
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
 }

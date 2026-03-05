@@ -17,7 +17,7 @@ const durationOptions = [
 
 export default function CreateAuctionPage() {
     const router = useRouter();
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [cardName, setCardName] = useState('');
     const [cardSet, setCardSet] = useState('');
@@ -38,7 +38,7 @@ export default function CreateAuctionPage() {
                 } else {
                     router.push('/auth/login');
                 }
-            } catch (error) {
+            } catch (_error) {
                 router.push('/auth/login');
             } finally {
                 setAuthLoading(false);

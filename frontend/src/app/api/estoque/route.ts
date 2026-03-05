@@ -30,8 +30,9 @@ export async function GET(req: Request) {
         }
 
         return NextResponse.json(stockMap);
-    } catch (error: any) {
+    } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro desconhecido';
         console.error('Erro API estoque:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: msg }, { status: 500 });
     }
 }

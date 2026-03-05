@@ -26,23 +26,21 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-    const [items, setItems] = useState<CartItem[]>([]);
+    const [items, setItems] = useState<CartItem[]>(() => {
+        // Lazy initializer: runs only on first render, safe in Next.js since this is a client component
+        if (typeof window === 'undefined') return [];
+        try {
+            const stored = localStorage.getItem('@tcghub:cart');
+            return stored ? (JSON.parse(stored) as CartItem[]) : [];
+        } catch {
+            return [];
+        }
+    });
     const [isOpen, setIsOpen] = useState(false);
-    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
-        const stored = localStorage.getItem('@tcghub:cart');
-        if (stored) {
-            try { setItems(JSON.parse(stored)); } catch (e) { }
-        }
-    }, []);
-
-    useEffect(() => {
-        if (mounted) {
-            localStorage.setItem('@tcghub:cart', JSON.stringify(items));
-        }
-    }, [items, mounted]);
+        localStorage.setItem('@tcghub:cart', JSON.stringify(items));
+    }, [items]);
 
     // Refresh stock from API and update maxStock on cart items
     const refreshStock = useCallback(async () => {
@@ -76,8 +74,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
                     : item
                 );
             }
-            const max = (newItem as any).maxStock ?? Infinity;
-            return [...prev, { ...newItem, quantity: 1, maxStock: (newItem as any).maxStock }];
+            return [...prev, { ...newItem, quantity: 1, maxStock: newItem.maxStock }];
         });
         setIsOpen(true);
     };

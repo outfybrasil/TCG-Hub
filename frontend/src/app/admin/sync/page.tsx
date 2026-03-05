@@ -2,10 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 
+interface TcgSet {
+    id: string;
+    name: string;
+    logo?: string;
+    cards?: number;
+}
+
 export default function SyncAdminPage() {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
-    const [sets, setSets] = useState<any[]>([]);
+    const [sets, setSets] = useState<TcgSet[]>([]);
     const [cardCount, setCardCount] = useState<number>(0);
     const [syncProgress, setSyncProgress] = useState<{ current: string, total: number, done: number } | null>(null);
 
@@ -26,7 +33,7 @@ export default function SyncAdminPage() {
                 const res = await fetch('https://api.tcgdex.net/v2/pt/sets');
                 const data = await res.json();
                 setSets(data.reverse()); // Novas coleções primeiro
-            } catch (err) {
+            } catch (_err) {
                 setStatus("Erro ao carregar coleções da TCGdex.");
             }
         };
@@ -86,8 +93,8 @@ export default function SyncAdminPage() {
                 setStatus(`Concluído! Total de ${totalCount} cards sincronizados.`);
                 await fetchStats();
             }
-        } catch (err: any) {
-            setStatus(`Erro: ${err.message}`);
+        } catch (err) {
+            setStatus(`Erro: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
         } finally {
             setLoading(false);
             setSyncProgress(null);

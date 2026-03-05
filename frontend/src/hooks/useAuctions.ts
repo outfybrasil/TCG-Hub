@@ -46,7 +46,6 @@ const MOCK_AUCTIONS: Auction[] = [
 export function useAuctions() {
     const [auctions, setAuctions] = useState<Auction[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetch = async () => {
@@ -85,5 +84,5 @@ export function useAuctions() {
         fetch();
     }, []);
 
-    return { auctions, loading, error };
+    return { auctions, loading };
 }

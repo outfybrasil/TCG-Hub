@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import type { User } from '@supabase/supabase-js';
 
 export default function UserNav() {
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [walletBalance, setWalletBalance] = useState<number>(0);
     const { items, setIsOpen } = useCart();
 
