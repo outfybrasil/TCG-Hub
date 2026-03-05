@@ -13,6 +13,14 @@ const formatBRL = (value: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 export default function AuctionCard({ auction }: AuctionCardProps) {
+    const [currentImageUrl, setCurrentImageUrl] = React.useState(auction.imageUrl);
+    const [imageError, setImageError] = React.useState(false);
+
+    React.useEffect(() => {
+        setCurrentImageUrl(auction.imageUrl);
+        setImageError(false);
+    }, [auction.imageUrl]);
+
     const isEnded = auction.status === 'ended' || new Date(auction.endsAt) <= new Date();
 
     return (
@@ -21,8 +29,17 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
                 {/* Card Image */}
                 <div className="relative aspect-square overflow-hidden bg-slate-50 rounded-t-[24px]">
                     <img
-                        src={auction.imageUrl}
+                        src={currentImageUrl}
                         alt={auction.cardName}
+                        onError={() => {
+                            if (!imageError && currentImageUrl) {
+                                setImageError(true);
+                                if (!currentImageUrl.includes('/pt/')) {
+                                    const ptUrl = currentImageUrl.replace(/\/(ja|en)\//, '/pt/');
+                                    setCurrentImageUrl(ptUrl);
+                                }
+                            }
+                        }}
                         className="h-full w-full object-contain p-6 group-hover:scale-110 transition-transform duration-500"
                     />
                     {/* Countdown Badge */}

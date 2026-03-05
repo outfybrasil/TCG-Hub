@@ -12,7 +12,7 @@ export async function POST(req: Request) {
         const {
             transactionAmount, token, description, installments, paymentMethodId,
             issuerId, payerEmail, userId, useCashback, discountAmount, payer,
-            items = [], totalAmount
+            items = [], totalAmount, shippingAddress
         } = body;
 
         if (transactionAmount === undefined) {
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
                     cashback_earned: 0,
                     payment_method: 'cashback',
                     mp_payment_id: 'cashback-' + Date.now(),
+                    shipping_address: shippingAddress,
                     status: 'approved'
                 });
             }
@@ -93,6 +94,7 @@ export async function POST(req: Request) {
                     cashback_earned: cashbackAmount,
                     payment_method: paymentMethodId || 'credit_card',
                     mp_payment_id: String(result.id),
+                    shipping_address: shippingAddress,
                     status: result.status || 'approved'
                 });
                 if (purchaseError) {
@@ -115,6 +117,9 @@ export async function POST(req: Request) {
             id: result.id,
             status: result.status,
             status_detail: result.status_detail,
+            qr_code: result.point_of_interaction?.transaction_data?.qr_code,
+            qr_code_base64: result.point_of_interaction?.transaction_data?.qr_code_base64,
+            ticket_url: result.point_of_interaction?.transaction_data?.ticket_url
         });
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Houve um erro no pagamento';

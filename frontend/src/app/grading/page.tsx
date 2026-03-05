@@ -28,11 +28,11 @@ export default function ArtificialIntelligenceGradingPage() {
 
                 <div className="grid grid-cols-2 gap-4 w-full lg:w-auto pt-8 lg:pt-0">
                     <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
-                        <span className="text-[10px] font-black text-slate-400 block mb-2 uppercase tracking-widest leading-none">Precisão_</span>
+                        <span className="text-[10px] font-black text-slate-400 block mb-2 uppercase tracking-widest leading-none">Precisão</span>
                         <span className="text-2xl font-black text-rose-600 tracking-tighter">99.9%</span>
                     </div>
                     <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
-                        <span className="text-[10px] font-black text-slate-400 block mb-2 uppercase tracking-widest leading-none">Processo_</span>
+                        <span className="text-[10px] font-black text-slate-400 block mb-2 uppercase tracking-widest leading-none">Processo</span>
                         <span className="text-2xl font-black text-slate-900 tracking-tighter">12s</span>
                     </div>
                 </div>
@@ -42,7 +42,7 @@ export default function ArtificialIntelligenceGradingPage() {
                 {/* Scanner Visualization */}
                 <div className="order-2 lg:order-1">
                     <div className="bg-white p-10 rounded-[40px] border border-slate-100 shadow-2xl shadow-rose-500/5 relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none text-rose-600 font-black text-[9px] uppercase tracking-[0.4em]">POKE_SCAN_NODE_v5</div>
+                        <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none text-rose-600 font-black text-[9px] uppercase tracking-[0.4em]">POKE SCAN NODE v5</div>
                         <AIScanner />
                     </div>
                 </div>

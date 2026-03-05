@@ -1,11 +1,56 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCart } from '@/context/CartContext';
+import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
+
+interface CardAsset {
+  id: string;
+  name: string;
+  official_name?: string;
+  set: string;
+  official_set_name?: string;
+  price: number;
+  image_url: string;
+  official_image_url?: string;
+  grade?: string;
+  finish?: string;
+}
 
 export default function HomePage() {
   const { addItem } = useCart();
+  const [featuredCards, setFeaturedCards] = useState<CardAsset[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      const { data } = await supabase
+        .from('enriched_inventory')
+        .select('*')
+        .order('price', { ascending: false })
+        .limit(4);
+
+      if (data) {
+        setFeaturedCards(data.map(c => ({
+          id: c.id,
+          name: c.official_name ?? c.name,
+          set: c.official_set_name ?? c.set,
+          price: Number(c.price),
+          image_url: c.official_image_url ?? c.image_url,
+          grade: c.grade ?? 'MINT',
+          finish: c.finish
+        })));
+      }
+      setLoading(false);
+    };
+
+    fetchFeatured();
+  }, []);
+
+  const heroCard = featuredCards[0];
+  const highlights = featuredCards.slice(1);
+
   return (
     <div className="animate-fade-up bg-slate-950 min-h-screen text-slate-200">
 
@@ -51,46 +96,61 @@ export default function HomePage() {
           </div>
 
           <div className="flex-1 w-full max-w-[500px]">
-            <div className="relative group perspective-[2000px]">
-              {/* Glowing behind the card */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/30 via-rose-500/20 to-purple-600/30 rounded-[40px] blur-2xl group-hover:blur-3xl transition-all duration-500" />
+            {loading ? (
+              <div className="h-[600px] w-full bg-slate-900/50 rounded-[40px] animate-pulse border border-white/5" />
+            ) : heroCard ? (
+              <div className="relative group perspective-[2000px]">
+                {/* Glowing behind the card */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-yellow-500/30 via-rose-500/20 to-purple-600/30 rounded-[40px] blur-2xl group-hover:blur-3xl transition-all duration-500" />
 
-              {/* Glassmorphism Card */}
-              <div className="bg-slate-900/60 backdrop-blur-xl p-8 rounded-[40px] shadow-2xl border border-white/10 relative transform rotate-[2deg] group-hover:rotate-[0deg] group-hover:-translate-y-2 transition-all duration-700 ease-out preserve-3d">
+                {/* Glassmorphism Card */}
+                <div className="bg-slate-900/60 backdrop-blur-xl p-8 rounded-[40px] shadow-2xl border border-white/10 relative transform rotate-[2deg] group-hover:rotate-[0deg] group-hover:-translate-y-2 transition-all duration-700 ease-out preserve-3d">
 
-                <div className="absolute -top-4 -right-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-slate-900 px-5 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-xl flex items-center gap-2 z-20">
-                  <span className="text-xs">✨</span> Certificado A+
-                </div>
-
-                <div className="relative overflow-hidden rounded-3xl group-hover:shadow-[0_0_50px_rgba(255,255,255,0.1)] transition-all duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none mix-blend-overlay" />
-                  <img src="https://images.pokemontcg.io/base1/4.png" alt="Charizard" className="w-full h-auto drop-shadow-2xl relative z-0 transform group-hover:scale-105 transition-transform duration-700 ease-out" />
-                </div>
-
-                <div className="mt-8 space-y-4 relative z-10">
-                  <div>
-                    <h3 className="text-3xl font-black tracking-tighter text-white">Charizard</h3>
-                    <p className="text-rose-400 font-bold text-xs uppercase tracking-widest mt-1">Base Set 1999</p>
+                  <div className="absolute -top-4 -right-4 bg-gradient-to-r from-yellow-400 to-yellow-600 text-slate-900 px-5 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-xl flex items-center gap-2 z-20">
+                    <span className="text-xs">✨</span> Certificado {heroCard.grade || 'A+'}
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                    <div className="space-y-1">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Avaliação do Especialista</p>
-                      <p className="text-white font-black text-xl tracking-tighter">R$ 15.600</p>
+                  <div className="relative overflow-hidden rounded-3xl group-hover:shadow-[0_0_50px_rgba(255,255,255,0.1)] transition-all duration-500 min-h-[400px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10 pointer-events-none mix-blend-overlay" />
+                    <img src={heroCard.image_url} alt={heroCard.name} className="w-full h-auto drop-shadow-2xl relative z-0 transform group-hover:scale-105 transition-transform duration-700 ease-out" />
+                  </div>
+
+                  <div className="mt-8 space-y-4 relative z-10">
+                    <div>
+                      <h3 className="text-3xl font-black tracking-tighter text-white">{heroCard.name}</h3>
+                      <p className="text-rose-400 font-bold text-xs uppercase tracking-widest mt-1">{heroCard.set}</p>
                     </div>
-                    <button
-                      onClick={() => addItem({ id: 'featured-1', name: 'Charizard Base Set', price: 15600, imageUrl: "https://images.pokemontcg.io/base1/4.png" })}
-                      className="h-12 w-12 flex items-center justify-center bg-white text-slate-900 font-black rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-lg hover:shadow-rose-500/50 hover:scale-110 active:scale-95"
-                      title="Adicionar ao Carrinho"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                        <path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" />
-                      </svg>
-                    </button>
+
+                    <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Valor de Mercado</p>
+                        <p className="text-white font-black text-xl tracking-tighter">
+                          R$ {heroCard.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => addItem({
+                          id: heroCard.id,
+                          name: heroCard.name,
+                          price: heroCard.price,
+                          imageUrl: heroCard.image_url
+                        })}
+                        className="h-12 w-12 flex items-center justify-center bg-white text-slate-900 font-black rounded-xl hover:bg-rose-500 hover:text-white transition-all shadow-lg hover:shadow-rose-500/50 hover:scale-110 active:scale-95"
+                        title="Adicionar ao Carrinho"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                          <path d="M2.25 2.25a.75.75 0 000 1.5h1.386c.17 0 .318.114.362.278l2.558 9.592a3.752 3.752 0 00-2.806 3.63c0 .414.336.75.75.75h15.75a.75.75 0 000-1.5H5.378A2.25 2.25 0 017.5 15h11.218a.75.75 0 00.674-.421 60.358 60.358 0 002.96-7.228.75.75 0 00-.525-.965A60.864 60.864 0 005.68 4.509l-.232-.867A1.875 1.875 0 003.636 2.25H2.25zM3.75 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zM16.5 20.25a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="h-[600px] w-full flex items-center justify-center border-2 border-dashed border-white/5 rounded-[40px] text-slate-500 font-bold uppercase tracking-widest text-[10px]">
+                Nenhum ativo disponível no momento
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -99,10 +159,10 @@ export default function HomePage() {
       <section className="py-8 border-y border-white/5 bg-slate-900/50 backdrop-blur-sm relative z-20">
         <div className="max-w-7xl mx-auto px-6 flex flex-wrap justify-center sm:justify-between items-center gap-8 opacity-70">
           {[
-            "100%_AUTÊNTICO",
-            "ENTREGA_SEGURA",
-            "CRIPTOGRAFIA_SSL",
-            "SUPORTE_VIP"
+            "100% AUTÊNTICO",
+            "ENTREGA SEGURA",
+            "CRIPTOGRAFIA SSL",
+            "SUPORTE VIP"
           ].map((badge, i) => (
             <div key={i} className="flex items-center gap-3">
               <span className="h-1.5 w-1.5 bg-rose-500 rounded-full" />
@@ -131,51 +191,62 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-left">
-          {[
-            { id: "hlt-1", name: "Pikachu Illustrator", price: 1200000, img: "https://images.pokemontcg.io/promo/1.png", grade: "PSA 10" },
-            { id: "hlt-2", name: "Mewtwo Shadowless", price: 25000, img: "https://images.pokemontcg.io/base1/10.png", grade: "BGS 9.5" },
-            { id: "hlt-3", name: "Lugia Legend", price: 8500, img: "https://images.pokemontcg.io/hgss1/114.png", grade: "CGC 10" }
-          ].map((card, i) => (
-            <div key={i} className="group relative">
-              <div className="absolute -inset-4 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 rounded-[40px] transition-all duration-500 -z-10" />
-              <div
-                className="aspect-[3/4] bg-slate-900/80 rounded-[32px] mb-8 overflow-hidden border border-white/10 relative backdrop-blur-sm cursor-pointer"
-              >
-                {/* Grade Badge */}
-                <div className="absolute top-4 left-4 z-20 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
-                  <span className="text-[10px] font-black text-yellow-400 uppercase tracking-wider">{card.grade}</span>
-                </div>
+          {loading ? (
+            [1, 2, 3].map(i => (
+              <div key={i} className="aspect-[3/4] bg-slate-900/50 rounded-[32px] animate-pulse" />
+            ))
+          ) : highlights.length > 0 ? (
+            highlights.map((card, i) => (
+              <div key={i} className="group relative">
+                <div className="absolute -inset-4 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 rounded-[40px] transition-all duration-500 -z-10" />
+                <div
+                  className="aspect-[3/4] bg-slate-900/80 rounded-[32px] mb-8 overflow-hidden border border-white/10 relative backdrop-blur-sm cursor-pointer"
+                >
+                  {/* Grade Badge */}
+                  <div className="absolute top-4 left-4 z-20 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
+                    <span className="text-[10px] font-black text-yellow-400 uppercase tracking-wider">{card.grade || 'MINT'}</span>
+                  </div>
 
-                {/* Hover Add to Cart Overlay */}
-                <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-500 z-10 flex flex-col items-center justify-center gap-4">
-                  <button
-                    onClick={() => addItem({ id: card.id, name: card.name, price: card.price, imageUrl: card.img })}
-                    className="h-12 px-8 bg-white text-slate-900 font-black uppercase tracking-widest text-[9px] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-xl hover:bg-rose-500 hover:text-white"
-                  >
-                    Adicionar à Collection
-                  </button>
-                  <Link href={`/marketplace`}>
-                    <button className="h-12 px-8 border border-white/30 text-white font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-white/10 transition-all">
-                      Ver Detalhes
+                  {/* Hover Add to Cart Overlay */}
+                  <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-all duration-500 z-10 flex flex-col items-center justify-center gap-4">
+                    <button
+                      onClick={() => addItem({
+                        id: card.id,
+                        name: card.name,
+                        price: card.price,
+                        imageUrl: card.image_url
+                      })}
+                      className="h-12 px-8 bg-white text-slate-900 font-black uppercase tracking-widest text-[9px] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-xl hover:bg-rose-500 hover:text-white"
+                    >
+                      Adicionar à Collection
                     </button>
-                  </Link>
+                    <Link href={`/marketplace`}>
+                      <button className="h-12 px-8 border border-white/30 text-white font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-white/10 transition-all">
+                        Ver Detalhes
+                      </button>
+                    </Link>
+                  </div>
+
+                  {/* Glow behind image */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-white/5 rounded-full blur-2xl group-hover:bg-rose-500/10 transition-colors duration-500" />
+
+                  <img src={card.image_url} alt={card.name} className="w-full h-full object-contain p-10 group-hover:scale-110 group-hover:-translate-y-2 transition-transform duration-700 ease-in-out relative z-0 drop-shadow-2xl" />
                 </div>
 
-                {/* Glow behind image */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-white/5 rounded-full blur-2xl group-hover:bg-rose-500/10 transition-colors duration-500" />
-
-                <img src={card.img} alt={card.name} className="w-full h-full object-contain p-10 group-hover:scale-110 group-hover:-translate-y-2 transition-transform duration-700 ease-in-out relative z-0 drop-shadow-2xl" />
-              </div>
-
-              <div className="px-2 space-y-3">
-                <h3 className="text-xl font-black tracking-tighter text-white group-hover:text-rose-400 transition-colors">{card.name}</h3>
-                <div className="flex items-center gap-3">
-                  <span className="text-slate-500 font-bold text-[10px] uppercase tracking-widest">Investimento_</span>
-                  <span className="text-white font-black text-lg">R$ {card.price.toLocaleString('pt-BR')}</span>
+                <div className="px-2 space-y-3">
+                  <h3 className="text-xl font-black tracking-tighter text-white group-hover:text-rose-400 transition-colors">{card.name}</h3>
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-500 font-bold text-[10px] uppercase tracking-widest">Investimento</span>
+                    <span className="text-white font-black text-lg">R$ {card.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
                 </div>
               </div>
+            ))
+          ) : (
+            <div className="col-span-3 text-center py-20 text-slate-500 font-bold uppercase tracking-widest text-xs">
+              Produtos em destaque em breve
             </div>
-          ))}
+          )}
         </div>
       </section>
 

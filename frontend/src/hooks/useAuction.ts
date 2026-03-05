@@ -22,7 +22,7 @@ export function useAuction(id: string) {
                     id, created_at, cardName:card_name, cardSet:card_set, cardNumber:card_number,
                     imageUrl:image_url, condition, startingBid:starting_bid, currentBid:current_bid,
                     bidCount:bid_count, highestBidderId:highest_bidder_id, highestBidderName:highest_bidder_name,
-                    endsAt:ends_at, createdBy:created_by, status, notes
+                    endsAt:ends_at, createdBy:created_by, status, notes, language
                 `).eq('id', id).single(),
                 supabase.from('bids').select(`
                     id, created_at, auctionId:auction_id, userId:user_id, userName:user_name, amount
@@ -42,7 +42,8 @@ export function useAuction(id: string) {
                 condition: 'NM', startingBid: 35000, currentBid: 42500, bidCount: 24,
                 highestBidderId: '', highestBidderName: 'Colecionador_X',
                 endsAt: new Date(Date.now() + 2 * 60 * 60 * 1000 + 14 * 60 * 1000).toISOString(),
-                createdBy: 'admin', status: 'active', notes: 'Carta em excelente estado, sem marcas visíveis.'
+                createdBy: 'admin', status: 'active', notes: 'Carta em excelente estado, sem marcas visíveis.',
+                language: 'Inglês'
             };
             setAuction(mockAuction);
             setBids(MOCK_BIDS);

@@ -13,8 +13,9 @@ export interface Auction {
     highestBidderName: string;
     endsAt: string;
     createdBy: string;
-    status: 'active' | 'ended';
+    status: 'active' | 'ended' | 'finished';
     notes: string;
+    language?: string;
 }
 
 export interface Bid {

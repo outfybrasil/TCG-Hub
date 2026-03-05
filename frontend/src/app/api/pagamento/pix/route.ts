@@ -55,6 +55,25 @@ export async function POST(req: Request) {
 
         const result = await payment.create(paymentRequest);
 
+        // ✅ Salvar compra com mp_payment_id real — necessário para reembolso e créditos de leilão
+        if (result.id && userId) {
+            const { error: purchaseError } = await supabase.from('purchases').insert({
+                user_id: userId,
+                items: body.items || [],
+                total_amount: body.totalAmount || transactionAmount,
+                discount_amount: discountAmount || 0,
+                cashback_earned: 0,
+                payment_method: 'pix',
+                mp_payment_id: String(result.id),
+                shipping_address: body.shippingAddress || null,
+                status: result.status || 'pending'
+            });
+
+            if (purchaseError) {
+                console.error('Erro ao salvar compra PIX:', purchaseError);
+            }
+        }
+
         // Se o PIX foi gerado e temos um userId, conceder o cashback para demonstração
         // Em um ambiente de produção real, faríamos isso no Webhook quando o PIX fosse pago de verdade.
         if (result.id && userId) {

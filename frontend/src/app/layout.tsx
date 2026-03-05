@@ -41,9 +41,7 @@ export default function RootLayout({
                   </Link>
 
                   <div className="hidden lg:flex items-center space-x-10">
-                    <a href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Loja</a>
-                    <Link href="/leilao" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Leilões</Link>
-                    <a href="/estoque" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Admin</a>
+                    <Link href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Loja</Link>
                   </div>
                 </div>
 
@@ -58,14 +56,21 @@ export default function RootLayout({
             <footer className="mt-32 pt-20 pb-10 border-t border-slate-100 bg-white">
               <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-16">
                 <div className="space-y-4">
-                  <h3 className="text-xl font-black tracking-tighter text-slate-900 uppercase">TCG<span className="text-rose-600">STORE</span></h3>
-                  <p className="text-slate-400 text-[11px] font-black uppercase tracking-widest leading-relaxed max-w-xs">
-                    Sua fonte exclusiva para cartas Pokémon de alta raridade e coleções certificadas.
-                  </p>
+                  <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-900 uppercase">Legal</h3>
+                  <div className="flex flex-col space-y-3">
+                    <Link href="/privacidade" className="text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-rose-600 transition-colors">Política de Privacidade</Link>
+                    <Link href="/privacidade#termos" className="text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-rose-600 transition-colors">Termos de Uso</Link>
+                  </div>
                 </div>
               </div>
-              <div className="mt-20 text-center text-[10px] font-bold uppercase tracking-widest text-zinc-400">
-                © 2026 TCGHub. Todos os direitos reservados.
+              <div className="mt-20 text-center text-[10px] font-bold uppercase tracking-widest text-zinc-400 space-y-2">
+                <p>© 2026 TCG Mega Store. Todos os direitos reservados.</p>
+                <div className="flex items-center justify-center gap-4 opacity-70">
+                  <p>Em conformidade com a LGPD</p>
+                  <div className="h-1 w-1 bg-slate-300 rounded-full" />
+                  <p>Pagamento Seguro</p>
+                </div>
+                <p className="opacity-50">Pokémon TCG e suas respectivas propriedades são copyright de The Pokémon Company.</p>
               </div>
             </footer>
           </main>

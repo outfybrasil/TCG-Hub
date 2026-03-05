@@ -123,7 +123,7 @@ export default function MemberAreaPage() {
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-4">Pedidos</span>
                             <div className="flex items-baseline gap-3">
                                 <h2 className="text-4xl font-black tracking-tighter text-slate-900">
-                                    {loading ? '...' : String(purchases.length).padStart(2, '0')}
+                                    {loading ? '...' : purchases.length}
                                 </h2>
                                 <span className="text-[9px] text-slate-500 font-black bg-slate-50 px-2 py-0.5 rounded-md">Total</span>
                             </div>

@@ -1,61 +1,124 @@
 "use client";
 
-import React from 'react';
+interface FilterSidebarProps {
+    options: {
+        sets: string[];
+        rarities: string[];
+        types: string[];
+    };
+    selected: {
+        sets: string[];
+        rarities: string[];
+        types: string[];
+    };
+    onToggle: (category: string, value: string) => void;
+    onClear: () => void;
+}
 
-const filters = {
-    sets: ["Base Set", "Selva", "Fóssil", "151", "Destinos de Paldea"],
-    rarities: ["Comum", "Incomum", "Rara", "Ultra Rara", "Rara Secreta"],
-    types: ["Grama", "Fogo", "Água", "Elétrico", "Psíquico", "Luta", "Sombrio", "Metal", "Fada", "Dragão"],
-};
-
-export default function FilterSidebar() {
+export default function FilterSidebar({ options, selected, onToggle, onClear }: FilterSidebarProps) {
     return (
-        <div className="w-72 flex-shrink-0 space-y-12 animate-fade-in hidden lg:block pr-10 border-r border-black/5">
-            <div className="space-y-6">
-                <h3 className="text-[#1A2B48]/40 font-bold uppercase text-[10px] tracking-[0.3em] flex items-center gap-3">
+        <div className="w-full flex-shrink-0 space-y-10 animate-fade-in lg:block">
+            {/* Project Header Branding */}
+            <div className="pb-4">
+                <div className="flex items-center gap-4">
+                    <div className="h-6 w-1.5 bg-rose-600 rounded-full"></div>
+                    <h2 className="text-[14px] font-black uppercase tracking-[0.2em] text-slate-900">Refinar Busca</h2>
+                </div>
+            </div>
+
+            {/* Arquivos Section */}
+            <div className="space-y-4">
+                <h3 className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.15em] ml-5">
                     Arquivos
                 </h3>
-                <div className="space-y-4">
-                    {filters.sets.map((set) => (
-                        <label key={set} className="flex items-center space-x-3 cursor-pointer group">
-                            <div className="h-4 w-4 border border-slate-200 rounded-full group-hover:border-rose-600 transition-colors flex items-center justify-center">
-                                <div className="h-1.5 w-1.5 bg-rose-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                            <span className="text-slate-500 text-[11px] font-black uppercase tracking-widest group-hover:text-slate-900 transition-colors">{set}</span>
-                        </label>
-                    ))}
+                <div className="flex flex-col gap-2">
+                    {options.sets.map((set) => {
+                        const isSelected = selected.sets.includes(set);
+                        return (
+                            <button
+                                key={set}
+                                onClick={() => onToggle('sets', set)}
+                                className={`flex items-center justify-between px-5 py-3 border rounded-2xl transition-all group ${isSelected
+                                    ? 'border-rose-600 bg-rose-50 shadow-sm'
+                                    : 'border-slate-100 bg-white hover:border-rose-200 hover:shadow-sm'
+                                    }`}
+                            >
+                                <span className={`text-[11px] font-black tracking-wider transition-colors ${isSelected ? 'text-rose-600' : 'text-slate-500 group-hover:text-slate-900'
+                                    }`}>{set}</span>
+                                <div className={`h-2.5 w-2.5 rounded-full border transition-all ${isSelected
+                                    ? 'border-rose-600 bg-rose-600 scale-110'
+                                    : 'border-slate-200 group-hover:border-rose-600 group-hover:bg-rose-600'
+                                    }`}></div>
+                            </button>
+                        );
+                    })}
+                    {options.sets.length === 0 && (
+                        <p className="text-[10px] text-slate-400 italic ml-5">Nenhuma edição disponível</p>
+                    )}
                 </div>
             </div>
 
-            <div className="space-y-6">
-                <h3 className="text-[#1A2B48]/40 font-bold uppercase text-[10px] tracking-[0.3em] flex items-center gap-3">
+            {/* Condição e Raridade Section */}
+            <div className="space-y-4">
+                <h3 className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.15em] ml-5">
                     Condição e Raridade
                 </h3>
-                <div className="space-y-4">
-                    {filters.rarities.map((rarity) => (
-                        <label key={rarity} className="flex items-center space-x-3 cursor-pointer group">
-                            <div className="h-4 w-4 border border-slate-200 rounded-md group-hover:border-rose-600 transition-colors" />
-                            <span className="text-slate-500 text-[11px] font-black uppercase tracking-widest group-hover:text-slate-900 transition-colors">{rarity}</span>
-                        </label>
-                    ))}
+                <div className="flex flex-col gap-2">
+                    {options.rarities.map((rarity) => {
+                        const isSelected = selected.rarities.includes(rarity);
+                        return (
+                            <button
+                                key={rarity}
+                                onClick={() => onToggle('rarities', rarity)}
+                                className={`flex items-center justify-between px-5 py-3 border rounded-2xl transition-all group ${isSelected
+                                    ? 'border-rose-600 bg-rose-50 shadow-sm'
+                                    : 'border-slate-100 bg-white hover:border-rose-200 hover:shadow-sm'
+                                    }`}
+                            >
+                                <span className={`text-[11px] font-black tracking-wider transition-colors ${isSelected ? 'text-rose-600' : 'text-slate-500 group-hover:text-slate-900'
+                                    }`}>{rarity}</span>
+                                <div className={`h-4 w-4 rounded-md border-2 transition-all flex items-center justify-center ${isSelected
+                                    ? 'border-rose-600 bg-rose-600'
+                                    : 'border-slate-100 group-hover:border-rose-600'
+                                    }`}>
+                                    {isSelected && <span className="text-[10px] text-white">✓</span>}
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            <div className="space-y-6">
-                <h3 className="text-[#1A2B48]/40 font-bold uppercase text-[10px] tracking-[0.3em] flex items-center gap-3">
-                    Elementos Essenciais
+            {/* Elementos Essenciais Section */}
+            <div className="space-y-4">
+                <h3 className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.15em] ml-5">
+                    Elementos
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                    {filters.types.map((type) => (
-                        <button key={type} className="px-4 py-2 border border-slate-100 bg-white text-[9px] font-black uppercase tracking-widest text-slate-400 hover:border-rose-600 hover:text-rose-600 transition-all rounded-lg">
-                            {type}
-                        </button>
-                    ))}
+                <div className="grid grid-cols-2 gap-2">
+                    {options.types.map((type) => {
+                        const isSelected = selected.types.includes(type);
+                        return (
+                            <button
+                                key={type}
+                                onClick={() => onToggle('types', type)}
+                                className={`h-10 border text-[9px] font-black uppercase tracking-widest transition-all rounded-xl ${isSelected
+                                    ? 'border-rose-600 bg-rose-600 text-white shadow-md shadow-rose-600/20'
+                                    : 'border-slate-100 bg-white text-slate-500 hover:border-rose-600 hover:text-rose-600 hover:shadow-sm'
+                                    }`}
+                            >
+                                {type}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            <div className="pt-10">
-                <button className="w-full h-12 border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all rounded-xl">
+            {/* Clear Filters Button */}
+            <div className="pt-4">
+                <button
+                    onClick={onClear}
+                    className="w-full h-12 bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all rounded-2xl border border-slate-100 border-dashed"
+                >
                     Limpar Filtros
                 </button>
             </div>

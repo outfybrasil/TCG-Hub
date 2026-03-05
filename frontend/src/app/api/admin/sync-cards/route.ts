@@ -47,9 +47,11 @@ async function syncSet(setId: string) {
         const setData = await response.json();
         const cards = setData.cards || [];
 
+        const totalOfficial = setData.cardCount?.official || 0;
+
         const cardsToInsert = cards.map((card: { id: string; localId: string; name: string; image?: string; rarity?: string }) => ({
             id: card.id,
-            local_id: card.localId,
+            local_id: totalOfficial > 0 ? `${card.localId}/${totalOfficial}` : card.localId,
             name: card.name,
             image_url: `${card.image}/high.png`,
             set_id: setData.id,

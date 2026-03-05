@@ -9,44 +9,58 @@ import type { User } from '@supabase/supabase-js';
 export default function UserNav() {
     const [user, setUser] = useState<User | null>(null);
     const [walletBalance, setWalletBalance] = useState<number>(0);
+    const [creditBalance, setCreditBalance] = useState<number>(0);
+    const [creditLocked, setCreditLocked] = useState<number>(0);
     const { items, setIsOpen } = useCart();
 
-    // Calcula badge
-    const cartItemCount = items.reduce((acc, item) => acc + item.quantity, 0);
+    const cartItemCount = items.reduce((acc: number, item: any) => acc + item.quantity, 0);
+
+    const fetchBalances = async (userId: string) => {
+        const [walletRes, creditRes] = await Promise.all([
+            supabase.from('wallets').select('balance').eq('user_id', userId).single(),
+            supabase.from('auction_credits').select('balance, locked').eq('user_id', userId).single()
+        ]);
+        if (walletRes.data) setWalletBalance(walletRes.data.balance);
+        if (creditRes.data) {
+            setCreditBalance(creditRes.data.balance);
+            setCreditLocked(creditRes.data.locked);
+        }
+    };
 
     useEffect(() => {
-        // Fetch session on mount
         supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
-                setUser(user);
-                supabase.from('wallets').select('balance').eq('user_id', user.id).single()
-                    .then(({ data }) => {
-                        if (data) setWalletBalance(data.balance);
-                    });
-            }
+            if (user) { setUser(user); fetchBalances(user.id); }
         });
 
-        // Listen for auth changes
         const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
             if (session?.user) {
                 setUser(session.user);
-                supabase.from('wallets').select('balance').eq('user_id', session.user.id).single()
-                    .then(({ data }) => {
-                        if (data) setWalletBalance(data.balance);
-                    });
+                fetchBalances(session.user.id);
             } else {
                 setUser(null);
                 setWalletBalance(0);
+                setCreditBalance(0);
+                setCreditLocked(0);
             }
         });
 
-        return () => {
-            authListener.subscription.unsubscribe();
-        };
+        return () => { authListener.subscription.unsubscribe(); };
     }, []);
+
+    const availableCredits = creditBalance - creditLocked;
 
     return (
         <div className="flex items-center space-x-2 sm:space-x-4">
+            <Link href="/leilao" className="hidden lg:block text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">
+                Leilões
+            </Link>
+
+            {user?.email === 'admin@tcghub.com.br' && (
+                <Link href="/estoque" className="hidden lg:block text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">
+                    Admin
+                </Link>
+            )}
+
             <Link href="/suporte" className="hidden sm:block text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-rose-600 transition-colors">
                 Suporte
             </Link>
@@ -57,6 +71,21 @@ export default function UserNav() {
                     <span className="text-xs font-black text-slate-900">R$ {walletBalance.toFixed(2).replace('.', ',')}</span>
                 </div>
             )}
+
+            {user && (
+                <Link
+                    href="/minha-conta/creditos"
+                    className="hidden sm:flex h-11 px-4 items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl hover:bg-amber-100 transition-all"
+                    title="Créditos para Leilão"
+                >
+                    <span className="text-[9px] font-black text-amber-700 uppercase tracking-widest">Créditos</span>
+                    <span className="text-xs font-black text-slate-900">R$ {availableCredits.toFixed(2).replace('.', ',')}</span>
+                </Link>
+            )}
+
+            <Link href={user ? '/minha-conta' : '/auth/login'} className="h-11 px-6 bg-slate-100 text-slate-900 flex items-center text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all rounded-xl">
+                {user ? 'Minha Conta' : 'Entrar'}
+            </Link>
 
             <button
                 onClick={() => setIsOpen(true)}
@@ -70,16 +99,6 @@ export default function UserNav() {
                     </span>
                 )}
             </button>
-
-            {user && (
-                <Link href="/minha-conta/pedidos" className="hidden sm:flex h-11 px-4 bg-slate-50 text-slate-600 items-center text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all rounded-xl border border-slate-100">
-                    Pedidos
-                </Link>
-            )}
-
-            <Link href="/membro" className="h-11 px-6 bg-slate-100 text-slate-900 flex items-center text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all rounded-xl">
-                {user ? 'Minha Conta' : 'Entrar'}
-            </Link>
         </div>
     );
 }
