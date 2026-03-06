@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
+import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
@@ -20,9 +20,15 @@ export default function PagamentoPage() {
     const [shippingCost, setShippingCost] = useState<number>(0);
     const [addresses, setAddresses] = useState<any[]>([]);
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
-    const [brickKey, setBrickKey] = useState(0); // forces brick remount when amount changes
+    const [dataReady, setDataReady] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    const brickKeyRef = useRef(0);
 
     const { items, total, clearCart } = useCart();
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     // Shipping Logic
     const calculateShipping = (uf: string, subtotal: number) => {
@@ -42,17 +48,34 @@ export default function PagamentoPage() {
     useEffect(() => {
         // Initialize MP exactly once (guard against React 18 Strict Mode double-invoke)
         if (!mpInitialized) {
-            mpInitialized = true;
-            initMercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY as string, { locale: 'pt-BR' });
+            const pk = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
+            console.log("MP Public Key status:", pk ? `Loaded (${pk.substring(0, 10)}...)` : "MISSING");
+            if (!pk) {
+                console.error("ERRO CRÍTICO: Chave Pública do Mercado Pago está ausente. Reinicie o servidor Next.js se você acabou de editar o .env!");
+            } else {
+                mpInitialized = true;
+                initMercadoPago(pk, { locale: 'pt-BR' });
+            }
         }
 
-        const fetchData = async (userId: string) => {
-            // Fetch Wallet
-            const walletReq = supabase.from('wallets').select('balance').eq('user_id', userId).single();
-            // Fetch Addresses
-            const addressReq = supabase.from('user_addresses').select('*').eq('user_id', userId).order('is_default', { ascending: false });
+        let cancelled = false;
 
-            const [walletRes, addressRes] = await Promise.all([walletReq, addressReq]);
+        const bootstrap = async () => {
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (cancelled || !authUser) return;
+
+            setUser({
+                id: authUser.id,
+                email: authUser.email,
+                name: authUser.user_metadata?.name || authUser.email?.split('@')[0]
+            });
+
+            const [walletRes, addressRes] = await Promise.all([
+                supabase.from('wallets').select('balance').eq('user_id', authUser.id).maybeSingle(),
+                supabase.from('user_addresses').select('*').eq('user_id', authUser.id).order('is_default', { ascending: false })
+            ]);
+
+            if (cancelled) return;
 
             if (!walletRes.error && walletRes.data) {
                 setWalletBalance(walletRes.data.balance);
@@ -60,94 +83,70 @@ export default function PagamentoPage() {
 
             if (!addressRes.error && addressRes.data) {
                 setAddresses(addressRes.data);
-                const defaultAddr = addressRes.data.find(a => a.is_default) || addressRes.data[0];
+                const defaultAddr = addressRes.data.find((a: any) => a.is_default) || addressRes.data[0];
                 if (defaultAddr) {
                     setSelectedAddressId(defaultAddr.id);
                     setShippingCost(calculateShipping(defaultAddr.state, total));
                 }
             }
+
+            // All data loaded — safe to render the Brick once
+            setDataReady(true);
         };
 
-        // Fetch logged in user
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) {
-                setUser({
-                    id: user.id,
-                    email: user.email,
-                    name: user.user_metadata?.name || user.email?.split('@')[0]
+        bootstrap();
+
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Preference state for Wallet Checkout Pro
+    const [preferenceId, setPreferenceId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!dataReady || !isMounted || !user) return;
+
+        const generatePreference = async () => {
+            try {
+                setPreferenceId(null);
+                const req = await fetch('/api/pagamento/preference', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: user.id,
+                        useCashback,
+                        discountAmount: discount,
+                        totalAmount: total,
+                        shippingAddress: addresses.find(a => a.id === selectedAddressId),
+                        items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity })),
+                        payer: { email: user.email }
+                    }),
                 });
-                fetchData(user.id);
+                const res = await req.json();
+
+                if (res.isCashbackOnly) {
+                    setPreferenceId('cashback-only');
+                    return;
+                }
+
+                if (res.id) {
+                    setPreferenceId(res.id);
+                } else {
+                    console.error("Falha ao gerar preference:", res.error);
+                }
+            } catch (err) {
+                console.error("Erro ao gerar API preference:", err);
             }
-        });
-    }, [total]);
+        };
 
-    const initialization = {
-        amount: finalAmount || 0.10, // Must provide some amount to Brick
-        payer: {
-            email: user?.email || '',
-        }
-    };
+        const timeout = setTimeout(() => {
+            generatePreference();
+        }, 500);
 
-    const [pixData, setPixData] = useState<{ qrCode: string; qrCodeBase64: string; ticketUrl: string } | null>(null);
+        return () => clearTimeout(timeout);
+    }, [dataReady, isMounted, total, useCashback, discount, selectedAddressId, items, user, addresses]);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const onSubmit = async (formData: any) => {
-        setLoading(true);
-        console.log("Submit do Brick", formData);
-
-        try {
-            // Using the card/general checkout endpoint that handles the tokenized/brick data
-            const req = await fetch('/api/pagamento/cartao', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    transactionAmount: formData.transaction_amount || finalAmount,
-                    token: (formData as unknown as Record<string, unknown>).token,
-                    description: `Compra de cartas - ${items.length} itens`,
-                    installments: (formData as unknown as Record<string, unknown>).installments,
-                    paymentMethodId: (formData as unknown as Record<string, unknown>).payment_method_id,
-                    issuerId: (formData as unknown as Record<string, unknown>).issuer_id,
-                    payerEmail: (formData as unknown as { payer?: { email?: string }; transaction_amount?: number }).payer?.email || user?.email || 'teste@exemplo.com',
-                    payer: (formData as unknown as Record<string, unknown>).payer,
-                    userId: user?.id,
-                    useCashback: useCashback,
-                    discountAmount: discount,
-                    totalAmount: total,
-                    shippingAddress: addresses.find(a => a.id === selectedAddressId),
-                    items: items.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, imageUrl: i.imageUrl }))
-                }),
-            });
-            const res = await req.json();
-            if (res.error) throw new Error(res.error);
-
-            if (res.qr_code) {
-                setPixData({
-                    qrCode: res.qr_code,
-                    qrCodeBase64: res.qr_code_base64,
-                    ticketUrl: res.ticket_url
-                });
-                return;
-            }
-
-            alert(`Pedido finalizado com sucesso! (Mercado Pago ID: ${res.id})`);
-            clearCart();
-            router.push('/');
-        } catch (error) {
-            console.error(error);
-            alert('Erro ao processar o pagamento: ' + (error instanceof Error ? error.message : 'Erro desconhecido'));
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const onError = async (error: any) => {
-        console.error(error);
-    };
-
-    const onReady = async () => {
-        console.log('MP Brick Ready');
-    };
+    if (!isMounted) return null;
 
     return (
         <div className="max-w-4xl mx-auto px-6 py-20 min-h-screen animate-fade-up">
@@ -253,53 +252,7 @@ export default function PagamentoPage() {
 
                 {/* Content */}
                 <div className="w-full">
-                    {pixData ? (
-                        <div className="text-center py-12 p-8 border-2 border-blue-100 bg-blue-50/30 rounded-3xl animate-fade-up">
-                            <div className="text-4xl mb-4">💠</div>
-                            <h3 className="text-2xl font-black tracking-tight text-slate-900 mb-2">Escaneie o QR Code</h3>
-                            <p className="text-slate-500 text-sm font-medium mb-8">
-                                Acesse seu banco, selecione Pix e escaneie o código abaixo para pagar.
-                            </p>
-
-                            <div className="max-w-[240px] mx-auto bg-white p-4 rounded-3xl shadow-xl border border-blue-50 mb-8 overflow-hidden">
-                                <img
-                                    src={`data:image/jpeg;base64,${pixData.qrCodeBase64}`}
-                                    alt="QR Code PIX"
-                                    className="w-full h-auto rounded-xl"
-                                />
-                            </div>
-
-                            <div className="space-y-4 max-w-sm mx-auto">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pix Copia e Cola</p>
-                                    <div className="relative group">
-                                        <input
-                                            type="text"
-                                            readOnly
-                                            value={pixData.qrCode}
-                                            className="w-full h-12 px-4 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-600 outline-none"
-                                        />
-                                        <button
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(pixData.qrCode);
-                                                alert('Código Pix copiado!');
-                                            }}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 h-8 px-4 bg-slate-900 text-white font-black uppercase text-[9px] rounded-lg hover:bg-blue-600 transition-all"
-                                        >
-                                            Copiar
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={() => router.push('/')}
-                                    className="w-full h-14 border border-blue-200 text-blue-700 font-black uppercase tracking-widest text-[11px] rounded-2xl hover:bg-white transition-all"
-                                >
-                                    Já paguei / Voltar para a Loja
-                                </button>
-                            </div>
-                        </div>
-                    ) : finalAmount === 0 && useCashback && walletBalance >= total ? (
+                    {preferenceId === 'cashback-only' || (finalAmount === 0 && useCashback && walletBalance >= total) ? (
                         <div className="text-center py-12 p-8 border-2 border-dashed border-rose-200 bg-rose-50 rounded-3xl">
                             <div className="text-4xl mb-4">🎉</div>
                             <h3 className="text-xl font-black tracking-tight text-slate-900 mb-2">Checkout 100% via Cashback!</h3>
@@ -307,23 +260,24 @@ export default function PagamentoPage() {
                                 onClick={async () => {
                                     setLoading(true);
                                     try {
-                                        // Mock do checkout com cashback total (A API cartao precisa lidar com isso se token for undefined, ou fazemos mock manual)
-                                        const req = await fetch('/api/pagamento/cartao', {
+                                        // Mock do checkout com cashback total (API lida retornando isCashbackOnly)
+                                        const req = await fetch('/api/pagamento/preference', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({
-                                                transactionAmount: 0.10, // dummy
-                                                token: 'wallet_checkout', // flag symbolica
-                                                description: `Checkout 100% Wallet - ${items.length} itens`,
-                                                payerEmail: user?.email || 'teste@exemplo.com',
+                                                totalAmount: 0,
                                                 useCashback: true,
-                                                discountAmount: discount
+                                                discountAmount: discount,
+                                                userId: user?.id,
+                                                payer: { email: user?.email },
+                                                items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity })),
+                                                shippingAddress: addresses.find(a => a.id === selectedAddressId),
                                             }),
                                         });
                                         const res = await req.json();
                                         alert('Pedido concluído com sucesso usando saldo de CashBack!');
                                         clearCart();
-                                        router.push('/');
+                                        router.push('/minha-conta/pedidos?status=success');
                                     } catch (e) { console.error(e); alert('Erro no fechamento do pedido.'); }
                                     finally { setLoading(false); }
                                 }}
@@ -333,8 +287,14 @@ export default function PagamentoPage() {
                                 {loading ? 'Processando...' : 'Finalizar Pedido Grátis'}
                             </button>
                         </div>
+                    ) : !dataReady || !preferenceId ? (
+                        <div className="w-full py-16 text-center">
+                            <div className="text-blue-600 font-bold tracking-widest uppercase text-xs animate-pulse">
+                                Gerando checkout seguro...
+                            </div>
+                        </div>
                     ) : (
-                        <div className="w-full mx-auto relative">
+                        <div className="w-full mx-auto relative flex justify-center mt-8">
                             {loading && (
                                 <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex items-center justify-center rounded-[30px]">
                                     <div className="text-blue-600 font-bold tracking-widest uppercase text-xs animate-pulse">
@@ -342,30 +302,8 @@ export default function PagamentoPage() {
                                     </div>
                                 </div>
                             )}
-                            <Payment
-                                key={`${finalAmount}-${useCashback}`}
-                                initialization={initialization}
-                                customization={{
-                                    paymentMethods: {
-                                        creditCard: 'all',
-                                        ticket: 'all',
-                                        bankTransfer: 'all',
-                                        mercadoPago: 'all'
-                                    },
-                                    visual: {
-                                        style: {
-                                            theme: 'default',
-                                            customVariables: {
-                                                textPrimaryColor: '#0f172a',
-                                                textSecondaryColor: '#64748b',
-                                                baseColor: '#2563eb', // blue-600 for MP
-                                            }
-                                        }
-                                    }
-                                }}
-                                onSubmit={onSubmit}
-                                onReady={onReady}
-                                onError={onError}
+                            <Wallet
+                                initialization={{ preferenceId, redirectMode: 'blank' }}
                             />
                         </div>
                     )}

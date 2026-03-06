@@ -116,12 +116,15 @@ export default function InventoryPage() {
                         <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Admin Control Center v5.0</p>
                     </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 flex-wrap">
                         <Link href="/admin/vendas">
                             <button className="h-11 px-6 bg-white border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-slate-50 transition-all cursor-pointer">Ver Vendas</button>
                         </Link>
                         <Link href="/admin/sync">
                             <button className="h-11 px-6 bg-white border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-slate-50 transition-all cursor-pointer">Sincronizar Cloud</button>
+                        </Link>
+                        <Link href="/admin/configuracoes">
+                            <button className="h-11 px-6 bg-white border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-slate-50 transition-all cursor-pointer">⚙️ Configurações</button>
                         </Link>
                         <a href="/estoque/novo">
                             <button className="h-11 px-6 bg-rose-600 text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg shadow-rose-500/20 hover:bg-rose-700 transition-all">Novo Item na Loja</button>

@@ -42,6 +42,8 @@ export default function RootLayout({
 
                   <div className="hidden lg:flex items-center space-x-10">
                     <Link href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Loja</Link>
+                    <Link href="/leilao" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Leilões</Link>
+                    <Link href="/suporte" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Suporte</Link>
                   </div>
                 </div>
 

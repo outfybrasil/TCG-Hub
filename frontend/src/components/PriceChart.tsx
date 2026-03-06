@@ -44,7 +44,7 @@ export default function PriceChart({ cardId, cardName, cardCode, currentPrice, s
         }
     };
 
-    const scrapeCurrentPrice = async () => {
+    const fetchCurrentPrice = async () => {
         setIsFetchingNew(true);
         try {
             const res = await fetch(`/api/prices/fetch`, {
@@ -54,15 +54,13 @@ export default function PriceChart({ cardId, cardName, cardCode, currentPrice, s
             });
             const json = await res.json();
             if (json.success) {
-                // Refresh the graph
                 await fetchHistory();
             } else {
-                alert(`Erro na comunicação com o servidor de scraping: ${json.error || 'Erro desconhecido'}`);
+                alert(`Não foi possível buscar preços: ${json.error || 'Erro desconhecido'}`);
             }
         } catch (e) {
-            alert(`Erro na solicitação: ${e instanceof Error ? e.message : 'Erro na rede'}`);
             console.error(e);
-            alert('Erro na comunicação com o servidor de scraping.');
+            alert('Erro na comunicação com o servidor de preços.');
         } finally {
             setIsFetchingNew(false);
         }
@@ -96,17 +94,16 @@ export default function PriceChart({ cardId, cardName, cardCode, currentPrice, s
         if (data.length === 0) return null;
 
         // Find the last record for each store
-        const stores = ['TCG Mega Store', 'MYP Cards', 'Liga Pokémon'];
+        const stores = ['TCG Mega Store', 'Liga Pokémon', 'MYP Cards'];
         const currentPrices: { name: string; price: number }[] = [];
 
         if (currentPrice) {
             currentPrices.push({ name: 'TCG Mega Store', price: currentPrice });
         }
 
-        // Search in the data array (sorted by date) for the last valid prices
         const latestPoints = data[data.length - 1];
-        if (latestPoints['MYP Cards']) currentPrices.push({ name: 'MYP Cards', price: latestPoints['MYP Cards'] });
         if (latestPoints['Liga Pokémon']) currentPrices.push({ name: 'Liga Pokémon', price: latestPoints['Liga Pokémon'] });
+        if (latestPoints['MYP Cards']) currentPrices.push({ name: 'MYP Cards', price: latestPoints['MYP Cards'] });
 
         if (currentPrices.length === 0) return null;
 
@@ -158,7 +155,7 @@ export default function PriceChart({ cardId, cardName, cardCode, currentPrice, s
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {['TCG Mega Store', 'MYP Cards', 'Liga Pokémon'].map(store => {
+                    {['TCG Mega Store', 'Liga Pokémon', 'MYP Cards'].map(store => {
                         const info = comparison?.find(c => c.name === store);
                         const price = store === 'TCG Mega Store' ? currentPrice : (comparison?.find(c => c.name === store)?.price);
                         const styles = info?.styles || { bg: 'bg-slate-50 border-slate-100 opacity-60', label: '' };
@@ -188,11 +185,11 @@ export default function PriceChart({ cardId, cardName, cardCode, currentPrice, s
                     <p className="text-xs font-medium text-slate-500">Variação de preços nos últimos 30 dias</p>
                 </div>
                 <button
-                    onClick={scrapeCurrentPrice}
+                    onClick={fetchCurrentPrice}
                     disabled={isFetchingNew}
                     className="h-9 px-4 bg-slate-900 text-white hover:bg-rose-600 disabled:opacity-50 disabled:hover:bg-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all"
                 >
-                    {isFetchingNew ? 'Consultando Robô...' : 'Atualizar Preço Agora'}
+                    {isFetchingNew ? 'Consultando API...' : 'Atualizar Preço'}
                 </button>
             </div>
 
@@ -200,7 +197,7 @@ export default function PriceChart({ cardId, cardName, cardCode, currentPrice, s
                 <div className="w-full h-64 bg-slate-50 border border-dashed border-slate-300 rounded-3xl flex flex-col items-center justify-center space-y-2 p-6 text-center">
                     <span className="text-2xl">📉</span>
                     <p className="text-sm font-bold text-slate-600">Nenhum histórico encontrado.</p>
-                    <p className="text-xs text-slate-400">Clique em "Atualizar Preço Agora" para o robô buscar os valores atuais na Liga Pokémon e MYP Cards.</p>
+                    <p className="text-xs text-slate-400">Clique em "Atualizar Preço" para buscar valores atuais na Liga Pokémon e MYP Cards.</p>
                 </div>
             ) : (
                 <div className="w-full h-72 bg-white border border-slate-200 rounded-[24px] p-6 shadow-sm">
@@ -227,8 +224,6 @@ export default function PriceChart({ cardId, cardName, cardCode, currentPrice, s
                             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4' }} />
                             <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 700, paddingTop: '10px' }} />
 
-                            {/* Note: Check the exact keys returned from the API grouping. 
-                  Currently the parser groupings use the store_name "Liga Pokémon" and "MYP Cards" */}
                             <Line
                                 type="monotone"
                                 dataKey="Liga Pokémon"

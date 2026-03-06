@@ -11,6 +11,7 @@ export default function UserNav() {
     const [walletBalance, setWalletBalance] = useState<number>(0);
     const [creditBalance, setCreditBalance] = useState<number>(0);
     const [creditLocked, setCreditLocked] = useState<number>(0);
+    const [hasMounted, setHasMounted] = useState(false);
     const { items, setIsOpen } = useCart();
 
     const cartItemCount = items.reduce((acc: number, item: any) => acc + item.quantity, 0);
@@ -28,6 +29,7 @@ export default function UserNav() {
     };
 
     useEffect(() => {
+        setHasMounted(true);
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (user) { setUser(user); fetchBalances(user.id); }
         });
@@ -51,9 +53,6 @@ export default function UserNav() {
 
     return (
         <div className="flex items-center space-x-2 sm:space-x-4">
-            <Link href="/leilao" className="hidden lg:block text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">
-                Leilões
-            </Link>
 
             {user?.email === 'admin@tcghub.com.br' && (
                 <Link href="/estoque" className="hidden lg:block text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">
@@ -61,9 +60,6 @@ export default function UserNav() {
                 </Link>
             )}
 
-            <Link href="/suporte" className="hidden sm:block text-[11px] font-black text-slate-400 uppercase tracking-widest hover:text-rose-600 transition-colors">
-                Suporte
-            </Link>
 
             {user && (
                 <div className="hidden sm:flex items-center h-11 px-4 bg-rose-50 border border-rose-100 rounded-xl" title="Seu saldo de Cashback">
@@ -93,7 +89,7 @@ export default function UserNav() {
                 title="Sacola de Compras"
             >
                 <span className="text-lg">🛒</span>
-                {cartItemCount > 0 && (
+                {hasMounted && cartItemCount > 0 && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                         {cartItemCount}
                     </span>

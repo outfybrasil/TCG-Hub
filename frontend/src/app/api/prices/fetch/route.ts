@@ -1,112 +1,82 @@
 import { NextResponse } from 'next/server';
-import { chromium } from 'playwright-extra';
-import stealth from 'puppeteer-extra-plugin-stealth';
-import * as cheerio from 'cheerio';
 import { supabaseAdmin } from '@/lib/supabase';
 
-chromium.use(stealth());
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36';
 
-// Scrape both MYPCards and Liga Pokemon using Playwright Stealth
-async function scrapeCardPrices(cardName: string, cardCode?: string) {
-    let debugLogs: string[] = [];
-    debugLogs.push('Iniciando scraper...');
+// Parse Brazilian price string like "R$ 14,99" to number 14.99
+function parseBRL(text: string): number | null {
+    const match = text.replace(/\s/g, '').match(/R?\$?\s*(\d+[\.,]\d+)/);
+    if (!match) return null;
+    return parseFloat(match[1].replace('.', '').replace(',', '.'));
+}
 
-    const browser = await chromium.launch({
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-blink-features=AutomationControlled',
-        ],
-    });
-
-    // Randomize user agent slightly to avoid fingerprinting
-    const userAgents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0'
-    ];
-    const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
-
-    const context = await browser.newContext({
-        userAgent: randomUA,
-        viewport: { width: 1920, height: 1080 },
-    });
-
-    const prices: { store: string; price: number }[] = [];
+async function scrapeLigaPokemon(cardName: string, cardCode?: string): Promise<{ min: number | null; max: number | null; avg: number | null }> {
+    const searchQuery = cardCode || cardName;
+    const url = `https://www.ligapokemon.com.br/?view=cards/card&card=${encodeURIComponent(searchQuery)}`;
 
     try {
-        const searchQuery = cardCode ? cardCode : cardName;
-
-        // --- MYP Cards Scraper ---
-        try {
-            const pageMyp = await context.newPage();
-            // Block tracking and resources to speed up
-            await pageMyp.route('**/*.{png,jpg,jpeg,gif,webp,css,font,woff,woff2}', route => route.abort());
-
-            await pageMyp.goto(`https://mypcards.com/pokemon/busca?q=${encodeURIComponent(searchQuery)}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
-            await pageMyp.waitForTimeout(4000);
-
-            const mypHtml = await pageMyp.content();
-            const $myp = cheerio.load(mypHtml);
-
-            let lowestMypPrice = Infinity;
-            $myp('.price, .preco, [class*="price"]').each((_, el) => {
-                const text = $myp(el).text().trim();
-                const match = text.match(/R\$\s*(\d+[,.]\d+)/i);
-                if (match) {
-                    const priceValue = parseFloat(match[1].replace(',', '.'));
-                    if (priceValue > 0 && priceValue < lowestMypPrice) {
-                        lowestMypPrice = priceValue;
-                    }
-                }
-            });
-
-            if (lowestMypPrice !== Infinity) {
-                prices.push({ store: 'MYP Cards', price: lowestMypPrice });
-            }
-        } catch (e) {
-            console.error('Error scraping MYP:', e);
-            debugLogs.push('MYP Scrape Error');
-        }
-
-        // --- Liga Pokemon Scraper ---
-        const pageLiga = await context.newPage();
-        await pageLiga.route('**/*.{png,jpg,jpeg,gif,webp,css,font,woff,woff2}', route => route.abort());
-
-        await pageLiga.goto(`https://www.ligapokemon.com.br/?view=cards/card&card=${encodeURIComponent(searchQuery)}`, { waitUntil: 'domcontentloaded', timeout: 45000 });
-
-        await pageLiga.waitForTimeout(5000); // Let JS execute / Cloudflare pass
-
-        const ligaHtml = await pageLiga.content();
-        const $liga = cheerio.load(ligaHtml);
-
-        let lowestLigaPrice = Infinity;
-        // LigaPokemon usually has `.price`, `#min-price`, or similar class for the lowest offering
-        $liga('.precos-desktop .preco-menor, .price-min, .prc-min').each((_, el) => {
-            const text = $liga(el).text().trim();
-            const match = text.match(/R\$\s*(\d+[,.]\d+)/i);
-            if (match) {
-                const priceValue = parseFloat(match[1].replace(',', '.'));
-                if (priceValue > 0 && priceValue < lowestLigaPrice) {
-                    lowestLigaPrice = priceValue;
-                }
-            }
+        const res = await fetch(url, {
+            headers: {
+                'User-Agent': USER_AGENT,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+            },
+            signal: AbortSignal.timeout(15000),
         });
 
-        if (lowestLigaPrice !== Infinity) {
-            prices.push({ store: 'Liga Pokémon', price: lowestLigaPrice });
+        if (!res.ok) return { min: null, max: null, avg: null };
+
+        const html = await res.text();
+
+        // Extract min price from .avgp-minprc
+        const minMatch = html.match(/class="avgp-minprc"[^>]*>([^<]+)/);
+        const maxMatch = html.match(/class="avgp-maxprc"[^>]*>([^<]+)/);
+
+        const min = minMatch ? parseBRL(minMatch[1]) : null;
+        const max = maxMatch ? parseBRL(maxMatch[1]) : null;
+        const avg = (min !== null && max !== null) ? +((min + max) / 2).toFixed(2) : null;
+
+        return { min, max, avg };
+    } catch (e) {
+        console.error('Liga Pokemon scrape error:', e);
+        return { min: null, max: null, avg: null };
+    }
+}
+
+async function scrapeMYPCards(cardName: string, cardCode?: string): Promise<number | null> {
+    const searchQuery = cardCode || cardName;
+    const url = `https://mypcards.com/pokemon/busca?q=${encodeURIComponent(searchQuery)}`;
+
+    try {
+        const res = await fetch(url, {
+            headers: {
+                'User-Agent': USER_AGENT,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+            },
+            signal: AbortSignal.timeout(15000),
+        });
+
+        if (!res.ok) return null;
+
+        const html = await res.text();
+
+        // Try to extract any price pattern
+        const priceMatches = html.matchAll(/R\$\s*(\d+[,\.]\d{2})/g);
+        let lowestPrice = Infinity;
+
+        for (const match of priceMatches) {
+            const price = parseFloat(match[1].replace('.', '').replace(',', '.'));
+            if (price > 0 && price < lowestPrice) {
+                lowestPrice = price;
+            }
         }
 
+        return lowestPrice !== Infinity ? lowestPrice : null;
     } catch (e) {
-        console.error('Scraping error:', e);
-        debugLogs.push(`Scraping overall error: ${e instanceof Error ? e.message : 'Unknown'}`);
-    } finally {
-        await browser.close();
-        debugLogs.push('Browser closed.');
+        console.error('MYP Cards scrape error:', e);
+        return null;
     }
-
-    return { prices, debugLogs };
 }
 
 export async function POST(request: Request) {
@@ -115,18 +85,63 @@ export async function POST(request: Request) {
         const { cardId, cardName, cardCode } = body;
 
         if (!cardId || (!cardName && !cardCode)) {
-            return NextResponse.json({ error: 'cardId and either cardName or cardCode are required' }, { status: 400 });
+            return NextResponse.json({ error: 'cardId e cardName ou cardCode são obrigatórios' }, { status: 400 });
         }
 
-        // Scrape prices
-        const result = await scrapeCardPrices(cardName, cardCode);
-        const scrapedPrices = result.prices;
+        // Scrape Brazilian sites concurrently
+        const [liga, mypPrice] = await Promise.all([
+            scrapeLigaPokemon(cardName, cardCode),
+            scrapeMYPCards(cardName, cardCode),
+        ]);
+
+        const scrapedPrices: { store: string; price: number }[] = [];
+
+        if (liga.min !== null) {
+            scrapedPrices.push({ store: 'Liga Pokémon', price: liga.min });
+        }
+        if (mypPrice !== null) {
+            scrapedPrices.push({ store: 'MYP Cards', price: mypPrice });
+        }
 
         if (scrapedPrices.length === 0) {
-            return NextResponse.json({ error: 'No prices found or bot blocked', debugLogs: result.debugLogs }, { status: 404 });
+            // Fallback: try pokemontcg.io for international reference
+            const POKEMONTCG_API = 'https://api.pokemontcg.io/v2/cards';
+            const queryParts: string[] = [];
+            if (cardName) queryParts.push(`name:"${cardName}"`);
+            if (cardCode) queryParts.push(`number:"${cardCode.split('/')[0]}"`);
+
+            const q = queryParts.join(' ');
+            const apiUrl = `${POKEMONTCG_API}?q=${encodeURIComponent(q)}&pageSize=1&select=id,name,tcgplayer,cardmarket`;
+
+            try {
+                const apiRes = await fetch(apiUrl, {
+                    headers: { 'X-Api-Key': process.env.POKEMONTCG_API_KEY || '' },
+                });
+
+                if (apiRes.ok) {
+                    const apiData = await apiRes.json();
+                    const card = apiData.data?.[0];
+                    if (card) {
+                        const tcgp = card.tcgplayer?.prices?.holofoil || card.tcgplayer?.prices?.normal || {};
+                        const cm = card.cardmarket?.prices || {};
+                        if (tcgp.market) scrapedPrices.push({ store: 'TCGPlayer (USD→BRL)', price: +(tcgp.market * 5.50).toFixed(2) });
+                        if (cm.averageSellPrice) scrapedPrices.push({ store: 'Cardmarket (EUR→BRL)', price: +(cm.averageSellPrice * 6.00).toFixed(2) });
+                    }
+                }
+            } catch (_) { /* silently fail fallback */ }
         }
 
-        // Insert into Supabase
+        if (scrapedPrices.length === 0) {
+            return NextResponse.json({
+                error: 'Nenhum preço encontrado nos sites brasileiros. Tente buscar manualmente.',
+                manualLinks: {
+                    liga: `https://www.ligapokemon.com.br/?view=cards/card&card=${encodeURIComponent(cardCode || cardName)}`,
+                    myp: `https://mypcards.com/pokemon/busca?q=${encodeURIComponent(cardCode || cardName)}`,
+                }
+            }, { status: 404 });
+        }
+
+        // Insert into price_history for the chart
         const insertData = scrapedPrices.map(p => ({
             card_id: cardId,
             store_name: p.store,
@@ -134,16 +149,13 @@ export async function POST(request: Request) {
         }));
 
         const { error } = await supabaseAdmin.from('price_history').insert(insertData);
-
-        if (error) {
-            throw error;
-        }
+        if (error) throw error;
 
         return NextResponse.json({ success: true, inserted: insertData });
 
     } catch (error) {
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : 'Unknown error' },
+            { error: error instanceof Error ? error.message : 'Erro desconhecido' },
             { status: 500 }
         );
     }

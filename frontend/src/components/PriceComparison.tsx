@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 
 interface PriceComparisonProps {
     cardName: string;
@@ -11,102 +11,130 @@ interface PriceComparisonProps {
     currentPrice?: number;
 }
 
-const sites = [
-    {
-        name: 'Liga Pokémon',
-        shortName: 'Liga',
-        defaultColor: 'hover:bg-yellow-400 hover:text-slate-900 hover:border-yellow-300',
-        getUrl: (name: string, number?: string) =>
-            `https://www.ligapokemon.com.br/?view=cards/card&card=${encodeURIComponent(number || name)}`,
-    },
-    {
-        name: 'MYP Cards',
-        shortName: 'MYP',
-        defaultColor: 'hover:bg-blue-600 hover:text-white hover:border-blue-500',
-        getUrl: (name: string, number?: string) =>
-            `https://mypcards.com/pokemon/busca?q=${encodeURIComponent(number || name)}`,
-    },
-];
+interface PriceData {
+    tcgplayer: {
+        low: number | null;
+        mid: number | null;
+        high: number | null;
+        market: number | null;
+        url: string | null;
+        currency: string;
+        brl: { low: number | null; mid: number | null; high: number | null; market: number | null };
+    };
+    cardmarket: {
+        avg: number | null;
+        low: number | null;
+        trend: number | null;
+        url: string | null;
+        currency: string;
+        brl: { avg: number | null; low: number | null; trend: number | null };
+    };
+    manualLinks: {
+        ligaPokemon: string;
+        mypCards: string;
+    };
+    fetchedAt: string | null;
+}
 
-export default function PriceComparison({ cardName, cardSet, cardNumber, size = 'md', prices = {}, currentPrice }: PriceComparisonProps) {
+const formatCurrency = (value: number | null, currency: string) => {
+    if (value === null || value === undefined) return '---';
+    const symbols: Record<string, string> = { USD: '$', EUR: '€', BRL: 'R$' };
+    return `${symbols[currency] || currency} ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+export default function PriceComparison({ cardName, cardSet, cardNumber, size = 'md', currentPrice }: PriceComparisonProps) {
     const [expanded, setExpanded] = useState(false);
-    // Build the most precise search query possible
-    const searchName = [cardName, cardNumber, cardSet].filter(Boolean).join(' ');
+    const [loading, setLoading] = useState(false);
+    const [priceData, setPriceData] = useState<PriceData | null>(null);
+    const [error, setError] = useState('');
+    const [source, setSource] = useState('');
 
-    const getRankedStyles = (storeName: string, price: number) => {
-        const allPrices: { name: string; price: number }[] = [];
-        if (currentPrice) allPrices.push({ name: 'TCG Hub', price: currentPrice });
-        Object.entries(prices).forEach(([name, val]) => {
-            if (val > 0) allPrices.push({ name, price: val });
-        });
+    const fetchPrices = useCallback(async () => {
+        if (priceData || loading) return;
+        setLoading(true);
+        setError('');
+        try {
+            const res = await fetch('/api/prices/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cardName, cardSet, cardNumber }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao buscar');
+            setPriceData(data.prices);
+            setSource(data.source);
+        } catch (err: any) {
+            setError(err.message || 'Erro ao buscar preços.');
+        } finally {
+            setLoading(false);
+        }
+    }, [cardName, cardSet, cardNumber, priceData, loading]);
 
-        if (allPrices.length < 2) return {
-            bg: 'bg-white border-slate-100 text-slate-400',
-            label: '---'
-        };
-
-        const sorted = [...allPrices].sort((a, b) => a.price - b.price);
-        const rank = sorted.findIndex(p => p.price === price);
-
-        if (rank === 0) return {
-            bg: 'bg-emerald-50 border-emerald-100 text-emerald-600',
-            label: 'MELHOR'
-        };
-        if (rank === sorted.length - 1) return {
-            bg: 'bg-rose-50 border-rose-100 text-rose-600',
-            label: 'CARO'
-        };
-        return {
-            bg: 'bg-amber-50 border-amber-100 text-amber-600',
-            label: 'MÉDIO'
-        };
+    const handleToggle = () => {
+        const willExpand = !expanded;
+        setExpanded(willExpand);
+        if (willExpand && !priceData) fetchPrices();
     };
 
-    if (size === 'sm') {
-        const allSources = [
-            { name: 'TCG Hub', shortName: 'Site' },
-            ...sites.map(s => ({ ...s }))
-        ];
+    const handleRefresh = async () => {
+        setPriceData(null);
+        setLoading(true);
+        setError('');
+        try {
+            const res = await fetch('/api/prices/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cardName, cardSet, cardNumber }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao buscar');
+            setPriceData(data.prices);
+            setSource(data.source);
+        } catch (err: any) {
+            setError(err.message || 'Erro ao buscar preços.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    // Compact mode for card gallery
+    if (size === 'sm') {
         return (
             <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-[9px] font-black tracking-tight">
-                {allSources.map((source, idx) => {
-                    const price = source.name === 'TCG Hub' ? currentPrice : prices[source.name];
-                    const styles = price ? getRankedStyles(source.name, price) : { bg: 'text-slate-300', label: '' };
-
-                    const isExternal = source.name !== 'TCG Hub';
-                    const site = isExternal ? sites.find(s => s.name === source.name) : null;
-
-                    return (
-                        <React.Fragment key={source.name}>
-                            {idx > 0 && <span className="text-slate-200">|</span>}
-                            {site ? (
-                                <a
-                                    href={site.getUrl(cardName, cardNumber)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:underline transition-all hover:brightness-75"
-                                >
-                                    <span className={`${styles.bg.split(' ')[2]} whitespace-nowrap uppercase`}>
-                                        {source.shortName}: R$ {price ? price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
-                                    </span>
-                                </a>
-                            ) : (
-                                <span className={`${styles.bg.split(' ')[2]} whitespace-nowrap uppercase`}>
-                                    {source.shortName}: R$ {price ? price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '---'}
-                                </span>
-                            )}
-                        </React.Fragment>
-                    );
-                })}
+                {currentPrice && (
+                    <span className="text-emerald-600 uppercase whitespace-nowrap">
+                        Site: R$ {currentPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                )}
+                <span className="text-slate-200">|</span>
+                <a
+                    href={`https://www.ligapokemon.com.br/?view=cards/card&card=${encodeURIComponent(cardNumber || cardName)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-rose-600 hover:underline uppercase whitespace-nowrap transition-colors"
+                >
+                    Liga →
+                </a>
+                <span className="text-slate-200">|</span>
+                <a
+                    href={`https://mypcards.com/pokemon/busca?q=${encodeURIComponent(cardNumber || cardName)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-rose-600 hover:underline uppercase whitespace-nowrap transition-colors"
+                >
+                    MYP →
+                </a>
             </div>
         );
     }
 
+    const hasTcgplayer = priceData && (priceData.tcgplayer.market || priceData.tcgplayer.low);
+    const hasCardmarket = priceData && (priceData.cardmarket.avg || priceData.cardmarket.low);
+
     return (
         <div className="space-y-4">
             <button
-                onClick={() => setExpanded(prev => !prev)}
+                onClick={handleToggle}
                 className="flex items-center gap-2.5 py-2 px-4 bg-white border border-slate-100 rounded-full shadow-sm hover:border-rose-200 hover:shadow-md transition-all group"
             >
                 <span className="text-base animate-pulse">📊</span>
@@ -117,65 +145,162 @@ export default function PriceComparison({ cardName, cardSet, cardNumber, size = 
             </button>
 
             {expanded && (
-                <div className="bg-white/50 backdrop-blur-sm border border-slate-100 rounded-[2rem] p-6 space-y-4 animate-fade-up shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)]">
+                <div className="bg-white/50 backdrop-blur-sm border border-slate-100 rounded-[2rem] p-6 space-y-5 animate-fade-up shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)]">
+                    {/* Header */}
                     <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                            Análise de Mercado
+                            Análise de Mercado Internacional
                         </p>
-                        <span className="text-[8px] font-bold text-slate-300 italic">Preços em tempo real</span>
+                        <div className="flex items-center gap-3">
+                            {source === 'cache' && (
+                                <span className="text-[7px] font-bold text-slate-300 italic">Cache</span>
+                            )}
+                            <button
+                                onClick={handleRefresh}
+                                disabled={loading}
+                                className="text-[8px] font-black text-rose-500 uppercase tracking-widest hover:text-rose-700 disabled:opacity-30 transition-colors"
+                            >
+                                {loading ? '...' : '↻ Atualizar'}
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex flex-col gap-3">
-                        {/* Current Site Price first for reference */}
-                        {currentPrice && (
-                            <div className={`flex items-center justify-between px-5 py-4 border rounded-2xl ${getRankedStyles('TCG Hub', currentPrice).bg}`}>
-                                <div className="flex items-center gap-3">
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-widest">Meu Site (TCG Hub)</p>
-                                        <p className="text-[8px] font-bold opacity-70">
-                                            Seu valor de venda atual
-                                        </p>
+                    {/* Loading */}
+                    {loading && (
+                        <div className="flex flex-col items-center py-8 space-y-4">
+                            <div className="h-8 w-8 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest animate-pulse">
+                                Consultando pokemontcg.io...
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Error */}
+                    {error && !loading && (
+                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-center">
+                            <p className="text-[9px] font-black text-rose-600 uppercase tracking-widest">{error}</p>
+                        </div>
+                    )}
+
+                    {/* Prices loaded */}
+                    {priceData && !loading && (
+                        <div className="space-y-4">
+                            {/* TCGPlayer */}
+                            <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-[20px] p-5 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-base">🇺🇸</span>
+                                        <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-widest">TCGPlayer</h4>
                                     </div>
+                                    {priceData.tcgplayer.url && (
+                                        <a href={priceData.tcgplayer.url} target="_blank" rel="noopener noreferrer"
+                                            className="text-[8px] font-black text-blue-500 uppercase tracking-widest hover:underline">
+                                            Ver no Site ↗
+                                        </a>
+                                    )}
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-lg font-black tracking-tight">R$ {currentPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                                    <p className="text-[7px] font-black uppercase opacity-60 tracking-widest">{getRankedStyles('TCG Hub', currentPrice).label}</p>
+                                {hasTcgplayer ? (
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        {[
+                                            { label: 'Mínimo', usd: priceData.tcgplayer.low, brl: priceData.tcgplayer.brl.low },
+                                            { label: 'Médio', usd: priceData.tcgplayer.mid, brl: priceData.tcgplayer.brl.mid },
+                                            { label: 'Mercado', usd: priceData.tcgplayer.market, brl: priceData.tcgplayer.brl.market },
+                                            { label: 'Máximo', usd: priceData.tcgplayer.high, brl: priceData.tcgplayer.brl.high },
+                                        ].map(item => (
+                                            <div key={item.label} className="bg-white/80 border border-blue-50 rounded-2xl px-4 py-3 text-center">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                                                <p className="text-sm font-black text-slate-900 tracking-tight">{formatCurrency(item.usd, 'USD')}</p>
+                                                <p className="text-[9px] font-bold text-blue-500 mt-0.5">≈ {formatCurrency(item.brl, 'BRL')}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center py-2">
+                                        Preço não disponível no TCGPlayer
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Cardmarket */}
+                            <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-[20px] p-5 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-base">🇪🇺</span>
+                                        <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Cardmarket</h4>
+                                    </div>
+                                    {priceData.cardmarket.url && (
+                                        <a href={priceData.cardmarket.url} target="_blank" rel="noopener noreferrer"
+                                            className="text-[8px] font-black text-emerald-500 uppercase tracking-widest hover:underline">
+                                            Ver no Site ↗
+                                        </a>
+                                    )}
+                                </div>
+                                {hasCardmarket ? (
+                                    <div className="grid grid-cols-3 gap-3">
+                                        {[
+                                            { label: 'Mínimo', eur: priceData.cardmarket.low, brl: priceData.cardmarket.brl.low },
+                                            { label: 'Média', eur: priceData.cardmarket.avg, brl: priceData.cardmarket.brl.avg },
+                                            { label: 'Tendência', eur: priceData.cardmarket.trend, brl: priceData.cardmarket.brl.trend },
+                                        ].map(item => (
+                                            <div key={item.label} className="bg-white/80 border border-emerald-50 rounded-2xl px-4 py-3 text-center">
+                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                                                <p className="text-sm font-black text-slate-900 tracking-tight">{formatCurrency(item.eur, 'EUR')}</p>
+                                                <p className="text-[9px] font-bold text-emerald-500 mt-0.5">≈ {formatCurrency(item.brl, 'BRL')}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center py-2">
+                                        Preço não disponível no Cardmarket
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Manual Links */}
+                            <div className="border-t border-slate-100 pt-4">
+                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3 text-center">
+                                    Busca Manual (Brasil)
+                                </p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <a
+                                        href={priceData.manualLinks.ligaPokemon}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2 h-12 bg-yellow-50 hover:bg-yellow-100 border border-yellow-100 rounded-2xl transition-all active:scale-95"
+                                    >
+                                        <span className="text-[10px] font-black text-yellow-700 uppercase tracking-widest">Liga Pokémon ↗</span>
+                                    </a>
+                                    <a
+                                        href={priceData.manualLinks.mypCards}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2 h-12 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition-all active:scale-95"
+                                    >
+                                        <span className="text-[10px] font-black text-blue-700 uppercase tracking-widest">MYP Cards ↗</span>
+                                    </a>
                                 </div>
                             </div>
-                        )}
 
-                        <div className="h-[1px] bg-slate-100 my-1"></div>
+                            {/* Timestamp */}
+                            {priceData.fetchedAt && (
+                                <p className="text-center text-[7px] font-bold text-slate-300 uppercase tracking-widest mt-2">
+                                    Última consulta: {new Date(priceData.fetchedAt).toLocaleString('pt-BR')}
+                                </p>
+                            )}
+                        </div>
+                    )}
 
-                        {sites.map(site => {
-                            const price = prices[site.name];
-                            const sourceStyles = price ? getRankedStyles(site.name, price) : { bg: 'bg-white border-slate-100 text-slate-900', label: 'BUSCAR' };
-
-                            return (
-                                <a
-                                    key={site.name}
-                                    href={site.getUrl(searchName, cardNumber)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`flex items-center justify-between px-5 py-4 border rounded-2xl transition-all duration-300 group/link active:scale-95 ${sourceStyles.bg} hover:shadow-lg`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest">{site.name}</p>
-                                            <p className="text-[8px] font-bold opacity-60 group-hover/link:opacity-100">
-                                                {price ? `R$ ${price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} - Ver anúncio →` : 'Clique para buscar no site →'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        {price && <p className="text-xl font-black tracking-tighter leading-none">R$ {price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>}
-                                        <p className="text-[8px] font-black uppercase opacity-60 tracking-widest mt-1.5">
-                                            {sourceStyles.label} ↗
-                                        </p>
-                                    </div>
-                                </a>
-                            );
-                        })}
-                    </div>
+                    {/* If not loaded yet and not loading */}
+                    {!priceData && !loading && !error && (
+                        <div className="text-center py-6">
+                            <button
+                                onClick={fetchPrices}
+                                className="px-6 h-12 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all shadow-lg"
+                            >
+                                Buscar Preços Agora
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

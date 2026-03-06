@@ -136,56 +136,73 @@ export default function CreateAuctionPage() {
 
     return (
         <AdminGuard>
-            <div className="max-w-4xl mx-auto px-6 py-12 animate-fade-up">
-                <div className="mb-16 space-y-4">
-                    <div className="inline-flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
-                        <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
-                        <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Protocolo de Criação de Leilão</span>
+            <div className="max-w-6xl mx-auto px-6 py-16 animate-fade-up">
+                <div className="mb-16 space-y-6 relative">
+                    <div className="inline-flex items-center gap-2 bg-rose-50/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-rose-100 shadow-sm">
+                        <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse" />
+                        <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Protocolo de Criação de Leilão</span>
                     </div>
-                    <h1 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
-                        Novo Leilão <span className="text-rose-600">Exclusivo.</span>
-                    </h1>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-relaxed">
-                        Configure um leilão público para a comunidade TCG Mega Store.
+                    <div className="space-y-2">
+                        <h1 className="text-6xl md:text-7xl font-black tracking-tighter text-slate-900 leading-[0.9] flex flex-col">
+                            Novo Leilão
+                            <span className="text-rose-600 relative inline-block">
+                                Exclusivo.
+                                <div className="absolute -bottom-2 left-0 w-24 h-2 bg-rose-600/10 rounded-full" />
+                            </span>
+                        </h1>
+                    </div>
+                    <p className="max-w-lg text-slate-500 font-bold text-sm uppercase tracking-widest leading-relaxed opacity-60">
+                        Configure um leilão público para a comunidade <span className="text-slate-900">TCG Mega Store</span>.
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-                    <div className="lg:col-span-2">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    <div className="lg:col-span-8">
                         <form onSubmit={handleSubmit} className="space-y-10">
-                            <div className="bg-white border border-slate-200 p-8 sm:p-12 rounded-[40px] shadow-sm space-y-8">
-                                <div className="flex items-center gap-4 mb-4">
-                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 whitespace-nowrap">Identificação da Carta</h2>
-                                    <div className="h-[1px] flex-1 bg-slate-100" />
+                            <div className="bg-white/80 backdrop-blur-xl border border-slate-200 p-8 sm:p-12 rounded-[48px] shadow-2xl shadow-slate-200/50 space-y-10 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full -mr-32 -mt-32 opacity-50" />
+
+                                <div className="flex items-center gap-4 mb-4 relative z-10">
+                                    <h2 className="text-[12px] font-black uppercase tracking-[0.3em] text-slate-900 whitespace-nowrap">Identificação da Carta</h2>
+                                    <div className="h-[2px] flex-1 bg-gradient-to-r from-slate-100 to-transparent" />
                                 </div>
 
-                                <div className="space-y-4 mb-8 bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Buscar na Database TCGDex</label>
-                                    <div className="flex flex-col md:flex-row gap-4">
-                                        <input
-                                            type="text"
-                                            placeholder="Nome da TCG Card..."
-                                            className="flex-1 h-14 px-5 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all font-bold text-slate-900"
-                                            value={cardName}
-                                            onChange={(e) => setCardName(e.target.value)}
-                                        />
-                                        <select
-                                            value={selectedSet}
-                                            onChange={(e) => setSelectedSet(e.target.value)}
-                                            className="flex-1 h-14 px-5 bg-white border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all font-bold text-slate-900 appearance-none cursor-pointer"
-                                        >
-                                            <option value="">Todas as Coleções</option>
-                                            {sets.map(set => (
-                                                <option key={set.id} value={set.id}>{set.name}</option>
-                                            ))}
-                                        </select>
+                                <div className="space-y-4 mb-8 bg-slate-50/50 backdrop-blur-md p-2 rounded-[32px] border border-slate-200/60 relative z-10 shadow-inner">
+                                    <div className="flex flex-col md:flex-row gap-2">
+                                        <div className="flex-[2] relative group">
+                                            <input
+                                                type="text"
+                                                placeholder="Buscar na Database TCGDex..."
+                                                className="w-full h-16 px-8 bg-white border border-transparent rounded-[24px] text-sm focus:outline-none focus:ring-4 focus:ring-rose-500/10 transition-all font-bold text-slate-900 shadow-sm group-hover:border-slate-200"
+                                                value={cardName}
+                                                onChange={(e) => setCardName(e.target.value)}
+                                            />
+                                            <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-rose-500 transition-colors">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 relative">
+                                            <select
+                                                value={selectedSet}
+                                                onChange={(e) => setSelectedSet(e.target.value)}
+                                                className="w-full h-16 px-6 bg-white border border-transparent rounded-[24px] text-[11px] focus:outline-none focus:ring-4 focus:ring-rose-500/10 transition-all font-black text-slate-900 appearance-none cursor-pointer shadow-sm uppercase tracking-widest"
+                                            >
+                                                <option value="">Coleções</option>
+                                                {sets.map(set => (
+                                                    <option key={set.id} value={set.id}>{set.name}</option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                                            </div>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={searchCards}
                                             disabled={searching}
-                                            className="h-14 px-8 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all disabled:opacity-50"
+                                            className="h-16 px-10 bg-slate-900 text-white font-black uppercase tracking-[0.2em] text-[11px] rounded-[24px] hover:bg-rose-600 transition-all disabled:opacity-50 shadow-lg shadow-slate-900/10"
                                         >
-                                            {searching ? 'Buscando...' : 'Buscar'}
+                                            {searching ? '...' : 'Buscar'}
                                         </button>
                                     </div>
                                 </div>
@@ -216,40 +233,38 @@ export default function CreateAuctionPage() {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome da Carta</label>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8 relative z-10">
+                                    <div className="group space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-rose-600 transition-colors">Nome da Carta</label>
                                         <input
                                             required value={cardName} onChange={e => setCardName(e.target.value)}
                                             placeholder="Charizard Base Set"
-                                            className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm"
+                                            className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-[24px] focus:border-rose-600 focus:bg-white focus:ring-[6px] focus:ring-rose-50 outline-none transition-all font-bold text-sm shadow-sm"
                                         />
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Edição / Expansão</label>
+                                    <div className="group space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-rose-600 transition-colors">Edição / Expansão</label>
                                         <input
                                             required value={cardSet} onChange={e => setCardSet(e.target.value)}
                                             placeholder="Base Set 1999"
-                                            className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm"
+                                            className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-[24px] focus:border-rose-600 focus:bg-white focus:ring-[6px] focus:ring-rose-50 outline-none transition-all font-bold text-sm shadow-sm"
                                         />
                                     </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Número da Carta <span className="text-rose-500">*</span></label>
+                                    <div className="group space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-rose-600 transition-colors">Número da Carta <span className="text-rose-500">*</span></label>
                                         <input
                                             required value={cardNumber} onChange={e => setCardNumber(e.target.value)}
                                             placeholder="021/094"
-                                            className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm"
+                                            className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-[24px] focus:border-rose-600 focus:bg-white focus:ring-[6px] focus:ring-rose-50 outline-none transition-all font-bold text-sm shadow-sm"
                                         />
-                                        <p className="text-[9px] text-slate-400 font-bold ml-1">Formato: 021/094</p>
+                                        <p className="text-[9px] text-slate-400 font-bold ml-2 opacity-60">Exemplo: 021/094</p>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Condição</label>
+                                    <div className="group space-y-3 relative">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-rose-600 transition-colors">Condição</label>
                                         <select
                                             value={condition} onChange={e => setCondition(e.target.value)}
-                                            className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm appearance-none cursor-pointer text-slate-900"
+                                            className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-[24px] focus:border-rose-600 focus:bg-white focus:ring-[6px] focus:ring-rose-50 outline-none transition-all font-bold text-sm appearance-none cursor-pointer text-slate-900 shadow-sm"
                                         >
                                             <option value="M">Mint (M)</option>
                                             <option value="NM">Near Mint (NM)</option>
@@ -257,141 +272,176 @@ export default function CreateAuctionPage() {
                                             <option value="MP">Moderately Played (MP)</option>
                                             <option value="HP">Heavily Played (HP)</option>
                                         </select>
+                                        <div className="absolute right-6 top-[54px] pointer-events-none text-slate-400">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idioma do Card</label>
+                                    <div className="group space-y-3 relative">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-rose-600 transition-colors">Idioma</label>
                                         <select
                                             value={language} onChange={e => setLanguage(e.target.value)}
-                                            className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm appearance-none cursor-pointer text-slate-900"
+                                            className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-[24px] focus:border-rose-600 focus:bg-white focus:ring-[6px] focus:ring-rose-50 outline-none transition-all font-bold text-sm appearance-none cursor-pointer text-slate-900 shadow-sm"
                                         >
                                             <option>Português</option>
                                             <option>Inglês</option>
                                             <option>Japonês</option>
                                         </select>
+                                        <div className="absolute right-6 top-[54px] pointer-events-none text-slate-400">
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">URL da Imagem</label>
+                                    <div className="group space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2 group-focus-within:text-rose-600 transition-colors">URL da Imagem</label>
                                         <input
                                             value={imageUrl} onChange={e => setImageUrl(e.target.value)}
-                                            placeholder="https://images.pokemontcg.io/base1/4.png"
-                                            className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm"
+                                            placeholder="https://images.pokemontcg.io/..."
+                                            className="w-full h-16 px-6 bg-slate-50 border border-slate-100 rounded-[24px] focus:border-rose-600 focus:bg-white focus:ring-[6px] focus:ring-rose-50 outline-none transition-all font-bold text-sm shadow-sm"
                                         />
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="bg-slate-900 p-8 sm:p-12 rounded-[40px] shadow-2xl space-y-8 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/10 rounded-bl-full -mr-20 -mt-20" />
+                            <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-8 sm:p-12 rounded-[48px] shadow-3xl shadow-slate-900/40 space-y-10 relative overflow-hidden group/dark">
+                                <div className="absolute top-0 right-0 w-80 h-80 bg-rose-500/10 rounded-full -mr-40 -mt-40 blur-3xl opacity-50 group-hover/dark:bg-rose-500/20 transition-all duration-700" />
+
                                 <div className="flex items-center gap-4 mb-4 relative z-10">
-                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-rose-500 whitespace-nowrap">Configuração do Leilão</h2>
-                                    <div className="h-[1px] flex-1 bg-white/5" />
+                                    <h2 className="text-[12px] font-black uppercase tracking-[0.3em] text-rose-500 whitespace-nowrap">Configuração do Leilão</h2>
+                                    <div className="h-[2px] flex-1 bg-gradient-to-r from-white/10 to-transparent" />
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Lance Inicial (BRL)</label>
-                                        <input
-                                            required type="number" min="1" step="0.01"
-                                            value={startingBid} onChange={e => setStartingBid(e.target.value)}
-                                            placeholder="500.00"
-                                            className="w-full h-16 px-6 bg-white/5 border border-white/5 text-yellow-400 rounded-3xl focus:border-rose-600 focus:bg-black/20 outline-none transition-all font-black text-2xl"
-                                        />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">Lance Inicial (BRL)</label>
+                                        <div className="relative group/input">
+                                            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-2xl font-black text-rose-500/50">R$</div>
+                                            <input
+                                                required type="number" min="1" step="0.01"
+                                                value={startingBid} onChange={e => setStartingBid(e.target.value)}
+                                                placeholder="0,00"
+                                                className="w-full h-20 pl-16 pr-8 bg-white/5 border border-white/5 text-yellow-400 rounded-[28px] focus:border-rose-500/50 focus:bg-white/10 outline-none transition-all font-black text-3xl shadow-2xl"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Duração do Leilão</label>
-                                        <select
-                                            value={durationHours}
-                                            onChange={e => setDurationHours(Number(e.target.value))}
-                                            className="w-full h-16 px-6 bg-white/5 border border-white/5 text-white rounded-3xl focus:border-rose-600 focus:bg-black/20 outline-none transition-all font-black text-lg appearance-none cursor-pointer"
-                                        >
-                                            {durationOptions.map(opt => (
-                                                <option key={opt.hours} value={opt.hours}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">Duração Limite</label>
+                                        <div className="relative">
+                                            <select
+                                                value={durationHours}
+                                                onChange={e => setDurationHours(Number(e.target.value))}
+                                                className="w-full h-20 px-8 bg-white/5 border border-white/5 text-white rounded-[28px] focus:border-rose-500/50 focus:bg-white/10 outline-none transition-all font-black text-xl appearance-none cursor-pointer shadow-2xl"
+                                            >
+                                                {durationOptions.map(opt => (
+                                                    <option key={opt.hours} value={opt.hours} className="bg-slate-900">{opt.label}</option>
+                                                ))}
+                                            </select>
+                                            <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-2 relative z-10">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Descrição Técnica</label>
+                                <div className="space-y-4 relative z-10">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">Descritivo Técnico</label>
                                     <textarea
                                         value={notes} onChange={e => setNotes(e.target.value)}
-                                        rows={4}
-                                        placeholder="Adicione detalhes sobre o estado da carta, centragem, brilho e qualquer detalhe relevante para o colecionador..."
-                                        className="w-full p-8 bg-white/5 border border-white/5 text-slate-300 rounded-[30px] focus:border-rose-600 focus:bg-black/20 outline-none transition-all font-medium text-sm leading-relaxed"
+                                        rows={6}
+                                        placeholder="Descreva o estado de conservação, raridade e detalhes do card..."
+                                        className="w-full p-8 bg-white/5 border border-white/5 text-slate-300 rounded-[32px] focus:border-rose-500/50 focus:bg-white/10 outline-none transition-all font-medium text-sm leading-relaxed shadow-inner"
                                     />
                                 </div>
                             </div>
                         </form>
                     </div>
 
-                    {/* Right: Preview & Publish */}
-                    <div className="space-y-8">
+                    <div className="lg:col-span-4">
                         <div className="sticky top-12 space-y-8">
-                            <div className="bg-white border border-slate-200 p-8 rounded-[40px] shadow-sm space-y-6">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preview do Leilão</label>
-                                <div className="aspect-[3/4] bg-slate-50 border-2 border-dashed border-slate-200 rounded-[30px] overflow-hidden flex flex-col items-center justify-center p-8 group transition-all hover:border-rose-200 relative">
+                            <div className="bg-white border border-slate-200 p-10 rounded-[48px] shadow-2xl shadow-slate-200/50 space-y-8 relative overflow-hidden group/preview">
+                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-400" />
+
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Preview Realtime</label>
+                                    <div className="px-2 py-0.5 bg-rose-50 rounded-md">
+                                        <span className="text-[8px] font-black text-rose-600 uppercase">Live</span>
+                                    </div>
+                                </div>
+
+                                <div className="aspect-[3/4] bg-slate-50 rounded-[32px] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center p-6 relative overflow-hidden group-hover/preview:border-rose-200 transition-colors">
                                     {imageUrl ? (
-                                        <div className="space-y-6 text-center animate-fade-in relative w-full">
-                                            <img
-                                                src={imageUrl}
-                                                alt="Preview"
-                                                onError={() => {
-                                                    if (!imageError) {
-                                                        setImageError(true);
-                                                        if (!imageUrl.includes('/pt/')) {
-                                                            const ptUrl = imageUrl.replace(/\/(ja|en)\//, '/pt/');
-                                                            setImageUrl(ptUrl);
+                                        <div className="relative w-full h-full flex flex-col items-center animate-fade-in group">
+                                            <div className="relative w-full aspect-[21/30] mb-6">
+                                                <img
+                                                    src={imageUrl}
+                                                    alt="Preview"
+                                                    onError={() => {
+                                                        if (!imageError) {
+                                                            setImageError(true);
+                                                            if (!imageUrl.includes('/pt/')) {
+                                                                const ptUrl = imageUrl.replace(/\/(ja|en)\//, '/pt/');
+                                                                setImageUrl(ptUrl);
+                                                            }
                                                         }
-                                                    }
-                                                }}
-                                                className="w-full h-auto rounded-xl shadow-2xl transform group-hover:scale-105 transition-transform duration-500"
-                                            />
+                                                    }}
+                                                    className="w-full h-full object-contain rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] transform group-hover:scale-110 transition-transform duration-700 ease-out z-10 relative"
+                                                />
+                                                <div className="absolute inset-x-0 bottom-0 h-10 bg-black/20 blur-2xl rounded-full scale-x-75 -z-0 opacity-50" />
+                                            </div>
+
                                             {imageError && (
-                                                <div className="absolute inset-0 flex items-center justify-center p-4">
-                                                    <div className="bg-rose-600 text-white text-[9px] font-black uppercase px-3 py-1 rounded-full shadow-lg">
-                                                        Imagem {language} indisponível - Usando Padrão
-                                                    </div>
+                                                <div className="mb-4 bg-rose-600 text-white text-[8px] font-black uppercase px-4 py-1.5 rounded-full shadow-lg animate-bounce">
+                                                    Mockup: Card {language} Indisponível
                                                 </div>
                                             )}
-                                            <div className="space-y-1">
-                                                <p className="font-black text-slate-900 tracking-tight text-xl leading-none">{cardName || '---'}</p>
-                                                <p className="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em]">{cardSet || '---'}</p>
+
+                                            <div className="text-center space-y-2">
+                                                <h3 className="font-black text-slate-900 tracking-tighter text-2xl leading-[0.9]">{cardName || 'Nome da Carta'}</h3>
+                                                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">{cardSet || 'Coleção'}</p>
                                             </div>
-                                            <div className="absolute bottom-4 right-4 bg-slate-900 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">
-                                                {condition}
+
+                                            <div className="absolute top-2 right-2 flex flex-col gap-2">
+                                                <div className="bg-slate-900/90 backdrop-blur-md text-white h-10 w-10 rounded-2xl flex items-center justify-center text-[10px] font-black shadow-xl">
+                                                    {condition}
+                                                </div>
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="text-center space-y-4 opacity-40">
-                                            <div className="text-5xl">🔨</div>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aguardando seleção...</p>
+                                        <div className="text-center space-y-6 opacity-30 group-hover:opacity-50 transition-opacity">
+                                            <div className="flex justify-center">
+                                                <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center text-3xl">🔨</div>
+                                            </div>
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Aguardando Dados...</p>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-4 pt-4">
-                                    <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                                        <span className="text-slate-400">Lance Inicial_</span>
-                                        <span className="text-slate-900 text-sm">{formatBRL(parseFloat(startingBid) || 0)}</span>
+                                <div className="space-y-6">
+                                    <div className="bg-slate-50 p-6 rounded-[28px] border border-slate-100 flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Lance Inicial</span>
+                                            <span className="text-xl font-black text-slate-900 leading-none mt-1">{formatBRL(parseFloat(startingBid) || 0)}</span>
+                                        </div>
+                                        <svg className="w-6 h-6 text-slate-200" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.39 2.1-1.39 1.47 0 2.01.59 2.06 1.47h1.73c-.05-1.44-1.02-2.55-2.59-2.91V5.5h-2.5v1.64c-1.67.37-2.73 1.46-2.73 2.91 0 1.95 1.51 2.8 3.82 3.38 2.06.52 2.48 1.1 2.48 1.83 0 1.05-.78 1.54-2.22 1.54-1.75 0-2.43-.8-2.53-1.89h-1.73c.11 1.66 1.25 2.76 2.89 3.12v1.67h2.5v-1.64c1.71-.34 2.84-1.39 2.84-2.9 0-2.25-1.95-2.88-4.14-3.41z" /></svg>
                                     </div>
+
                                     <button
                                         onClick={(e) => handleSubmit(e as any)}
                                         disabled={loading || !imageUrl}
-                                        className="w-full h-16 bg-rose-600 text-white font-black uppercase tracking-widest text-[11px] rounded-[25px] shadow-xl shadow-rose-500/20 hover:bg-rose-700 transition-all transform hover:-translate-y-1 active:scale-95 disabled:opacity-50"
+                                        className="w-full h-20 bg-rose-600 text-white font-black uppercase tracking-[0.2em] text-[12px] rounded-[30px] shadow-2xl shadow-rose-500/40 hover:bg-rose-700 hover:shadow-rose-600/50 transition-all transform hover:-translate-y-1 active:scale-[0.98] disabled:opacity-30 disabled:hover:translate-y-0"
                                     >
-                                        {loading ? 'PUBLICANDO...' : 'PUBLICAR LEILÃO'}
+                                        {loading ? 'PUBLICANDO...' : 'PUBLICAR AGORA'}
                                     </button>
                                 </div>
-                            </div>
 
-                            <div className="p-6 bg-slate-900 rounded-[30px] text-center space-y-2">
-                                <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Contrato de Leilão</p>
-                                <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                                    Ao publicar, o leilão entrará em vigor imediatamente e não poderá ser cancelado se houver lances.
-                                </p>
+                                <div className="pt-2">
+                                    <div className="p-5 bg-slate-900 rounded-[28px] relative group/contract overflow-hidden">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-rose-500/20 to-transparent opacity-0 group-hover/contract:opacity-100 transition-opacity" />
+                                        <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1 relative z-10">Contrato de Leilão</p>
+                                        <p className="text-[10px] text-slate-400 font-medium leading-relaxed relative z-10 uppercase text-[8px] tracking-tight">
+                                            A publicação implica na aceitação dos termos de lances e irreversibilidade imediata após o primeiro lance.
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

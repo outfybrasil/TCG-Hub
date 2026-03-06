@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
+import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
 interface CreditData {
     balance: number;
@@ -45,15 +45,11 @@ export default function CreditosPage() {
     const [loading, setLoading] = useState(true);
 
     // Recharge Flow State
-    const [step, setStep] = useState<1 | 2 | 3>(1); // 1: Amount, 2: Method, 3: Payment
+    const [step, setStep] = useState<1 | 2>(1); // 1: Amount, 2: Checkout Pro Ready
     const [depositAmount, setDepositAmount] = useState('');
-    const [depositMethod, setDepositMethod] = useState<'pix' | 'card' | null>(null);
     const [depositing, setDepositing] = useState(false);
-    const [depositResult, setDepositResult] = useState<any>(null);
     const [depositError, setDepositError] = useState('');
-
-    const [cpf, setCpf] = useState('');
-    const [copied, setCopied] = useState(false);
+    const [preferenceId, setPreferenceId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!mpInitialized) {
@@ -76,26 +72,15 @@ export default function CreditosPage() {
             if (txRes.data) setTransactions(txRes.data);
             if (profileRes.data) {
                 setProfile(profileRes.data);
-                setCpf(profileRes.data.document_number || '');
             }
             setLoading(false);
         };
         init();
     }, [router]);
 
-    const handleCopyPix = (code: string) => {
-        navigator.clipboard.writeText(code);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 3000);
-    };
-
-    const handlePixDeposit = async () => {
+    const handleGeneratePreference = async () => {
         if (!depositAmount || parseFloat(depositAmount) < 10) {
             setDepositError('Valor mínimo: R$ 10,00');
-            return;
-        }
-        if (!cpf || cpf.length < 11) {
-            setDepositError('Informe um CPF válido para continuar.');
             return;
         }
 
@@ -103,32 +88,26 @@ export default function CreditosPage() {
         setDepositError('');
 
         try {
-            // Update profile with CPF if changed
-            if (cpf !== profile?.document_number) {
-                await supabase.from('profiles').update({ document_number: cpf, document_type: 'CPF' }).eq('id', user.id);
-            }
-
-            const res = await fetch('/api/creditos/depositar', {
+            const res = await fetch('/api/creditos/preference', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     amount: parseFloat(depositAmount),
-                    paymentMethod: 'pix',
                     userId: user.id,
                     payerEmail: user.email,
                     payerFirstName: profile?.full_name?.split(' ')[0] || user.user_metadata?.name?.split(' ')[0] || 'Cliente',
                     payerLastName: profile?.full_name?.split(' ').slice(1).join(' ') || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'TCG',
-                    docType: 'CPF',
-                    docNumber: cpf
                 })
             });
 
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
-            setDepositResult(data);
-            setStep(3);
+
+            setPreferenceId(data.id);
+            setStep(2);
         } catch (err: any) {
-            setDepositError(err.message || 'Erro ao gerar PIX.');
+            console.error(err);
+            setDepositError(err.message || 'Erro ao gerar Checkout.');
         } finally {
             setDepositing(false);
         }
@@ -219,148 +198,40 @@ export default function CreditosPage() {
                                 />
                             </div>
                             <button
-                                onClick={() => setStep(2)}
-                                disabled={!depositAmount || parseFloat(depositAmount) < 10}
+                                onClick={handleGeneratePreference}
+                                disabled={depositing || !depositAmount || parseFloat(depositAmount) < 10}
                                 className="w-full h-14 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all shadow-xl disabled:opacity-50"
                             >
-                                Continuar
+                                {depositing ? 'Gerando Checkout...' : 'Continuar para Pagamento'}
                             </button>
                         </div>
                     )}
 
-                    {step === 2 && (
-                        <div className="space-y-6 animate-fade-in">
+                    {step === 2 && preferenceId && (
+                        <div className="space-y-8 animate-fade-in">
                             <div className="flex items-center gap-2 mb-2">
-                                <button onClick={() => setStep(1)} className="text-[10px] font-black text-slate-400 uppercase hover:text-rose-600">← Voltar</button>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Método de Pagamento</p>
+                                <button onClick={() => { setStep(1); setPreferenceId(null); }} className="text-[10px] font-black text-slate-400 uppercase hover:text-rose-600">← Alterar Valor</button>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Checkout Pro</p>
                             </div>
 
-                            <div className="space-y-3">
-                                <button
-                                    onClick={() => setDepositMethod('pix')}
-                                    className={`w-full p-5 rounded-2xl border-2 flex items-center justify-between transition-all ${depositMethod === 'pix' ? 'border-rose-500 bg-rose-50/50' : 'border-slate-100 hover:border-slate-200'}`}
-                                >
-                                    <div className="flex items-center gap-4 text-left">
-                                        <div className="h-10 w-10 bg-slate-950 rounded-xl flex items-center justify-center text-white font-black text-lg italic">PIX</div>
-                                        <div>
-                                            <p className="text-sm font-black text-slate-900">PIX Cashback</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Aprovação instantânea</p>
-                                        </div>
-                                    </div>
-                                    {depositMethod === 'pix' && <div className="h-4 w-4 rounded-full bg-rose-600" />}
-                                </button>
-                                <button
-                                    onClick={() => setDepositMethod('card')}
-                                    className={`w-full p-5 rounded-2xl border-2 flex items-center justify-between transition-all ${depositMethod === 'card' ? 'border-rose-500 bg-rose-50/50' : 'border-slate-100 hover:border-slate-200'}`}
-                                >
-                                    <div className="flex items-center gap-4 text-left">
-                                        <div className="h-10 w-10 bg-slate-950 rounded-xl flex items-center justify-center text-white">
-                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-slate-900">Cartão de Crédito</p>
-                                            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Pague em até 12x</p>
-                                        </div>
-                                    </div>
-                                    {depositMethod === 'card' && <div className="h-4 w-4 rounded-full bg-rose-600" />}
-                                </button>
+                            <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl mb-4 flex justify-between items-center">
+                                <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor da Recarga</p>
+                                    <p className="text-2xl font-black text-slate-900">R$ {parseFloat(depositAmount).toFixed(2).replace('.', ',')}</p>
+                                </div>
                             </div>
 
-                            <div className="pt-4">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Sua Identificação (Obrigatório)</p>
-                                <input
-                                    type="text"
-                                    placeholder="CPF (apenas números)"
-                                    value={cpf}
-                                    onChange={e => setCpf(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                                    className="w-full h-14 px-5 bg-slate-50 border-none rounded-2xl text-slate-900 font-black text-sm focus:ring-2 focus:ring-rose-500"
-                                />
-                            </div>
+                            <Wallet
+                                initialization={{ preferenceId }}
+                            />
 
-                            <button
-                                onClick={depositMethod === 'pix' ? handlePixDeposit : () => setStep(3)}
-                                disabled={!depositMethod || !cpf || cpf.length < 11 || depositing}
-                                className="w-full h-14 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all shadow-xl disabled:opacity-50"
-                            >
-                                {depositing ? 'Gerando PIX...' : 'Próximo'}
-                            </button>
+                            <p className="text-center text-[10px] text-slate-400 font-bold max-w-sm mx-auto">
+                                Clique acima para abrir a janela segura do Mercado Pago e concluir sua recarga.
+                            </p>
                         </div>
                     )}
 
-                    {step === 3 && (
-                        <div className="animate-fade-in text-center">
-                            <div className="flex items-center gap-2 mb-6">
-                                <button onClick={() => setStep(2)} className="text-[10px] font-black text-slate-400 uppercase hover:text-rose-600">← Alterar Método</button>
-                            </div>
 
-                            {depositMethod === 'pix' && depositResult?.qr_code_base64 && (
-                                <div className="space-y-6">
-                                    <div className="bg-slate-50 p-8 rounded-[32px] inline-block mb-4">
-                                        <img src={`data:image/png;base64,${depositResult.qr_code_base64}`} alt="QR Code PIX" className="w-56 h-56 mx-auto" />
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <button
-                                            onClick={() => handleCopyPix(depositResult.qr_code)}
-                                            className="w-full py-4 border-2 border-slate-900 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-900 hover:text-white transition-all"
-                                        >
-                                            {copied ? '✓ Código Copiado!' : 'Copiar Código PIX'}
-                                        </button>
-                                        <p className="text-[8px] text-slate-400 font-black uppercase tracking-widest">
-                                            Aprovação automática após o pagamento. Não feche esta página.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {depositMethod === 'card' && (
-                                <div className="text-left">
-                                    <Payment
-                                        initialization={{ amount: Number(depositAmount), payer: { email: user?.email || '' } }}
-                                        customization={{
-                                            paymentMethods: { creditCard: 'all', ticket: 'all', bankTransfer: 'all', mercadoPago: 'all' },
-                                            visual: { style: { theme: 'default', customVariables: { baseColor: '#e11d48' } } }
-                                        }}
-                                        onSubmit={async (formData: any) => {
-                                            setDepositing(true);
-                                            try {
-                                                const res = await fetch('/api/creditos/depositar', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({
-                                                        amount: Number(depositAmount),
-                                                        paymentMethod: 'card',
-                                                        token: formData.token,
-                                                        installments: formData.installments,
-                                                        paymentMethodId: formData.payment_method_id,
-                                                        issuerId: formData.issuer_id,
-                                                        userId: user.id,
-                                                        payerEmail: user.email,
-                                                        docType: 'CPF',
-                                                        docNumber: cpf
-                                                    })
-                                                });
-                                                const data = await res.json();
-                                                if (!res.ok) throw new Error(data.error);
-
-                                                if (data.status === 'approved') {
-                                                    setCredits(prev => ({ ...prev, balance: prev.balance + Number(depositAmount) }));
-                                                    alert('✅ Créditos adicionados com sucesso!');
-                                                    setStep(1);
-                                                    setDepositAmount('');
-                                                    setDepositResult(null);
-                                                }
-                                            } catch (err: any) {
-                                                alert(err.message || 'Erro ao processar cartão.');
-                                            } finally {
-                                                setDepositing(false);
-                                            }
-                                        }}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    )}
 
                     {depositError && (
                         <p className="mt-4 p-4 bg-rose-50 text-rose-600 text-[10px] font-black uppercase tracking-widest rounded-2xl text-center border border-rose-100">

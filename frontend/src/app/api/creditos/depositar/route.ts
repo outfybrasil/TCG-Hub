@@ -8,7 +8,11 @@ const payment = new Payment(client);
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { amount, paymentMethod, userId, payerEmail, payerFirstName, payerLastName, docType, docNumber, token, installments, paymentMethodId, issuerId } = body;
+        const { amount, paymentMethod, userId, payerEmail, payerFirstName, payerLastName, docType, docNumber, token, installments } = body;
+
+        // Handle both camelCase and snake_case from frontend
+        const paymentMethodId = body.paymentMethodId || body.payment_method_id;
+        const issuerId = body.issuerId || body.issuer_id;
 
         if (!amount || !userId || !payerEmail) {
             return NextResponse.json({ error: 'Dados obrigatórios ausentes.' }, { status: 400 });
@@ -19,9 +23,9 @@ export async function POST(req: Request) {
         }
 
         let email = payerEmail;
-        if (process.env.MP_ACCESS_TOKEN?.includes('TEST-')) {
-            // Using a strictly test user email pattern for Sandbox
-            email = 'test_user_678@testuser.com';
+        if (process.env.MP_ACCESS_TOKEN?.includes('TEST-') && !payerEmail?.includes('@')) {
+            // Only force test email if the provided one is invalid or missing
+            email = 'test_user_1476974797@testuser.com';
         }
 
         let paymentBody: any;
@@ -47,7 +51,10 @@ export async function POST(req: Request) {
                 installments: Number(installments) || 1,
                 payment_method_id: paymentMethodId,
                 issuer_id: issuerId,
-                payer: { email }
+                payer: {
+                    email,
+                    identification: { type: docType || 'CPF', number: docNumber || '11804338907' }
+                }
             };
         }
 

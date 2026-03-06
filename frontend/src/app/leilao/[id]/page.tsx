@@ -6,12 +6,27 @@ import { useAuction } from '@/hooks/useAuction';
 import { supabase } from '@/lib/supabase';
 import CountdownTimer from '@/components/CountdownTimer';
 import PriceComparison from '@/components/PriceComparison';
+import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 
 const formatBRL = (v: number) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
 const formatDate = (iso: string) =>
     new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+const RuleItem = ({ icon, title, desc }: { icon: string, title: string, desc: string }) => (
+    <div className="flex gap-4 group/rule">
+        <div className="h-10 w-10 shrink-0 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-lg shadow-sm group-hover/rule:border-rose-200 group-hover/rule:bg-rose-50 transition-all duration-300">
+            {icon}
+        </div>
+        <div className="space-y-1">
+            <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{title}</h4>
+            <p className="text-[9px] text-slate-400 font-bold leading-relaxed uppercase tracking-tight">{desc}</p>
+        </div>
+    </div>
+);
+
+let mpInitialized = false;
 
 export default function AuctionDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -26,18 +41,30 @@ export default function AuctionDetailPage() {
     // Reload Modal State
     const [showReload, setShowReload] = useState(false);
     const [depositAmount, setDepositAmount] = useState('');
-    const [depositMethod, setDepositMethod] = useState<'pix' | 'card'>('pix');
     const [depositing, setDepositing] = useState(false);
-    const [depositResult, setDepositResult] = useState<any>(null);
+    const [preferenceId, setPreferenceId] = useState<string | null>(null);
     const [depositError, setDepositError] = useState('');
     const [currentImageUrl, setCurrentImageUrl] = useState('');
     const [imageError, setImageError] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+    const [showEndConfirmation, setShowEndConfirmation] = useState(false);
+    const [endingAuction, setEndingAuction] = useState(false);
 
     useEffect(() => {
+        if (!mpInitialized) {
+            mpInitialized = true;
+            initMercadoPago(process.env.NEXT_PUBLIC_MP_PUBLIC_KEY as string, { locale: 'pt-BR' });
+        }
+
         supabase.auth.getUser()
             .then(({ data: { user } }) => {
                 if (user) {
-                    setUser({ id: user.id, name: user.user_metadata?.name || user.email });
+                    setUser({ id: user.id, name: user.user_metadata?.name || user.email || '' });
+
+                    // Check if Admin
+                    const ADMIN_EMAILS = ['admin@tcghub.com.br', 'contato@tcgmegastore.com.br'];
+                    setIsAdmin(ADMIN_EMAILS.includes(user.email || ''));
+
                     // Fetch auction credits
                     supabase.from('auction_credits')
                         .select('balance, locked')
@@ -51,7 +78,7 @@ export default function AuctionDetailPage() {
             .catch(() => setUser(null));
 
         const interval = setInterval(() => {
-            if (user && depositResult && depositResult.status === 'pending') {
+            if (user && preferenceId) { // Check periodically if credits updated while modal is open
                 supabase.from('auction_credits')
                     .select('balance, locked')
                     .eq('user_id', user.id)
@@ -61,7 +88,7 @@ export default function AuctionDetailPage() {
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [user?.id, depositResult]);
+    }, [user?.id, preferenceId]);
 
     useEffect(() => {
         if (auction?.imageUrl) {
@@ -80,35 +107,54 @@ export default function AuctionDetailPage() {
         }
         setDepositError('');
         setDepositing(true);
-        setDepositResult(null);
+        setPreferenceId(null);
 
         try {
-            const res = await fetch('/api/creditos/depositar', {
+            const res = await fetch('/api/creditos/preference', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     amount,
-                    paymentMethod: depositMethod,
                     userId: user?.id,
-                    payerEmail: user?.name?.includes('@') ? user.name : 'gustavolanconi@outlook.com',
+                    payerEmail: user?.name?.includes('@') ? user.name : undefined,
                     payerFirstName: user?.name?.split(' ')[0] || 'Cliente',
-                    payerLastName: user?.name?.split(' ').slice(1).join(' ') || 'TCG',
-                    docType: 'CPF',
-                    docNumber: '11804338907' // Using CPF from screenshot for testing session if needed, or keeping it fixed for demo
+                    payerLastName: user?.name?.split(' ').slice(1).join(' ') || 'TCG'
                 })
             });
 
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
-            setDepositResult(data);
-
-            if (data.status === 'approved') {
-                setUserCredits(prev => prev ? { ...prev, balance: prev.balance + amount } : { balance: amount, locked: 0 });
-            }
+            setPreferenceId(data.id);
         } catch (err: any) {
-            setDepositError(err.message || 'Erro ao processar depósito.');
+            setDepositError(err.message || 'Erro ao preparar checkout.');
         } finally {
             setDepositing(false);
+        }
+    };
+
+    const handleEndAuction = async () => {
+        if (!id || !user || !isAdmin) return;
+
+        setEndingAuction(true);
+        try {
+            // Set end_at to now and status to finished
+            const { error } = await supabase
+                .from('auctions')
+                .update({
+                    ends_at: new Date().toISOString(),
+                    status: 'finished'
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            setShowEndConfirmation(false);
+            refetch();
+        } catch (err) {
+            console.error(err);
+            alert('Erro ao finalizar leilão.');
+        } finally {
+            setEndingAuction(false);
         }
     };
 
@@ -292,6 +338,19 @@ export default function AuctionDetailPage() {
                         {auction.notes && (
                             <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-lg">{auction.notes}</p>
                         )}
+
+                        {/* Admin Action */}
+                        {isAdmin && !isExpired && (
+                            <div className="pt-4 animate-fade-up">
+                                <button
+                                    onClick={() => setShowEndConfirmation(true)}
+                                    className="px-6 h-10 border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-100 hover:bg-rose-50 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-2 group"
+                                >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-rose-600 animate-pulse" />
+                                    Encerrar Leilão Manualmente
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Countdown Timer */}
@@ -424,6 +483,36 @@ export default function AuctionDetailPage() {
                     </div>
 
                     <PriceComparison cardName={auction.cardName} cardSet={auction.cardSet} cardNumber={auction.cardNumber} />
+
+                    {/* General Rules Section */}
+                    <div className="bg-slate-50/50 border border-slate-100 p-8 rounded-[40px] space-y-8 animate-fade-up">
+                        <div className="flex items-center gap-4">
+                            <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 whitespace-nowrap">Regras Gerais</h2>
+                            <div className="h-[1px] flex-1 bg-slate-200" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
+                            <RuleItem
+                                icon="⏱️"
+                                title="Anti-sniper Ativo"
+                                desc="Lances nos últimos 15 segundos adicionam +15s ao cronômetro."
+                            />
+                            <RuleItem
+                                icon="🛡️"
+                                title="Lance é Compromisso"
+                                desc="Lances são vinculativos. O não pagamento gera banimento da plataforma."
+                            />
+                            <RuleItem
+                                icon="📦"
+                                title="Logística de Frete"
+                                desc="O valor do frete é combinado diretamente com o vendedor após o término."
+                            />
+                            <RuleItem
+                                icon="💳"
+                                title="Saldo em Créditos"
+                                desc="Certifique-se de ter saldo em conta para cobrir o valor total do seu lance."
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -431,10 +520,10 @@ export default function AuctionDetailPage() {
             {showReload && (
                 <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
                     <div className="bg-white rounded-[40px] p-10 w-full max-w-md shadow-2xl relative animate-fade-up">
-                        <button onClick={() => { setShowReload(false); setDepositResult(null); }} className="absolute top-8 right-8 text-slate-300 hover:text-rose-600 transition-colors">✕</button>
+                        <button onClick={() => { setShowReload(false); setPreferenceId(null); }} className="absolute top-8 right-8 text-slate-300 hover:text-rose-600 transition-colors">✕</button>
                         <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8">Recarga Rápida</h3>
 
-                        {!depositResult ? (
+                        {!preferenceId ? (
                             <div className="space-y-6">
                                 <div className="grid grid-cols-2 gap-3">
                                     {[50, 100, 200, 500].map(v => (
@@ -443,41 +532,76 @@ export default function AuctionDetailPage() {
                                 </div>
                                 <input type="number" placeholder="Outro valor..." value={depositAmount} onChange={e => setDepositAmount(e.target.value)} className="w-full h-14 px-6 border border-slate-200 rounded-2xl text-slate-900 font-black text-sm outline-none focus:border-rose-600 transition-all font-mono" />
 
-                                <div className="flex gap-2">
-                                    <button onClick={() => setDepositMethod('pix')} className={`flex-1 h-12 text-[10px] font-black uppercase tracking-widest rounded-xl border transition-all ${depositMethod === 'pix' ? 'bg-slate-900 text-white border-slate-900 shadow-lg' : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-200'}`}>PIX</button>
-                                    <button onClick={() => setDepositMethod('card')} className={`flex-1 h-12 text-[10px] font-black uppercase tracking-widest rounded-xl border transition-all ${depositMethod === 'card' ? 'bg-slate-900 text-white border-slate-900 shadow-lg' : 'bg-slate-50 border-slate-100 text-slate-500 hover:bg-slate-200'}`}>Cartão</button>
-                                </div>
-
                                 {depositError && <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest text-center">{depositError}</p>}
 
                                 <button onClick={handleQuickDeposit} disabled={depositing || !depositAmount} className="w-full h-16 bg-rose-600 text-white font-black uppercase tracking-widest text-[11px] rounded-2xl hover:bg-rose-700 transition-all disabled:opacity-50 shadow-xl shadow-rose-100">
-                                    {depositing ? 'Processando...' : 'Confirmar Depósito'}
+                                    {depositing ? 'Gerando Checkout...' : 'Confirmar Depósito'}
                                 </button>
                             </div>
                         ) : (
                             <div className="space-y-6 text-center">
-                                {depositResult.qr_code_base64 && (
-                                    <div className="space-y-4">
-                                        <div className="bg-slate-50 p-6 rounded-[30px] inline-block border border-slate-100">
-                                            <img src={`data:image/png;base64,${depositResult.qr_code_base64}`} alt="QR Code" className="w-48 h-48 mx-auto" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código PIX (Copia e Cola)</p>
-                                            <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 break-all text-[8px] font-mono select-all truncate">
-                                                {depositResult.qr_code}
-                                            </div>
-                                        </div>
+                                <div className="p-6 bg-slate-50 border border-slate-100 rounded-3xl mb-4 flex justify-between items-center text-left">
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valor da Recarga</p>
+                                        <p className="text-2xl font-black text-slate-900">R$ {parseFloat(depositAmount).toFixed(2).replace('.', ',')}</p>
                                     </div>
-                                )}
-                                {depositResult.status === 'approved' && (
-                                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
-                                        <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">✓ DEPÓSITO CONFIRMADO</p>
-                                    </div>
-                                )}
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest animate-pulse">Aguardando pagamento...</p>
-                                <button onClick={() => { setShowReload(false); setDepositResult(null); }} className="w-full h-14 bg-slate-100 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-200">Voltar pro Leilão</button>
+                                    <button onClick={() => setPreferenceId(null)} className="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:underline">Alterar</button>
+                                </div>
+
+                                <Wallet
+                                    initialization={{ preferenceId }}
+                                />
+
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest animate-pulse mt-4">Aguardando pagamento seguro...</p>
+                                <button onClick={() => { setShowReload(false); setPreferenceId(null); }} className="w-full h-14 bg-slate-100 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-200">Voltar pro Leilão</button>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* End Confirmation Modal */}
+            {showEndConfirmation && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[60]">
+                    <div className="bg-white rounded-[40px] p-10 w-full max-w-md shadow-2xl relative animate-fade-up border border-slate-100">
+                        <div className="text-center space-y-6">
+                            <div className="h-20 w-20 bg-rose-50 rounded-[28px] flex items-center justify-center text-4xl mx-auto border border-rose-100 animate-bounce">⚠️</div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Encerrar Leilão?</h3>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                                    Esta ação é irreversível. O leilão será finalizado imediatamente e o vencedor será o portador do lance atual.
+                                </p>
+                            </div>
+
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center text-left">
+                                <div>
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Lance Atual</p>
+                                    <p className="text-lg font-black text-slate-900">{formatBRL(auction.currentBid)}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Vencedor</p>
+                                    <p className="text-xs font-black text-rose-600 uppercase">{auction.highestBidderName || 'Nenhum'}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <button
+                                    onClick={() => setShowEndConfirmation(false)}
+                                    disabled={endingAuction}
+                                    className="h-16 bg-slate-100 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-200 transition-all disabled:opacity-50"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleEndAuction}
+                                    disabled={endingAuction}
+                                    className="h-16 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-700 transition-all shadow-xl shadow-rose-200 disabled:opacity-50 flex items-center justify-center"
+                                >
+                                    {endingAuction ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : 'Confirmar Encerramento'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

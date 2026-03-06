@@ -1,0 +1,53 @@
+{
+  "bodyRecebidoFrontend": {
+    "userId": "903365b1-a8d7-4aad-8a96-6d90ccf228cf",
+    "useCashback": false,
+    "discountAmount": 0,
+    "totalAmount": 12,
+    "items": [
+      {
+        "id": "e518016b-6acd-4483-821b-6400da4b0fd9",
+        "title": "Mega Venusaur ex",
+        "unit_price": 12,
+        "quantity": 1
+      }
+    ],
+    "payer": {
+      "email": "admin@tcghub.com.br"
+    }
+  },
+  "payloadGeradoMecadoPago": {
+    "payment_methods": {
+      "excluded_payment_methods": [],
+      "excluded_payment_types": [],
+      "installments": 12
+    },
+    "items": [
+      {
+        "id": "e518016b-6acd-4483-821b-6400da4b0fd9",
+        "title": "Mega Venusaur ex",
+        "quantity": 1,
+        "unit_price": 12,
+        "currency_id": "BRL"
+      }
+    ],
+    "payer": {
+      "email": "admin@tcghub.com.br",
+      "name": "Cliente",
+      "surname": "Site"
+    },
+    "back_urls": {
+      "success": "https://tcghub.com.br/minha-conta/pedidos?status=success",
+      "pending": "https://tcghub.com.br/minha-conta/pedidos?status=pending",
+      "failure": "https://tcghub.com.br/pagamento?status=failure"
+    },
+    "auto_return": "approved",
+    "statement_descriptor": "TCG HUB",
+    "external_reference": "user_903365b1-a8d7-4aad-8a96-6d90ccf228cf_1772828521206",
+    "metadata": {
+      "userId": "903365b1-a8d7-4aad-8a96-6d90ccf228cf",
+      "useCashback": "false",
+      "discountAmount": "0"
+    }
+  }
+}
