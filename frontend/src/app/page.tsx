@@ -39,7 +39,8 @@ export default function HomePage() {
           price: Number(c.price),
           image_url: c.official_image_url ?? c.image_url,
           grade: c.grade ?? 'MINT',
-          finish: c.finish
+          finish: c.finish,
+          quantity: c.quantity || 0
         })));
       }
       setLoading(false);

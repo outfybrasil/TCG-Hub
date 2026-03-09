@@ -11,6 +11,7 @@ interface CardProps {
     set: string;
     imageUrl: string;
     price?: number;
+    originalPrice?: number;
     grade?: string;
     isPromo?: boolean;
     finish?: string;
@@ -19,6 +20,7 @@ interface CardProps {
     marketPrices?: Record<string, number>;
     addItem?: (item: { id: string; name: string; price: number; imageUrl: string; maxStock?: number }) => void;
     onDelete?: (id: string) => void;
+    onUpdatePrice?: (id: string, newPrice: number, originalPrice?: number) => void;
 }
 
 const getGradeColor = (grade: string | undefined) => {
@@ -31,7 +33,7 @@ const getGradeColor = (grade: string | undefined) => {
     return 'bg-slate-400';
 };
 
-const ProductCard = ({ id, name, set, imageUrl, price, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, addItem, onDelete }: CardProps) => {
+const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, addItem, onDelete, onUpdatePrice }: CardProps) => {
     const [currentImageUrl, setCurrentImageUrl] = React.useState(imageUrl);
     const [imageError, setImageError] = React.useState(false);
     const [selectedQty, setSelectedQty] = React.useState(1);
@@ -56,7 +58,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, grade, isPromo, finish, q
 
             {/* Header Info: Promo, Finish & Grade */}
             <div className="flex justify-between items-start mb-4 px-1">
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 items-center">
                     {isPromo && (
                         <span className="px-2 py-0.5 bg-rose-600 text-[8px] font-black text-white uppercase tracking-widest rounded-md shadow-sm">
                             PROMO
@@ -65,6 +67,11 @@ const ProductCard = ({ id, name, set, imageUrl, price, grade, isPromo, finish, q
                     {finish && finish !== "Normal" && (
                         <span className="px-2 py-0.5 bg-slate-900 text-[8px] font-black text-rose-300 uppercase tracking-widest rounded-md shadow-sm border border-white/10">
                             {finish}
+                        </span>
+                    )}
+                    {originalPrice && price && originalPrice > price && (
+                        <span className="px-2 py-0.5 bg-emerald-500 text-[8px] font-black text-white uppercase tracking-widest rounded-md shadow-sm">
+                            -{Math.round((1 - price / originalPrice) * 100)}%
                         </span>
                     )}
                     {isOutOfStock ? (
@@ -138,14 +145,27 @@ const ProductCard = ({ id, name, set, imageUrl, price, grade, isPromo, finish, q
                 </div>
 
                 {/* Price Row (Simplified Market comparison) */}
-                <PriceComparison
-                    cardName={name}
-                    cardSet={set}
-                    cardNumber={cardNumber}
-                    prices={marketPrices}
-                    currentPrice={price}
-                    size="sm"
-                />
+                <div className="space-y-2 w-full">
+                    <div className="flex flex-col items-center">
+                        {originalPrice && price && originalPrice > price && (
+                            <span className="text-[10px] font-bold text-slate-400 line-through opacity-60">
+                                R$ {originalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                        )}
+                        <span className={`text-2xl font-black tracking-tighter ${originalPrice && price && originalPrice > price ? 'text-rose-600' : 'text-slate-900'}`}>
+                            R$ {(price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                    </div>
+
+                    <PriceComparison
+                        cardName={name}
+                        cardSet={set}
+                        cardNumber={cardNumber}
+                        prices={marketPrices}
+                        currentPrice={price}
+                        size="sm"
+                    />
+                </div>
             </div>
 
             {/* Action Bar (Hub Identity - Dark Premium) */}
@@ -172,40 +192,50 @@ const ProductCard = ({ id, name, set, imageUrl, price, grade, isPromo, finish, q
                     )}
 
                     {/* Add Button (Wide Slate Button) */}
-                    <button
-                        onClick={() => {
-                            if (onDelete) {
-                                if (confirm(`Deseja remover "${name}" do inventário?`)) {
-                                    onDelete(id);
+                    <div className="flex gap-2">
+                        {onUpdatePrice && (
+                            <button
+                                onClick={() => onUpdatePrice(id, price || 0, originalPrice)}
+                                className="flex-1 h-12 rounded-xl bg-slate-100 text-slate-500 font-black uppercase tracking-widest text-[9px] hover:bg-slate-200 transition-all border border-slate-200"
+                            >
+                                Editar Preço
+                            </button>
+                        )}
+                        <button
+                            onClick={() => {
+                                if (onDelete) {
+                                    if (confirm(`Deseja remover "${name}" do inventário?`)) {
+                                        onDelete(id);
+                                    }
+                                    return;
                                 }
-                                return;
-                            }
-                            for (let i = 0; i < selectedQty; i++) {
-                                addItem?.({ id, name, price: price || 0, imageUrl, maxStock: quantity });
-                            }
-                        }}
-                        disabled={isOutOfStock && !onDelete}
-                        className={`w-full h-12 rounded-xl uppercase font-black tracking-widest text-[11px] transition-all flex items-center justify-center active:scale-[0.98] ${isOutOfStock && !onDelete
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                            : onDelete
-                                ? 'bg-slate-100 text-slate-900 hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-100'
-                                : 'bg-slate-900 text-white hover:bg-rose-600 shadow-lg shadow-slate-900/10 hover:shadow-rose-600/20'
-                            }`}
-                    >
-                        <span>{onDelete ? 'Remover Item' : isOutOfStock ? 'Esgotado' : 'Carrinho'}</span>
-                    </button>
+                                for (let i = 0; i < selectedQty; i++) {
+                                    addItem?.({ id, name, price: price || 0, imageUrl, maxStock: quantity });
+                                }
+                            }}
+                            disabled={isOutOfStock && !onDelete}
+                            className={`${onUpdatePrice ? 'flex-1' : 'w-full'} h-12 rounded-xl uppercase font-black tracking-widest text-[11px] transition-all flex items-center justify-center active:scale-[0.98] ${isOutOfStock && !onDelete
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : onDelete
+                                    ? 'bg-slate-100 text-slate-900 hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-100'
+                                    : 'bg-slate-900 text-white hover:bg-rose-600 shadow-lg shadow-slate-900/10 hover:shadow-rose-600/20'
+                                }`}
+                        >
+                            <span>{onDelete ? 'Remover Item' : isOutOfStock ? 'Esgotado' : 'Carrinho'}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     );
 };
 
-export default function CardGallery({ cards, onDelete }: { cards: CardProps[]; onDelete?: (id: string) => void }) {
+export default function CardGallery({ cards, onDelete, onUpdatePrice }: { cards: CardProps[]; onDelete?: (id: string) => void, onUpdatePrice?: (id: string, newPrice: number, originalPrice?: number) => void }) {
     const { addItem } = useCart();
     return (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {cards.map((card) => (
-                <ProductCard key={card.id} {...card} addItem={addItem} onDelete={onDelete} />
+                <ProductCard key={card.id} {...card} addItem={addItem} onDelete={onDelete} onUpdatePrice={onUpdatePrice} />
             ))}
         </div>
     );

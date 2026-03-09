@@ -8,7 +8,10 @@ import AdminGuard from '@/components/AdminGuard';
 
 export default function InventoryPage() {
     const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
-    const [cards, setCards] = useState<{ id: string; name: string; set: string; imageUrl: string; price: number; grade: string; finish: string; isPromo: boolean }[]>([]);
+    const [cards, setCards] = useState<{ id: string; name: string; set: string; imageUrl: string; price: number; originalPrice?: number; grade: string; finish: string; isPromo: boolean }[]>([]);
+    const [editingCard, setEditingCard] = useState<any>(null);
+    const [editPrice, setEditPrice] = useState('');
+    const [editOriginalPrice, setEditOriginalPrice] = useState('');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ totalValue: 0, itemsCount: 0, salesCount: 0 });
 
@@ -30,9 +33,11 @@ export default function InventoryPage() {
                     set: doc.set || "Arquivo Nulo",
                     imageUrl: doc.image_url || "https://images.pokemontcg.io/base1/4.png",
                     price: doc.price || 0,
+                    originalPrice: doc.original_price,
                     grade: doc.grade || "NM",
                     finish: doc.finish || "Normal",
-                    isPromo: doc.is_promo || false
+                    isPromo: doc.is_promo || false,
+                    quantity: doc.quantity || 0
                 }));
                 setCards(formattedCards);
 
@@ -89,6 +94,34 @@ export default function InventoryPage() {
         } catch (error) {
             console.error("Erro ao deletar item:", error);
             alert("Erro ao remover item do estoque.");
+        }
+    };
+
+    const handleUpdatePrice = async () => {
+        if (!editingCard) return;
+        try {
+            const newPrice = parseFloat(editPrice);
+            const originalPrice = editOriginalPrice ? parseFloat(editOriginalPrice) : null;
+
+            const { error } = await supabase
+                .from('inventory')
+                .update({
+                    price: newPrice,
+                    original_price: originalPrice
+                })
+                .eq('id', editingCard.id);
+
+            if (error) throw error;
+
+            setCards(prev => prev.map(c =>
+                c.id === editingCard.id
+                    ? { ...c, price: newPrice, originalPrice: originalPrice || undefined }
+                    : c
+            ));
+            setEditingCard(null);
+        } catch (error) {
+            console.error("Erro ao atualizar preço:", error);
+            alert("Erro ao atualizar preço.");
         }
     };
 
@@ -172,7 +205,63 @@ export default function InventoryPage() {
                         <h2 className="text-[12px] font-black uppercase tracking-[0.3em] text-slate-900 whitespace-nowrap">Itens Publicados na Loja</h2>
                         <div className="h-[1px] flex-1 bg-slate-100"></div>
                     </div>
-                    <CardGallery cards={cards} onDelete={handleDelete} />
+                    <CardGallery
+                        cards={cards}
+                        onDelete={handleDelete}
+                        onUpdatePrice={(id) => {
+                            const card = cards.find(c => c.id === id);
+                            if (card) {
+                                setEditingCard(card);
+                                setEditPrice(card.price.toString());
+                                setEditOriginalPrice(card.originalPrice?.toString() || '');
+                            }
+                        }}
+                    />
+
+                    {/* Quick Edit Modal */}
+                    {editingCard && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
+                            <div className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl animate-fade-up">
+                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8">Editar Preço</h3>
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço de Venda (BRL)</label>
+                                        <input
+                                            type="number"
+                                            value={editPrice}
+                                            onChange={(e) => setEditPrice(e.target.value)}
+                                            className="w-full h-14 px-6 rounded-2xl border border-slate-100 bg-slate-50 text-slate-900 font-black focus:border-rose-600 transition-all outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço Original (MSRP/Desconto)</label>
+                                        <input
+                                            type="number"
+                                            value={editOriginalPrice}
+                                            onChange={(e) => setEditOriginalPrice(e.target.value)}
+                                            placeholder="Ex: 100.00"
+                                            className="w-full h-14 px-6 rounded-2xl border border-slate-100 bg-slate-50 text-slate-900 font-black focus:border-rose-600 transition-all outline-none"
+                                        />
+                                        <p className="text-[9px] text-slate-400 font-bold ml-1 uppercase">Deixe vazio se não houver desconto</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 mt-10">
+                                    <button
+                                        onClick={() => setEditingCard(null)}
+                                        className="h-14 bg-slate-100 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-200 transition-all"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleUpdatePrice}
+                                        className="h-14 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20"
+                                    >
+                                        Salvar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AdminGuard>

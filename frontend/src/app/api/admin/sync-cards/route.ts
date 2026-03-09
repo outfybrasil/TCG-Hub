@@ -49,7 +49,7 @@ async function syncSet(setId: string) {
 
         const totalOfficial = setData.cardCount?.official || 0;
 
-        const cardsToInsert = cards.map((card: { id: string; localId: string; name: string; image?: string; rarity?: string }) => ({
+        const cardsToInsert = cards.map((card: { id: string; localId: string; name: string; image?: string; rarity?: string; types?: string[] }) => ({
             id: card.id,
             local_id: totalOfficial > 0 ? `${card.localId}/${totalOfficial}` : card.localId,
             name: card.name,
@@ -57,6 +57,7 @@ async function syncSet(setId: string) {
             set_id: setData.id,
             set_name: setData.name,
             rarity: card.rarity || 'Common',
+            types: card.types || [],
             updated_at: new Date().toISOString()
         }));
 

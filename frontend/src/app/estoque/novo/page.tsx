@@ -7,15 +7,18 @@ import Link from 'next/link';
 import AdminGuard from '@/components/AdminGuard';
 
 interface TcgSet { id: string; name: string; }
-interface PokemonCard { id: string; name: string; set_name: string; local_id: string; image_url: string; }
+interface PokemonCard { id: string; name: string; set_name: string; local_id: string; image_url: string; types?: string[]; }
 
 export default function NewAssetPage() {
     const [name, setName] = useState('');
     const [set, setSet] = useState('');
     const [cardNumber, setCardNumber] = useState('');
     const [price, setPrice] = useState('0');
+    const [originalPrice, setOriginalPrice] = useState('');
     const [quantity, setQuantity] = useState('1');
     const [imageUrl, setImageUrl] = useState('');
+    const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [grade, setGrade] = useState('NM');
     const [finish, setFinish] = useState('Normal');
     const [language, setLanguage] = useState('Português');
@@ -102,6 +105,7 @@ export default function NewAssetPage() {
                 set,
                 number: cardNumber,
                 price: parseFloat(price),
+                original_price: originalPrice ? parseFloat(originalPrice) : null,
                 quantity: parseInt(quantity),
                 image_url: imageUrl,
                 condition: grade,
@@ -109,7 +113,8 @@ export default function NewAssetPage() {
                 finish,
                 language,
                 is_promo: isPromo,
-                notes
+                notes,
+                types: selectedTypes
             });
 
             if (error) throw error;
@@ -187,6 +192,8 @@ export default function NewAssetPage() {
                                                     setSet(card.set_name);
                                                     setCardNumber(card.local_id || '');
                                                     setImageUrl(card.image_url);
+                                                    setSelectedCardId(card.id);
+                                                    setSelectedTypes(card.types || []);
                                                 }}
                                                 className="bg-white border border-slate-200 p-4 rounded-3xl hover:border-rose-500 cursor-pointer transition-all hover:shadow-xl group"
                                             >
@@ -249,12 +256,24 @@ export default function NewAssetPage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço de Venda (R$)</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço Cru (Original/MSRP)</label>
+                                    <input
+                                        type="number"
+                                        value={originalPrice} onChange={e => setOriginalPrice(e.target.value)}
+                                        placeholder="Ex: 10.00"
+                                        className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Preço de Venda Final (R$)</label>
                                     <input
                                         type="number"
                                         required value={price} onChange={e => setPrice(e.target.value)}
                                         className="w-full h-14 px-5 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-lg text-rose-600"
                                     />
+                                    {originalPrice && parseFloat(originalPrice) > parseFloat(price) && (
+                                        <p className="text-[9px] text-emerald-600 font-black uppercase mt-1">Oferta: {Math.round((1 - parseFloat(price) / parseFloat(originalPrice)) * 100)}% de desconto</p>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Quantidade em Estoque</label>

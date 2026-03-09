@@ -32,14 +32,7 @@ export default function PagamentoPage() {
 
     // Shipping Logic
     const calculateShipping = (uf: string, subtotal: number) => {
-        const state = uf.toUpperCase();
-        if (state === 'SP' || state === 'PR') {
-            return subtotal >= 200 ? 0 : 15;
-        }
-        if (['RJ', 'MG', 'ES', 'SC', 'RS'].includes(state)) {
-            return 15;
-        }
-        return 30;
+        return 0; // Removido temporariamente para testes
     };
 
     const discount = useCashback ? Math.min(walletBalance, total + shippingCost) : 0;

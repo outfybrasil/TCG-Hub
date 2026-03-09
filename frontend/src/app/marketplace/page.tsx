@@ -9,11 +9,12 @@ interface InventoryCard {
     id: string; name?: string; set?: string;
     official_name?: string; official_set_name?: string;
     official_image_url?: string; image_url?: string;
-    price?: number; grade?: string; finish?: string;
+    price?: number; original_price?: number; grade?: string; finish?: string;
     is_promo?: boolean; isPromo?: boolean;
     quantity?: number; number?: string; local_id?: string;
     marketPrices?: Record<string, number>;
     rarity?: string;
+    types?: string[];
 }
 
 export default function MarketplacePage() {
@@ -127,12 +128,10 @@ export default function MarketplacePage() {
         const matchesSet = selectedSets.length === 0 || selectedSets.includes(card.official_set_name || card.set || '');
         const matchesRarity = selectedRarities.length === 0 || selectedRarities.includes(card.rarity || card.finish || '');
 
-        // Simple type matching (checks if any selected type is in the card name or if we had a type column)
-        // Since we don't have a direct 'type' column in migration yet, we'll simulate it with name matching if needed,
-        // but for now we'll assume the user wants it to work once the data is there.
-        const matchesType = selectedTypes.length === 0 || selectedTypes.some(t =>
-            (card.official_name || card.name || '').toUpperCase().includes(t.toUpperCase())
-        );
+        // Type matching: checks if any selected type matches the card's types array
+        const matchesType = selectedTypes.length === 0 || (card.types && card.types.some(t =>
+            selectedTypes.some(selected => selected.toUpperCase() === t.toUpperCase())
+        ));
 
         return matchesSearch && matchesSet && matchesRarity && matchesType;
     });
@@ -241,8 +240,8 @@ export default function MarketplacePage() {
                                                 setIsSortModalOpen(false);
                                             }}
                                             className={`w-full h-14 flex items-center justify-between px-6 rounded-2xl border transition-all ${sortBy === opt.id
-                                                    ? 'border-rose-600 bg-rose-50 text-rose-600 shadow-sm'
-                                                    : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-300'
+                                                ? 'border-rose-600 bg-rose-50 text-rose-600 shadow-sm'
+                                                : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-300'
                                                 }`}
                                         >
                                             <span className="text-[11px] font-black uppercase tracking-widest">{opt.label}</span>
@@ -273,10 +272,11 @@ export default function MarketplacePage() {
                             set: c.official_set_name ?? c.set ?? 'Desconhecido',
                             imageUrl: c.official_image_url ?? c.image_url ?? 'https://images.pokemontcg.io/base1/1.png',
                             price: c.price ?? 0,
+                            originalPrice: c.original_price,
                             grade: c.grade ?? 'NM',
                             finish: c.finish ?? 'Normal',
                             isPromo: c.is_promo ?? c.isPromo ?? false,
-                            quantity: c.quantity ?? 1,
+                            quantity: c.quantity || 0,
                             cardNumber: c.number,
                             marketPrices: c.marketPrices
                         }))} />

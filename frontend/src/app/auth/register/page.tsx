@@ -15,38 +15,6 @@ export default function RegisterPage() {
     const [cpf, setCpf] = useState('');
 
 
-    // Address State
-    const [cep, setCep] = useState('');
-    const [street, setStreet] = useState('');
-    const [number, setNumber] = useState('');
-    const [complement, setComplement] = useState('');
-    const [neighborhood, setNeighborhood] = useState('');
-    const [city, setCity] = useState('');
-    const [state, setState] = useState('');
-    const [cepLoading, setCepLoading] = useState(false);
-
-    const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value.replace(/\D/g, '');
-        setCep(value);
-
-        if (value.length === 8) {
-            setCepLoading(true);
-            try {
-                const res = await fetch(`https://viacep.com.br/ws/${value}/json/`);
-                const data = await res.json();
-                if (!data.erro) {
-                    setStreet(data.logradouro);
-                    setNeighborhood(data.bairro);
-                    setCity(data.localidade);
-                    setState(data.uf);
-                }
-            } catch (err) {
-                console.error("Erro ao buscar CEP:", err);
-            } finally {
-                setCepLoading(false);
-            }
-        }
-    };
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -89,25 +57,6 @@ export default function RegisterPage() {
                 console.error("Erro ao salvar perfil:", profileError);
             }
 
-            // Save address to user_addresses
-            if (cep) {
-                const { error: addressError } = await supabase.from('user_addresses').insert({
-                    user_id: user.id,
-                    label: 'Principal',
-                    cep,
-                    street,
-                    number,
-                    complement,
-                    neighborhood,
-                    city,
-                    state,
-                    is_default: true
-                });
-
-                if (addressError) {
-                    console.error("Erro ao salvar endereço:", addressError);
-                }
-            }
 
             router.push('/auth/verify-email');
         } catch (err) {
@@ -224,86 +173,6 @@ export default function RegisterPage() {
                             />
                         </div>
 
-                        {/* Address Header */}
-                        <div className="flex items-center gap-4 pt-6 pb-2">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 whitespace-nowrap">Endereço de Entrega</h3>
-                            <div className="h-[1px] flex-1 bg-slate-100" />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">CEP</label>
-                                <div className="relative">
-                                    <input
-                                        required maxLength={8}
-                                        type="text" value={cep} onChange={handleCepChange}
-                                        placeholder="01001000"
-                                        className="w-full h-14 px-6 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white outline-none transition-all font-bold text-sm text-slate-900"
-                                    />
-                                    {cepLoading && <div className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />}
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Estado</label>
-                                <input
-                                    required readOnly
-                                    type="text" value={state}
-                                    placeholder="UF"
-                                    className="w-full h-14 px-6 bg-slate-200 border border-transparent rounded-2xl font-black text-sm text-slate-600 cursor-not-allowed"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Rua / Logradouro</label>
-                            <input
-                                required
-                                type="text" value={street} onChange={e => setStreet(e.target.value)}
-                                placeholder="Praça da Sé"
-                                className="w-full h-14 px-6 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white outline-none transition-all font-bold text-sm text-slate-900"
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Número</label>
-                                <input
-                                    required
-                                    type="text" value={number} onChange={e => setNumber(e.target.value)}
-                                    placeholder="123"
-                                    className="w-full h-14 px-6 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white outline-none transition-all font-bold text-sm text-slate-900"
-                                />
-                            </div>
-                            <div className="col-span-2 space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Complemento</label>
-                                <input
-                                    type="text" value={complement} onChange={e => setComplement(e.target.value)}
-                                    placeholder="Apto 42"
-                                    className="w-full h-14 px-6 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white outline-none transition-all font-bold text-sm text-slate-900"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Bairro</label>
-                                <input
-                                    required
-                                    type="text" value={neighborhood} onChange={e => setNeighborhood(e.target.value)}
-                                    placeholder="Sé"
-                                    className="w-full h-14 px-6 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white outline-none transition-all font-bold text-sm text-slate-900"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Cidade</label>
-                                <input
-                                    required
-                                    type="text" value={city} onChange={e => setCity(e.target.value)}
-                                    placeholder="São Paulo"
-                                    className="w-full h-14 px-6 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white outline-none transition-all font-bold text-sm text-slate-900"
-                                />
-                            </div>
-                        </div>
 
                         {/* Error message */}
                         {error && (
