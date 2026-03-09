@@ -33,10 +33,13 @@ export async function POST(req: Request) {
         const description: string = mpPayment.description || '';
         const isCredit = description.toLowerCase().includes('créditos') || description.toLowerCase().includes('deposito');
 
+        // External reference format: purchase_ID, user_ID_TIMESTAMP, guest_TIMESTAMP
+        const externalReference = mpPayment.external_reference || '';
+        const metadata = mpPayment.metadata || {};
+
         if (isCredit) {
-            // This is an auction credit deposit — find the user by external_reference or metadata
-            // MP sends the user_id we must store in the payment's external_reference
-            const userId = mpPayment.external_reference || mpPayment.metadata?.user_id;
+            // This is an auction credit deposit
+            const userId = externalReference.startsWith('user_') ? externalReference.split('_')[1] : metadata.user_id;
 
             if (userId) {
                 await supabase.rpc('deposit_auction_credits', {
@@ -47,6 +50,29 @@ export async function POST(req: Request) {
 
                 console.log(`Credits deposited: ${mpPayment.transaction_amount} for user ${userId}`);
             }
+        } else if (externalReference.startsWith('purchase_') || metadata.purchase_id) {
+            // This is a regular store order
+            const purchaseId = externalReference.startsWith('purchase_')
+                ? externalReference.replace('purchase_', '')
+                : metadata.purchase_id;
+
+            if (purchaseId) {
+                const { error: updateError } = await supabase
+                    .from('purchases')
+                    .update({
+                        status: 'approved',
+                        mp_payment_id: String(data.id)
+                    })
+                    .eq('id', purchaseId);
+
+                if (updateError) {
+                    console.error(`Error updating purchase ${purchaseId}:`, updateError);
+                } else {
+                    console.log(`Purchase ${purchaseId} approved via webhook. MP ID: ${data.id}`);
+                }
+            }
+        } else {
+            console.log(`Payment approved but not categorized: ${description} (Ref: ${externalReference})`);
         }
 
         return NextResponse.json({ received: true });

@@ -31,10 +31,51 @@ export async function POST(req: Request) {
 
         // 100% cashback: no MP payment needed, just return a success signal handled by frontend
         const totalWithShipping = Number(totalAmount) + (Number(shippingCost) || 0);
+        let mpPaymentId = 'cashback-' + Date.now();
+        let isCashbackOnly = false;
+
         if (totalWithShipping === 0 || (useCashback && discountAmount >= totalWithShipping)) {
+            isCashbackOnly = true;
+        }
+
+        // Deduct cashback immediately if applicable
+        if (useCashback && discountAmount > 0 && userId) {
+            const { data: success, error: deductError } = await supabase.rpc('deduct_cashback', {
+                p_user_id: userId,
+                p_amount: discountAmount
+            });
+            if (deductError || !success) {
+                return NextResponse.json({ error: 'Erro ao descontar cashback. Saldo insuficiente?' }, { status: 400 });
+            }
+        }
+
+        // Create the purchase record in pending status (or approved if cashback only)
+        let purchaseId = null;
+        if (userId) {
+            const { data: purchaseData, error: purchaseError } = await supabase.from('purchases').insert({
+                user_id: userId,
+                items: items || [],
+                total_amount: totalAmount,
+                discount_amount: discountAmount || 0,
+                cashback_earned: 0,
+                payment_method: isCashbackOnly ? 'wallet' : 'mercadopago_checkout',
+                mp_payment_id: isCashbackOnly ? mpPaymentId : null, // will be updated by webhook for MP
+                shipping_address: shippingAddress || null,
+                status: isCashbackOnly ? 'approved' : 'pending'
+            }).select('id').single();
+
+            if (purchaseError) {
+                console.error('Erro ao salvar compra preliminar:', purchaseError);
+            } else if (purchaseData) {
+                purchaseId = purchaseData.id;
+            }
+        }
+
+        if (isCashbackOnly) {
             return NextResponse.json({
                 isCashbackOnly: true,
-                message: 'Pagamento 100% coberto pelo cashback'
+                message: 'Pagamento 100% coberto pelo cashback',
+                purchaseId: purchaseId
             });
         }
 
@@ -89,9 +130,10 @@ export async function POST(req: Request) {
                 },
                 auto_return: 'approved',
                 statement_descriptor: 'TCG HUB',
-                external_reference: userId ? `user_${userId}_${Date.now()}` : `guest_${Date.now()}`,
+                external_reference: purchaseId ? `purchase_${purchaseId}` : (userId ? `user_${userId}_${Date.now()}` : `guest_${Date.now()}`),
                 metadata: {
                     userId: userId,
+                    purchaseId: purchaseId,
                     useCashback: useCashback ? 'true' : 'false',
                     discountAmount: String(discountAmount),
                     shippingAddress: JSON.stringify(shippingAddress)
