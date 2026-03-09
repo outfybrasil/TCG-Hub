@@ -298,7 +298,7 @@ export default function PagamentoPage() {
                                 </div>
                             )}
                             <Wallet
-                                initialization={{ preferenceId, redirectMode: 'modal' }}
+                                initialization={{ preferenceId, redirectMode: 'modal' as any }}
                             />
                         </div>
                     )}
