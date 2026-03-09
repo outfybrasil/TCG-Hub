@@ -5,12 +5,13 @@ export const dynamic = 'force-dynamic';
 
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!serviceRoleKey) {
-    console.warn('⚠️ FATAL WEBHOOK ERROR: SUPABASE_SERVICE_ROLE_KEY is missing in the production environment! RLS bypass will fail and database updates will drop silently.');
+    const msg = '❌ ERROR: SUPABASE_SERVICE_ROLE_KEY is missing! Webhook cannot bypass RLS.';
+    console.error(msg);
 }
 
 const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-    serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy'
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    serviceRoleKey || 'missing-key'
 );
 
 // Mercado Pago sends payment notifications here

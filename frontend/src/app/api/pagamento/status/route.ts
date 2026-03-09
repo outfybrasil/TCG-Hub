@@ -13,12 +13,12 @@ export async function GET(req: Request) {
 
         const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (!serviceRoleKey) {
-            console.warn('⚠️ WARNING: SUPABASE_SERVICE_ROLE_KEY is missing. RLS bypass will fail.');
+            return NextResponse.json({ error: 'System configuration error: Service key missing' }, { status: 500 });
         }
 
         const supabaseAdmin = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-            serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy'
+            process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+            serviceRoleKey
         );
 
         const { data, error } = await supabaseAdmin
