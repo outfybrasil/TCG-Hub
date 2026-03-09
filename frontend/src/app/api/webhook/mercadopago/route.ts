@@ -50,13 +50,15 @@ export async function POST(req: Request) {
 
         const purchaseId = externalReference.startsWith('purchase_')
             ? externalReference.replace('purchase_', '')
-            : metadata.purchase_id;
+            : (metadata.purchase_id || metadata.purchaseId);
+
+        const userIdMetadata = metadata.user_id || metadata.userId;
 
         const isCredit = !purchaseId && (externalReference.startsWith('user_') || metadata.type === 'credit' || description.toLowerCase().includes('créditos'));
 
         if (isCredit) {
             // This is an auction credit deposit
-            const userId = externalReference.startsWith('user_') ? externalReference.split('_')[1] : metadata.user_id;
+            const userId = externalReference.startsWith('user_') ? externalReference.split('_')[1] : userIdMetadata;
 
             if (userId) {
                 const { error: rpcError } = await supabaseAdmin.rpc('deposit_auction_credits', {

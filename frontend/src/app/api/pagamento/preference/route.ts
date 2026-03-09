@@ -153,13 +153,14 @@ export async function POST(req: Request) {
                 },
                 auto_return: 'approved',
                 statement_descriptor: 'TCG HUB',
+                notification_url: `${BASE_URL}/api/webhook/mercadopago`,
                 external_reference: purchaseId ? `purchase_${purchaseId}` : (userId ? `user_${userId}_${Date.now()}` : `guest_${Date.now()}`),
                 metadata: {
-                    userId: userId,
-                    purchaseId: purchaseId,
-                    useCashback: useCashback ? 'true' : 'false',
-                    discountAmount: String(discountAmount),
-                    shippingAddress: JSON.stringify(shippingAddress)
+                    user_id: userId,
+                    purchase_id: purchaseId,
+                    use_cashback: useCashback ? 'true' : 'false',
+                    discount_amount: String(discountAmount),
+                    shipping_address: JSON.stringify(shippingAddress)
                 }
             }
         };
