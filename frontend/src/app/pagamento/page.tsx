@@ -149,15 +149,16 @@ export default function PagamentoPage() {
         if (!createdPurchaseId) return;
 
         const interval = setInterval(async () => {
-            const { data } = await supabase
-                .from('purchases')
-                .select('status')
-                .eq('id', createdPurchaseId)
-                .single();
+            try {
+                const req = await fetch(`/api/pagamento/status?id=${createdPurchaseId}`);
+                const res = await req.json();
 
-            if (data && data.status === 'approved') {
-                clearInterval(interval);
-                router.push('/minha-conta/pedidos?status=success');
+                if (res.status === 'approved') {
+                    clearInterval(interval);
+                    router.push('/minha-conta/pedidos?status=success');
+                }
+            } catch (error) {
+                console.error('Erro ao verificar status da compra:', error);
             }
         }, 4000);
 

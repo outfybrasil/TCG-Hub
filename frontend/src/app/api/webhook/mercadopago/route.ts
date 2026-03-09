@@ -3,9 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!serviceRoleKey) {
+    console.warn('⚠️ FATAL WEBHOOK ERROR: SUPABASE_SERVICE_ROLE_KEY is missing in the production environment! RLS bypass will fail and database updates will drop silently.');
+}
+
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy'
+    serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy'
 );
 
 // Mercado Pago sends payment notifications here
@@ -54,13 +59,17 @@ export async function POST(req: Request) {
             const userId = externalReference.startsWith('user_') ? externalReference.split('_')[1] : metadata.user_id;
 
             if (userId) {
-                await supabaseAdmin.rpc('deposit_auction_credits', {
+                const { error: rpcError } = await supabaseAdmin.rpc('deposit_auction_credits', {
                     p_user_id: userId,
                     p_amount: mpPayment.transaction_amount,
                     p_mp_payment_id: String(data.id)
                 });
 
-                console.log(`Credits deposited: ${mpPayment.transaction_amount} for user ${userId}`);
+                if (rpcError) {
+                    console.error('💥 ERROR ao depositar creditos (Possivel RLS Block by missing Service Key):', rpcError);
+                } else {
+                    console.log(`Credits deposited: ${mpPayment.transaction_amount} for user ${userId}`);
+                }
             }
         } else if (purchaseId) {
             // This is a regular store order
