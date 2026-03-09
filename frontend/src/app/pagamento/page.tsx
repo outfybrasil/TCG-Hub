@@ -117,6 +117,7 @@ export default function PagamentoPage() {
                         useCashback,
                         discountAmount: discount,
                         totalAmount: total,
+                        shippingCost: shippingCost,
                         shippingAddress: addresses.find(a => a.id === selectedAddressId),
                         items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity })),
                         payer: { email: user.email }
@@ -265,7 +266,8 @@ export default function PagamentoPage() {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({
-                                                totalAmount: 0,
+                                                totalAmount: total,
+                                                shippingCost: shippingCost,
                                                 useCashback: true,
                                                 discountAmount: discount,
                                                 userId: user?.id,

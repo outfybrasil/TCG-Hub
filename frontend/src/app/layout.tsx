@@ -5,13 +5,10 @@ import "./globals.css";
 import UserNav from "@/components/UserNav";
 import { CartProvider } from "@/context/CartContext";
 import CartDrawer from "@/components/CartDrawer";
+import MobileNav from "@/components/MobileNav";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-
-export const metadata: Metadata = {
-  title: "TCGHub | Digital Asset Management",
-  description: "Plataforma moderna de gestão e certificação de ativos Pokémon TCG.",
-};
+// ... existing metadata ...
 
 export default function RootLayout({
   children,
@@ -20,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`light scroll-smooth ${inter.variable}`}>
-      <body className="font-sans bg-[#F8F9FA] text-[#0F172A] antialiased selection:bg-[#3B82F6] selection:text-white">
+      <body className="font-sans bg-[#F8F9FA] text-[#0F172A] antialiased selection:bg-[#3B82F6] selection:text-white pb-20 lg:pb-0">
         <CartProvider>
           <main className="min-h-screen">
             {/* Pro Branding Bar */}
@@ -54,6 +51,8 @@ export default function RootLayout({
             <div className="relative">
               {children}
             </div>
+
+            <MobileNav />
 
             <footer className="mt-32 pt-20 pb-10 border-t border-slate-100 bg-white">
               <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-16">

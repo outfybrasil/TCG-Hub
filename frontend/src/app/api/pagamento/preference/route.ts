@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
         const {
             userId, useCashback, discountAmount, payer,
-            items = [], totalAmount, shippingAddress
+            items = [], totalAmount, shippingAddress, shippingCost
         } = body;
 
         let email = payer?.email;
@@ -30,7 +30,8 @@ export async function POST(req: Request) {
         if (BASE_URL.includes('null')) BASE_URL = 'http://localhost:3000';
 
         // 100% cashback: no MP payment needed, just return a success signal handled by frontend
-        if (totalAmount === 0 || (useCashback && discountAmount >= totalAmount)) {
+        const totalWithShipping = Number(totalAmount) + (Number(shippingCost) || 0);
+        if (totalWithShipping === 0 || (useCashback && discountAmount >= totalWithShipping)) {
             return NextResponse.json({
                 isCashbackOnly: true,
                 message: 'Pagamento 100% coberto pelo cashback'
@@ -45,6 +46,16 @@ export async function POST(req: Request) {
             unit_price: Number(item.unit_price) || Number(item.price) || 0,
             currency_id: 'BRL',
         }));
+
+        if (Number(shippingCost) > 0) {
+            mpItems.push({
+                id: 'shipping-cost',
+                title: 'Custo de Envio (Frete)',
+                quantity: 1,
+                unit_price: Number(shippingCost),
+                currency_id: 'BRL'
+            });
+        }
 
         if (useCashback && discountAmount > 0) {
             mpItems.push({

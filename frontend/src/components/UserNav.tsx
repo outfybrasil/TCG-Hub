@@ -30,15 +30,23 @@ export default function UserNav() {
 
     useEffect(() => {
         setHasMounted(true);
-        supabase.auth.getUser().then(({ data: { user } }) => {
-            if (user) { setUser(user); fetchBalances(user.id); }
-        });
+
+        // Immediate session check
+        const initAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                setUser(session.user);
+                fetchBalances(session.user.id);
+            }
+        };
+
+        initAuth();
 
         const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
             if (session?.user) {
                 setUser(session.user);
                 fetchBalances(session.user.id);
-            } else {
+            } else if (event === 'SIGNED_OUT') {
                 setUser(null);
                 setWalletBalance(0);
                 setCreditBalance(0);

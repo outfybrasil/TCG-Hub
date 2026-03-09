@@ -19,14 +19,38 @@ export default function LoginPage() {
                 password,
             });
 
-            if (signInError) throw signInError;
+            if (signInError) {
+                if (signInError.message.includes('Email not confirmed')) {
+                    router.push('/auth/verify-email');
+                    return;
+                }
+                throw signInError;
+            }
 
             router.push('/membro');
-        } catch (err) {
-            console.error(err); // Changed from 'error' to 'err' to match catch block variable
-            alert("Acesso negado. Verifique suas credenciais de acesso.");
+        } catch (err: any) {
+            console.error(err);
+            const message = err.message === 'Invalid login credentials'
+                ? "Acesso negado. Verifique suas credenciais de acesso."
+                : err.message;
+            alert(message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        try {
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`,
+                },
+            });
+            if (error) throw error;
+        } catch (err) {
+            console.error("Erro ao fazer login com Google:", err);
+            alert("Erro ao autenticar com Google. Tente novamente.");
         }
     };
 
@@ -68,6 +92,26 @@ export default function LoginPage() {
                                 placeholder="••••••••"
                                 className="w-full h-14 px-6 bg-slate-50 border border-transparent rounded-2xl focus:border-rose-600 focus:bg-white focus:ring-4 focus:ring-rose-50 outline-none transition-all font-bold text-sm text-slate-900"
                             />
+                        </div>
+
+                        {/* Google Login Button */}
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                onClick={handleGoogleLogin}
+                                className="w-full h-14 bg-white border border-slate-200 text-slate-900 font-bold text-[10px] uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-50 transition-all"
+                            >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                                    <path fill="#EA4335" d="M12.48 10.92v3.28h7.84c-.24 1.84-.9 3.32-2.06 4.44-1.28 1.24-3.24 2.16-5.78 2.16-4.52 0-8.24-3.48-8.24-8.04s3.72-8.04 8.24-8.04c2.44 0 4.28.96 5.6 2.24l2.32-2.32C18.44 2.56 15.64 1.2 12.48 1.2 6.48 1.2 1.6 6.08 1.6 12.08s4.88 10.88 10.88 10.88c3.24 0 5.68-1.04 7.6-3.04 2-2 2.64-4.8 2.64-7.08 0-.52-.04-1.04-.12-1.52h-10.12z" />
+                                </svg>
+                                Continuar com Google
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-4 py-2">
+                            <div className="h-[1px] flex-1 bg-slate-100" />
+                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none">ou</span>
+                            <div className="h-[1px] flex-1 bg-slate-100" />
                         </div>
 
                         <button

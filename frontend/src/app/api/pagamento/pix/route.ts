@@ -9,11 +9,13 @@ const payment = new Payment(client);
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { transactionAmount, description, payerEmail, payerFirstName, payerLastName, docType, docNumber, userId, useCashback, discountAmount } = body;
+        const { transactionAmount, shippingCost, description, payerEmail, payerFirstName, payerLastName, docType, docNumber, userId, useCashback, discountAmount } = body;
 
         if (transactionAmount === undefined || !payerEmail) {
             return NextResponse.json({ error: 'Faltam dados obrigatórios' }, { status: 400 });
         }
+
+        const finalTransactionAmount = Number(transactionAmount) + (Number(shippingCost) || 0);
 
         if (useCashback && discountAmount > 0 && userId) {
             const { data: success, error: deductError } = await supabase.rpc('deduct_cashback', {
@@ -38,7 +40,7 @@ export async function POST(req: Request) {
 
         const paymentRequest = {
             body: {
-                transaction_amount: Number(transactionAmount),
+                transaction_amount: Number(finalTransactionAmount),
                 description: description || 'Pgto PIX - TCG Mega Store',
                 payment_method_id: 'pix',
                 payer: {

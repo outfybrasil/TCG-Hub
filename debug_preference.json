@@ -4,6 +4,7 @@
     "useCashback": false,
     "discountAmount": 0,
     "totalAmount": 12,
+    "shippingCost": 0,
     "items": [
       {
         "id": "e518016b-6acd-4483-821b-6400da4b0fd9",
@@ -43,7 +44,7 @@
     },
     "auto_return": "approved",
     "statement_descriptor": "TCG HUB",
-    "external_reference": "user_903365b1-a8d7-4aad-8a96-6d90ccf228cf_1772828521206",
+    "external_reference": "user_903365b1-a8d7-4aad-8a96-6d90ccf228cf_1773075622601",
     "metadata": {
       "userId": "903365b1-a8d7-4aad-8a96-6d90ccf228cf",
       "useCashback": "false",
