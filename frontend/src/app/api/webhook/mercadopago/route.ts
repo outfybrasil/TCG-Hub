@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 // Mercado Pago sends payment notifications here
 // Configure in: https://www.mercadopago.com.br/developers/panel/webhooks
@@ -42,7 +47,7 @@ export async function POST(req: Request) {
             const userId = externalReference.startsWith('user_') ? externalReference.split('_')[1] : metadata.user_id;
 
             if (userId) {
-                await supabase.rpc('deposit_auction_credits', {
+                await supabaseAdmin.rpc('deposit_auction_credits', {
                     p_user_id: userId,
                     p_amount: mpPayment.transaction_amount,
                     p_mp_payment_id: String(data.id)
@@ -57,7 +62,7 @@ export async function POST(req: Request) {
                 : metadata.purchase_id;
 
             if (purchaseId) {
-                const { error: updateError } = await supabase
+                const { error: updateError } = await supabaseAdmin
                     .from('purchases')
                     .update({
                         status: 'approved',
