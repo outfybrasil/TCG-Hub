@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy'
+);
 
 // Initialize MP using the generic credentials
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
@@ -47,7 +52,7 @@ export async function POST(req: Request) {
 
         // Deduct cashback immediately if applicable
         if (useCashback && discountAmount > 0 && userId) {
-            const { data: success, error: deductError } = await supabase.rpc('deduct_cashback', {
+            const { data: success, error: deductError } = await supabaseAdmin.rpc('deduct_cashback', {
                 p_user_id: userId,
                 p_amount: discountAmount
             });
@@ -59,7 +64,7 @@ export async function POST(req: Request) {
         // Create the purchase record in pending status (or approved if cashback only)
         let purchaseId = null;
         if (userId) {
-            const { data: purchaseData, error: purchaseError } = await supabase.from('purchases').insert({
+            const { data: purchaseData, error: purchaseError } = await supabaseAdmin.from('purchases').insert({
                 user_id: userId,
                 items: items || [],
                 total_amount: totalAmount,
