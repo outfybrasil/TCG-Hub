@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { createClient } from '@supabase/supabase-js';
 
@@ -77,10 +78,15 @@ export async function POST(req: Request) {
             }).select('id').single();
 
             if (purchaseError) {
-                console.error('Erro ao salvar compra preliminar:', purchaseError);
+                console.error('💥 FATAL ERROR ao salvar compra preliminar:', purchaseError);
+                return NextResponse.json({ error: 'Erro no Banco de Dados', details: purchaseError.message || purchaseError }, { status: 500 });
             } else if (purchaseData) {
                 purchaseId = purchaseData.id;
+                console.log('✅ Purchase ID created:', purchaseId);
             }
+        } else {
+            console.error('💥 FATAL ERROR: No userId provided to Preference API');
+            return NextResponse.json({ error: 'Erro crítico: userId ausente.' }, { status: 400 });
         }
 
         if (isCashbackOnly) {
