@@ -162,7 +162,7 @@ export async function POST(req: Request) {
 
         const result = await preference.create(preferenceRequest);
 
-        return NextResponse.json({ id: result.id, init_point: result.init_point });
+        return NextResponse.json({ id: result.id, init_point: result.init_point, purchaseId: purchaseId });
 
     } catch (error: any) {
         console.error('Mercado Pago Preference Error:', JSON.stringify({

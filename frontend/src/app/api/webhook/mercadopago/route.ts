@@ -38,11 +38,16 @@ export async function POST(req: Request) {
         }
 
         const description: string = mpPayment.description || '';
-        const isCredit = description.toLowerCase().includes('créditos') || description.toLowerCase().includes('deposito');
 
         // External reference format: purchase_ID, user_ID_TIMESTAMP, guest_TIMESTAMP
         const externalReference = mpPayment.external_reference || '';
         const metadata = mpPayment.metadata || {};
+
+        const purchaseId = externalReference.startsWith('purchase_')
+            ? externalReference.replace('purchase_', '')
+            : metadata.purchase_id;
+
+        const isCredit = !purchaseId && (externalReference.startsWith('user_') || metadata.type === 'credit' || description.toLowerCase().includes('créditos'));
 
         if (isCredit) {
             // This is an auction credit deposit
@@ -57,12 +62,8 @@ export async function POST(req: Request) {
 
                 console.log(`Credits deposited: ${mpPayment.transaction_amount} for user ${userId}`);
             }
-        } else if (externalReference.startsWith('purchase_') || metadata.purchase_id) {
+        } else if (purchaseId) {
             // This is a regular store order
-            const purchaseId = externalReference.startsWith('purchase_')
-                ? externalReference.replace('purchase_', '')
-                : metadata.purchase_id;
-
             if (purchaseId) {
                 const { error: updateError } = await supabaseAdmin
                     .from('purchases')

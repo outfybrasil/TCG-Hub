@@ -95,6 +95,7 @@ export default function PagamentoPage() {
 
     // Preference state for Wallet Checkout Pro
     const [preferenceId, setPreferenceId] = useState<string | null>(null);
+    const [createdPurchaseId, setCreatedPurchaseId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!dataReady || !isMounted || !user) return;
@@ -125,6 +126,9 @@ export default function PagamentoPage() {
 
                 if (res.id) {
                     setPreferenceId(res.id);
+                    if (res.purchaseId) {
+                        setCreatedPurchaseId(res.purchaseId);
+                    }
                 } else {
                     console.error("Falha ao gerar preference:", res.error);
                 }
@@ -139,6 +143,26 @@ export default function PagamentoPage() {
 
         return () => clearTimeout(timeout);
     }, [dataReady, isMounted, total, useCashback, discount, selectedAddressId, items, user, addresses]);
+
+    // Pool order status to handle redirect for PIX automatically
+    useEffect(() => {
+        if (!createdPurchaseId) return;
+
+        const interval = setInterval(async () => {
+            const { data } = await supabase
+                .from('purchases')
+                .select('status')
+                .eq('id', createdPurchaseId)
+                .single();
+
+            if (data && data.status === 'approved') {
+                clearInterval(interval);
+                router.push('/minha-conta/pedidos?status=success');
+            }
+        }, 4000);
+
+        return () => clearInterval(interval);
+    }, [createdPurchaseId, router]);
 
     if (!isMounted) return null;
 
