@@ -3,9 +3,14 @@ export const dynamic = 'force-dynamic';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { createClient } from '@supabase/supabase-js';
 
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!serviceRoleKey) {
+    console.warn('⚠️ WARNING: SUPABASE_SERVICE_ROLE_KEY is perfectly missing in the environment. RLS bypass will fail.');
+}
+
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy'
+    serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy'
 );
 
 // Initialize MP using the generic credentials
