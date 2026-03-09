@@ -222,7 +222,7 @@ export default function CreditosPage() {
                             </div>
 
                             <Wallet
-                                initialization={{ preferenceId }}
+                                initialization={{ preferenceId, redirectMode: 'modal' }}
                             />
 
                             <p className="text-center text-[10px] text-slate-400 font-bold max-w-sm mx-auto">

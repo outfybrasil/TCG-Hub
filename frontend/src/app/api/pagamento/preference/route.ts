@@ -29,6 +29,13 @@ export async function POST(req: Request) {
         let BASE_URL = `${protocol}://${host}`;
         if (BASE_URL.includes('null')) BASE_URL = 'http://localhost:3000';
 
+        // Workaround: Mercado Pago's back_urls validation fails with http://localhost URLs
+        // Since we are using redirectMode: 'modal', the actual redirect does not happen,
+        // so we can safely use the production URL purely to pass validation when testing locally.
+        if (BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1')) {
+            BASE_URL = 'https://tcg-hub.tonicoimbra.com';
+        }
+
         // 100% cashback: no MP payment needed, just return a success signal handled by frontend
         const totalWithShipping = Number(totalAmount) + (Number(shippingCost) || 0);
         let mpPaymentId = 'cashback-' + Date.now();
@@ -124,9 +131,9 @@ export async function POST(req: Request) {
                     // Let Mercado Pago handle the address input during checkout for simplicity
                 },
                 back_urls: {
-                    success: 'https://tcghub.com.br/minha-conta/pedidos?status=success',
-                    pending: 'https://tcghub.com.br/minha-conta/pedidos?status=pending',
-                    failure: 'https://tcghub.com.br/pagamento?status=failure'
+                    success: `${BASE_URL}/minha-conta/pedidos?status=success`,
+                    pending: `${BASE_URL}/minha-conta/pedidos?status=pending`,
+                    failure: `${BASE_URL}/pagamento?status=failure`
                 },
                 auto_return: 'approved',
                 statement_descriptor: 'TCG HUB',

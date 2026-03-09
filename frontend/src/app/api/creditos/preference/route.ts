@@ -22,6 +22,19 @@ export async function POST(req: Request) {
             email = 'guest@tcghub.com.br';
         }
 
+        let host = req.headers.get('host') || 'localhost:3000';
+        let protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+        let BASE_URL = `${protocol}://${host}`;
+        if (BASE_URL.includes('null')) BASE_URL = 'http://localhost:3000';
+
+        // Workaround: Mercado Pago's back_urls validation fails with http://localhost URLs
+        // Since we are using redirectMode: 'modal', the actual redirect does not happen,
+        // so we can safely use the production URL purely to pass validation when testing locally.
+        if (BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1')) {
+            BASE_URL = 'https://tcg-hub.tonicoimbra.com';
+        }
+
+
         const mpItems = [{
             id: 'creditos-tcg-hub',
             title: 'Depósito de Créditos TCG Hub',
@@ -44,9 +57,9 @@ export async function POST(req: Request) {
                     surname: payerLastName || 'Site',
                 },
                 back_urls: {
-                    success: 'https://tcghub.com.br/minha-conta/creditos?status=success',
-                    pending: 'https://tcghub.com.br/minha-conta/creditos?status=pending',
-                    failure: 'https://tcghub.com.br/minha-conta/creditos?status=failure'
+                    success: `${BASE_URL}/minha-conta/creditos?status=success`,
+                    pending: `${BASE_URL}/minha-conta/creditos?status=pending`,
+                    failure: `${BASE_URL}/minha-conta/creditos?status=failure`
                 },
                 auto_return: 'approved',
                 statement_descriptor: 'TCG HUB CREDITOS',

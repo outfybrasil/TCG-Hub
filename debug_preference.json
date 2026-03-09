@@ -1,20 +1,35 @@
 {
   "bodyRecebidoFrontend": {
-    "userId": "903365b1-a8d7-4aad-8a96-6d90ccf228cf",
+    "userId": "242236f4-ce84-41fa-bcc2-1bf31909feb9",
     "useCashback": false,
     "discountAmount": 0,
-    "totalAmount": 12,
+    "totalAmount": 0.01,
     "shippingCost": 0,
+    "shippingAddress": {
+      "id": "b7beb62f-0fa7-4086-b3b5-851810cc6a07",
+      "user_id": "242236f4-ce84-41fa-bcc2-1bf31909feb9",
+      "label": "Casa",
+      "cep": "81320000",
+      "street": "Rua Carlos Klemtz",
+      "number": "1410",
+      "complement": "Bloco 12 ap 04",
+      "neighborhood": "Fazendinha",
+      "city": "Curitiba",
+      "state": "PR",
+      "is_default": true,
+      "created_at": "2026-03-05T18:06:50.187795+00:00",
+      "updated_at": "2026-03-05T18:06:50.187795+00:00"
+    },
     "items": [
       {
-        "id": "e518016b-6acd-4483-821b-6400da4b0fd9",
-        "title": "Mega Venusaur ex",
-        "unit_price": 12,
+        "id": "c821d6c8-468f-4d53-855e-e505e0fbd18b",
+        "title": "Mega Camerupt ex",
+        "unit_price": 0.01,
         "quantity": 1
       }
     ],
     "payer": {
-      "email": "admin@tcghub.com.br"
+      "email": "gustavolanconi@outlook.com"
     }
   },
   "payloadGeradoMecadoPago": {
@@ -25,30 +40,32 @@
     },
     "items": [
       {
-        "id": "e518016b-6acd-4483-821b-6400da4b0fd9",
-        "title": "Mega Venusaur ex",
+        "id": "c821d6c8-468f-4d53-855e-e505e0fbd18b",
+        "title": "Mega Camerupt ex",
         "quantity": 1,
-        "unit_price": 12,
+        "unit_price": 0.01,
         "currency_id": "BRL"
       }
     ],
     "payer": {
-      "email": "admin@tcghub.com.br",
+      "email": "gustavolanconi@outlook.com",
       "name": "Cliente",
       "surname": "Site"
     },
     "back_urls": {
-      "success": "https://tcghub.com.br/minha-conta/pedidos?status=success",
-      "pending": "https://tcghub.com.br/minha-conta/pedidos?status=pending",
-      "failure": "https://tcghub.com.br/pagamento?status=failure"
+      "success": "https://tcg-hub.tonicoimbra.com/minha-conta/pedidos?status=success",
+      "pending": "https://tcg-hub.tonicoimbra.com/minha-conta/pedidos?status=pending",
+      "failure": "https://tcg-hub.tonicoimbra.com/pagamento?status=failure"
     },
     "auto_return": "approved",
     "statement_descriptor": "TCG HUB",
-    "external_reference": "user_903365b1-a8d7-4aad-8a96-6d90ccf228cf_1773075622601",
+    "external_reference": "user_242236f4-ce84-41fa-bcc2-1bf31909feb9_1773084467462",
     "metadata": {
-      "userId": "903365b1-a8d7-4aad-8a96-6d90ccf228cf",
+      "userId": "242236f4-ce84-41fa-bcc2-1bf31909feb9",
+      "purchaseId": null,
       "useCashback": "false",
-      "discountAmount": "0"
+      "discountAmount": "0",
+      "shippingAddress": "{\"id\":\"b7beb62f-0fa7-4086-b3b5-851810cc6a07\",\"user_id\":\"242236f4-ce84-41fa-bcc2-1bf31909feb9\",\"label\":\"Casa\",\"cep\":\"81320000\",\"street\":\"Rua Carlos Klemtz\",\"number\":\"1410\",\"complement\":\"Bloco 12 ap 04\",\"neighborhood\":\"Fazendinha\",\"city\":\"Curitiba\",\"state\":\"PR\",\"is_default\":true,\"created_at\":\"2026-03-05T18:06:50.187795+00:00\",\"updated_at\":\"2026-03-05T18:06:50.187795+00:00\"}"
     }
   }
 }
