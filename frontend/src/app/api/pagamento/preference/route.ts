@@ -88,6 +88,21 @@ export async function POST(req: Request) {
             } else if (purchaseData) {
                 purchaseId = purchaseData.id;
                 console.log('✅ Purchase ID created:', purchaseId);
+
+                if (isCashbackOnly) {
+                    // Decrement inventory immediately since payment is already approved
+                    for (const item of items || []) {
+                        if (item.id && !item.is_auction) {
+                            const { error: rpcError } = await supabaseAdmin.rpc('decrement_inventory', {
+                                p_item_id: item.id,
+                                p_quantity: item.quantity || 1
+                            });
+                            if (rpcError) {
+                                console.error(`Error decrementing inventory for item ${item.id}:`, rpcError);
+                            }
+                        }
+                    }
+                }
             }
         } else {
             console.error('💥 FATAL ERROR: No userId provided to Preference API');

@@ -25,12 +25,13 @@ const statusLabels: Record<string, string> = {
     shipped: 'Enviado',
     delivered: 'Entregue',
     refunded: 'Reembolsado',
+    canceled: 'Cancelado',
     rejected: 'Recusado'
 };
 
 function OrderStatusBar({ status }: { status: string }) {
     const currentStep = statusSteps.indexOf(status);
-    const isRefunded = status === 'refunded' || status === 'rejected';
+    const isRefunded = status === 'refunded' || status === 'rejected' || status === 'canceled';
 
     if (isRefunded) {
         return (

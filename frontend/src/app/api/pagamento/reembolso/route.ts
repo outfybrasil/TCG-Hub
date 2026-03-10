@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(req: Request) {
     try {
@@ -10,9 +10,16 @@ export async function POST(req: Request) {
         }
 
         // 1. Verify admin permissions
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            return NextResponse.json({ error: 'Não autorizado.' }, { status: 401 });
+        const authHeader = req.headers.get('Authorization');
+        const token = authHeader?.replace('Bearer ', '');
+
+        if (!token) {
+            return NextResponse.json({ error: 'Não autorizado. Token ausente.' }, { status: 401 });
+        }
+
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+        if (authError || !user) {
+            return NextResponse.json({ error: 'Não autorizado. Sessão inválida.' }, { status: 401 });
         }
 
         const { data: profile } = await supabase
@@ -21,11 +28,12 @@ export async function POST(req: Request) {
             .eq('id', user.id)
             .single();
 
-        // If is_admin doesn't exist yet, we might need to check user_metadata or similar
-        // For now, let's assume is_admin is the way.
+        // If is_admin doesn't exist yet, we check user role and emails
         if (!profile?.is_admin) {
-            // Check user metadata as fallback if is_admin column isn't fully ready
-            if (user.user_metadata?.role !== 'admin' && user.email !== 'contato@tcgmegastore.com.br') {
+            const allowedEmails = ['contato@tcgmegastore.com.br', 'admin@tcghub.com.br'];
+            const userEmail = user.email || '';
+
+            if (user.user_metadata?.role !== 'admin' && !allowedEmails.includes(userEmail)) {
                 return NextResponse.json({ error: 'Acesso negado. Apenas administradores podem reembolsar.' }, { status: 403 });
             }
         }
@@ -50,14 +58,33 @@ export async function POST(req: Request) {
             }, { status: response.status });
         }
 
-        // 3. Update Purchase status in Supabase
-        const { error: updateError } = await supabase
+        // 3. Get purchase items to restore inventory
+        const { data: purchaseData, error: fetchError } = await supabaseAdmin
+            .from('purchases')
+            .select('items')
+            .eq('id', purchaseId)
+            .single();
+
+        // 4. Update Purchase status in Supabase
+        const { error: updateError } = await supabaseAdmin
             .from('purchases')
             .update({
-                status: 'refunded',
+                status: 'canceled', // Changed from refunded to canceled per user request
                 updated_at: new Date().toISOString()
             })
             .eq('id', purchaseId);
+
+        // 5. Restore inventory if successful
+        if (!updateError && purchaseData?.items) {
+            for (const item of purchaseData.items) {
+                if (item.id && !item.is_auction) {
+                    await supabaseAdmin.rpc('restore_inventory', {
+                        p_item_id: item.id,
+                        p_quantity: item.quantity || 1
+                    });
+                }
+            }
+        }
 
         if (updateError) {
             console.error('Erro ao atualizar status da compra:', updateError);

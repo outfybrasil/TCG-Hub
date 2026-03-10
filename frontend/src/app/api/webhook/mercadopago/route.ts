@@ -38,8 +38,9 @@ export async function POST(req: Request) {
 
         const mpPayment = await mpResponse.json();
 
-        if (mpPayment.status !== 'approved') {
-            // Payment not approved yet, nothing to do
+        const validStatuses = ['approved', 'refunded', 'cancelled'];
+        if (!validStatuses.includes(mpPayment.status)) {
+            // Unhandled payment status
             return NextResponse.json({ received: true });
         }
 
@@ -77,18 +78,86 @@ export async function POST(req: Request) {
         } else if (purchaseId) {
             // This is a regular store order
             if (purchaseId) {
-                const { error: updateError } = await supabaseAdmin
-                    .from('purchases')
-                    .update({
-                        status: 'approved',
-                        mp_payment_id: String(data.id)
-                    })
-                    .eq('id', purchaseId);
+                if (mpPayment.status === 'approved') {
+                    // Fetch the purchase items first to know what to decrement
+                    const { data: purchaseData, error: fetchError } = await supabaseAdmin
+                        .from('purchases')
+                        .select('items, status')
+                        .eq('id', purchaseId)
+                        .single();
 
-                if (updateError) {
-                    console.error(`Error updating purchase ${purchaseId}:`, updateError);
-                } else {
-                    console.log(`Purchase ${purchaseId} approved via webhook. MP ID: ${data.id}`);
+                    if (fetchError || !purchaseData) {
+                        console.error(`Error fetching purchase ${purchaseId} for inventory update:`, fetchError);
+                    } else if (purchaseData.status !== 'approved') {
+                        // Update purchase status
+                        const { error: updateError } = await supabaseAdmin
+                            .from('purchases')
+                            .update({
+                                status: 'approved',
+                                mp_payment_id: String(data.id)
+                            })
+                            .eq('id', purchaseId);
+
+                        if (updateError) {
+                            console.error(`Error updating purchase ${purchaseId}:`, updateError);
+                        } else {
+                            console.log(`Purchase ${purchaseId} approved via webhook. MP ID: ${data.id}`);
+
+                            // Decrement inventory for each item
+                            const items = purchaseData.items || [];
+                            for (const item of items) {
+                                if (item.id && !item.is_auction) {
+                                    const { error: rpcError } = await supabaseAdmin.rpc('decrement_inventory', {
+                                        p_item_id: item.id,
+                                        p_quantity: item.quantity || 1
+                                    });
+                                    if (rpcError) {
+                                        console.error(`Error decrementing inventory for item ${item.id}:`, rpcError);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (mpPayment.status === 'refunded' || mpPayment.status === 'cancelled') {
+                    // Handle Refunds or Cancellations from MP Webhook
+                    const { data: purchaseData, error: fetchError } = await supabaseAdmin
+                        .from('purchases')
+                        .select('items, status')
+                        .eq('id', purchaseId)
+                        .single();
+
+                    if (fetchError || !purchaseData) {
+                        console.error(`Error fetching purchase ${purchaseId} for refund/cancelation:`, fetchError);
+                    } else if (purchaseData.status !== 'canceled' && purchaseData.status !== 'refunded') {
+                        // Mark as canceled
+                        const { error: updateError } = await supabaseAdmin
+                            .from('purchases')
+                            .update({
+                                status: 'canceled',
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', purchaseId);
+
+                        if (updateError) {
+                            console.error(`Error canceling purchase ${purchaseId}:`, updateError);
+                        } else {
+                            console.log(`Purchase ${purchaseId} canceled/refunded via webhook. MP ID: ${data.id}`);
+
+                            // Restore inventory
+                            const items = purchaseData.items || [];
+                            for (const item of items) {
+                                if (item.id && !item.is_auction) {
+                                    const { error: rpcError } = await supabaseAdmin.rpc('restore_inventory', {
+                                        p_item_id: item.id,
+                                        p_quantity: item.quantity || 1
+                                    });
+                                    if (rpcError) {
+                                        console.error(`Error restoring inventory for item ${item.id}:`, rpcError);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         } else {

@@ -27,7 +27,11 @@ export default function LoginPage() {
                 throw signInError;
             }
 
-            router.push('/membro');
+            if (email === 'admin@tcghub.com.br') {
+                router.push('/admin/vendas');
+            } else {
+                router.push('/membro');
+            }
         } catch (err: any) {
             console.error(err);
             const message = err.message === 'Invalid login credentials'

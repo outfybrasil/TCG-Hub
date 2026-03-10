@@ -1,18 +1,44 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export default function MobileNav() {
     const pathname = usePathname();
+    const [isAdmin, setIsAdmin] = useState(false);
 
-    const navItems = [
+    useEffect(() => {
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setIsAdmin(session?.user?.email === 'admin@tcghub.com.br');
+        };
+
+        checkUser();
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            setIsAdmin(session?.user?.email === 'admin@tcghub.com.br');
+        });
+
+        return () => { authListener.subscription.unsubscribe(); };
+    }, []);
+
+    let navItems = [
         { label: 'Loja', icon: '🃏', href: '/marketplace' },
         { label: 'Leilões', icon: '⚡', href: '/leilao' },
         { label: 'Conta', icon: '👤', href: '/minha-conta' },
         { label: 'Suporte', icon: '💬', href: '/suporte' },
     ];
+
+    if (isAdmin) {
+        navItems = [
+            { label: 'Loja', icon: '🃏', href: '/marketplace' },
+            { label: 'Leilões', icon: '⚡', href: '/leilao' },
+            { label: 'Vendas', icon: '📦', href: '/admin/vendas' },
+            { label: 'Estoque', icon: '📋', href: '/estoque' },
+        ];
+    }
 
     return (
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-slate-100 z-[100] pb-safe-area-inset-bottom">

@@ -10,7 +10,11 @@ export default function AuthCallbackPage() {
     useEffect(() => {
         const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
-                router.push('/membro');
+                if (session.user?.email === 'admin@tcghub.com.br') {
+                    router.push('/admin/vendas');
+                } else {
+                    router.push('/membro');
+                }
             }
         });
 
@@ -18,7 +22,11 @@ export default function AuthCallbackPage() {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session) {
-                router.push('/membro');
+                if (session.user?.email === 'admin@tcghub.com.br') {
+                    router.push('/admin/vendas');
+                } else {
+                    router.push('/membro');
+                }
             }
         };
 

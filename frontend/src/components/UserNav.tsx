@@ -87,9 +87,22 @@ export default function UserNav() {
                 </Link>
             )}
 
-            <Link href={user ? '/minha-conta' : '/auth/login'} className="h-11 px-6 bg-slate-100 text-slate-900 flex items-center text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all rounded-xl">
-                {user ? 'Minha Conta' : 'Entrar'}
+            <Link href={user ? (user.email === 'admin@tcghub.com.br' ? '/admin/vendas' : '/minha-conta') : '/auth/login'} className="h-11 px-6 bg-slate-100 text-slate-900 flex items-center text-[10px] font-black uppercase tracking-widest hover:bg-yellow-400 transition-all rounded-xl">
+                {user ? (user.email === 'admin@tcghub.com.br' ? 'Pedidos' : 'Minha Conta') : 'Entrar'}
             </Link>
+
+            {user && (
+                <button
+                    onClick={async () => {
+                        await supabase.auth.signOut();
+                        window.location.href = '/';
+                    }}
+                    className="h-11 px-4 text-slate-400 flex items-center text-[10px] font-black uppercase tracking-widest hover:text-rose-600 transition-all rounded-xl border border-transparent hover:border-rose-100 hover:bg-rose-50"
+                    title="Sair"
+                >
+                    Sair
+                </button>
+            )}
 
             <button
                 onClick={() => setIsOpen(true)}

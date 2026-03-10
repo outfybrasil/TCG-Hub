@@ -22,6 +22,7 @@ export default function PagamentoPage() {
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
     const [dataReady, setDataReady] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [paymentApproved, setPaymentApproved] = useState(false);
     const brickKeyRef = useRef(0);
 
     const { items, total, clearCart } = useCart();
@@ -113,7 +114,7 @@ export default function PagamentoPage() {
                         totalAmount: total,
                         shippingCost: shippingCost,
                         shippingAddress: addresses.find(a => a.id === selectedAddressId),
-                        items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity })),
+                        items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity, imageUrl: i.imageUrl })),
                         payer: { email: user.email }
                     }),
                 });
@@ -155,15 +156,19 @@ export default function PagamentoPage() {
 
                 if (res.status === 'approved') {
                     clearInterval(interval);
-                    router.push('/minha-conta/pedidos?status=success');
+                    setPaymentApproved(true);
+                    clearCart();
+                    setTimeout(() => {
+                        router.push('/minha-conta/pedidos?status=success');
+                    }, 3500);
                 }
             } catch (error) {
                 console.error('Erro ao verificar status da compra:', error);
             }
-        }, 4000);
+        }, 3000);
 
         return () => clearInterval(interval);
-    }, [createdPurchaseId, router]);
+    }, [createdPurchaseId, router, clearCart]);
 
     if (!isMounted) return null;
 
@@ -271,7 +276,32 @@ export default function PagamentoPage() {
 
                 {/* Content */}
                 <div className="w-full">
-                    {preferenceId === 'cashback-only' || (finalAmount === 0 && useCashback && walletBalance >= total) ? (
+                    {paymentApproved ? (
+                        <div className="text-center py-16 p-8 border border-emerald-200 bg-emerald-50 rounded-[40px] shadow-sm animate-fade-in">
+                            <div className="flex justify-center mb-8">
+                                <div className="h-24 w-24 bg-emerald-500 rounded-full flex items-center justify-center animate-bounce shadow-[0_0_40px_rgba(16,185,129,0.4)]">
+                                    <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="4" d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <h3 className="text-3xl font-black tracking-tighter text-emerald-950 mb-3">Pagamento Aprovado!</h3>
+                            <p className="text-emerald-700 font-medium mb-8">Sua compra foi confirmada com sucesso.</p>
+                            <div className="flex justify-center flex-col items-center">
+                                <div className="w-64 h-1.5 bg-emerald-200/60 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500 w-full animate-[progress_3.5s_ease-in-out_forwards] origin-left scale-x-0" style={{ transformOrigin: 'left', animation: 'progress 3.5s linear forwards' }}></div>
+                                </div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600/70 mt-4">Redirecionando...</p>
+                            </div>
+                            <style dangerouslySetInnerHTML={{
+                                __html: `
+                                @keyframes progress {
+                                    0% { transform: scaleX(0); }
+                                    100% { transform: scaleX(1); }
+                                }
+                            `}} />
+                        </div>
+                    ) : preferenceId === 'cashback-only' || (finalAmount === 0 && useCashback && walletBalance >= total) ? (
                         <div className="text-center py-12 p-8 border-2 border-dashed border-rose-200 bg-rose-50 rounded-3xl">
                             <div className="text-4xl mb-4">🎉</div>
                             <h3 className="text-xl font-black tracking-tight text-slate-900 mb-2">Checkout 100% via Cashback!</h3>
@@ -290,14 +320,16 @@ export default function PagamentoPage() {
                                                 discountAmount: discount,
                                                 userId: user?.id,
                                                 payer: { email: user?.email },
-                                                items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity })),
+                                                items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity, imageUrl: i.imageUrl })),
                                                 shippingAddress: addresses.find(a => a.id === selectedAddressId),
                                             }),
                                         });
                                         const res = await req.json();
-                                        alert('Pedido concluído com sucesso usando saldo de CashBack!');
+                                        setPaymentApproved(true);
                                         clearCart();
-                                        router.push('/minha-conta/pedidos?status=success');
+                                        setTimeout(() => {
+                                            router.push('/minha-conta/pedidos?status=success');
+                                        }, 3500);
                                     } catch (e) { console.error(e); alert('Erro no fechamento do pedido.'); }
                                     finally { setLoading(false); }
                                 }}
