@@ -20,7 +20,7 @@ interface CardProps {
     marketPrices?: Record<string, number>;
     addItem?: (item: { id: string; name: string; price: number; imageUrl: string; maxStock?: number }) => void;
     onDelete?: (id: string) => void;
-    onUpdatePrice?: (id: string, newPrice: number, originalPrice?: number) => void;
+    onEditCard?: (id: string, newPrice: number, originalPrice?: number, quantity?: number) => void;
 }
 
 const getGradeColor = (grade: string | undefined) => {
@@ -33,7 +33,7 @@ const getGradeColor = (grade: string | undefined) => {
     return 'bg-slate-400';
 };
 
-const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, addItem, onDelete, onUpdatePrice }: CardProps) => {
+const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, addItem, onDelete, onEditCard }: CardProps) => {
     const [currentImageUrl, setCurrentImageUrl] = React.useState(imageUrl);
     const [imageError, setImageError] = React.useState(false);
     const [selectedQty, setSelectedQty] = React.useState(1);
@@ -193,12 +193,12 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
 
                     {/* Add Button (Wide Slate Button) */}
                     <div className="flex gap-2">
-                        {onUpdatePrice && (
+                        {onEditCard && (
                             <button
-                                onClick={() => onUpdatePrice(id, price || 0, originalPrice)}
+                                onClick={() => onEditCard(id, price || 0, originalPrice, quantity)}
                                 className="flex-1 h-12 rounded-xl bg-slate-100 text-slate-500 font-black uppercase tracking-widest text-[9px] hover:bg-slate-200 transition-all border border-slate-200"
                             >
-                                Editar Preço
+                                Editar Item
                             </button>
                         )}
                         <button
@@ -214,7 +214,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                                 }
                             }}
                             disabled={isOutOfStock && !onDelete}
-                            className={`${onUpdatePrice ? 'flex-1' : 'w-full'} h-12 rounded-xl uppercase font-black tracking-widest text-[11px] transition-all flex items-center justify-center active:scale-[0.98] ${isOutOfStock && !onDelete
+                            className={`${onEditCard ? 'flex-1' : 'w-full'} h-12 rounded-xl uppercase font-black tracking-widest text-[11px] transition-all flex items-center justify-center active:scale-[0.98] ${isOutOfStock && !onDelete
                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                 : onDelete
                                     ? 'bg-slate-100 text-slate-900 hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-100'
@@ -230,12 +230,12 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
     );
 };
 
-export default function CardGallery({ cards, onDelete, onUpdatePrice }: { cards: CardProps[]; onDelete?: (id: string) => void, onUpdatePrice?: (id: string, newPrice: number, originalPrice?: number) => void }) {
+export default function CardGallery({ cards, onDelete, onEditCard }: { cards: CardProps[]; onDelete?: (id: string) => void, onEditCard?: (id: string, newPrice: number, originalPrice?: number, quantity?: number) => void }) {
     const { addItem } = useCart();
     return (
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {cards.map((card) => (
-                <ProductCard key={card.id} {...card} addItem={addItem} onDelete={onDelete} onUpdatePrice={onUpdatePrice} />
+                <ProductCard key={card.id} {...card} addItem={addItem} onDelete={onDelete} onEditCard={onEditCard} />
             ))}
         </div>
     );

@@ -24,6 +24,7 @@ export default function AdminSalesPage() {
     const [loading, setLoading] = useState(true);
     const [refundingId, setRefundingId] = useState<string | null>(null);
     const [refundModal, setRefundModal] = useState<{ isOpen: boolean; purchaseId: string | null; paymentId: string | null }>({ isOpen: false, purchaseId: null, paymentId: null });
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; purchaseId: string | null }>({ isOpen: false, purchaseId: null });
     const [alertModal, setAlertModal] = useState<{ isOpen: boolean; title: string; message: string; type: 'success' | 'error' }>({ isOpen: false, title: '', message: '', type: 'success' });
     const [activeTab, setActiveTab] = useState<'ativas' | 'canceladas'>('ativas');
 
@@ -176,6 +177,28 @@ export default function AdminSalesPage() {
             alert('Erro ao atualizar rastreio.');
         } finally {
             setUpdatingTrack(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!deleteModal.purchaseId) return;
+
+        const purchaseId = deleteModal.purchaseId;
+        setDeleteModal({ isOpen: false, purchaseId: null });
+
+        try {
+            const { error } = await supabase
+                .from('purchases')
+                .delete()
+                .eq('id', purchaseId);
+
+            if (error) throw error;
+
+            setAlertModal({ isOpen: true, title: 'Sucesso!', message: 'Registro de venda removido permanentemente.', type: 'success' });
+            fetchPurchases();
+        } catch (error) {
+            console.error('Erro ao deletar venda:', error);
+            setAlertModal({ isOpen: true, title: 'Erro', message: 'Erro ao tentar deletar o registro no banco de dados.', type: 'error' });
         }
     };
 
@@ -352,6 +375,14 @@ export default function AdminSalesPage() {
                                                     </button>
                                                 )}
 
+                                                <button
+                                                    onClick={() => setDeleteModal({ isOpen: true, purchaseId: p.id })}
+                                                    className="h-9 w-9 bg-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-lg flex items-center justify-center transition-all border border-transparent hover:border-rose-100 shadow-sm ml-2 inline-block align-middle"
+                                                    title="Excluir Registro"
+                                                >
+                                                    <span className="text-xs">✕</span>
+                                                </button>
+
                                                 {p.status === 'refunded' && (
                                                     <span className="text-[9px] font-black text-slate-300 uppercase italic block mt-2">Operação Finalizada</span>
                                                 )}
@@ -414,6 +445,37 @@ export default function AdminSalesPage() {
                         >
                             Fechar
                         </button>
+                    </div>
+                </div>
+            )}
+            {/* Delete Confirmation Modal */}
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm px-4">
+                    <div className="bg-white rounded-[32px] p-8 max-w-sm w-full shadow-2xl animate-fade-up">
+                        <div className="flex items-center gap-3 mb-6">
+                            <span className="text-3xl">🗑️</span>
+                            <div>
+                                <h3 className="text-xl font-black tracking-tighter text-slate-900">Excluir Registro</h3>
+                                <p className="text-[10px] text-rose-600 font-black uppercase tracking-widest">Ação Irreversível</p>
+                            </div>
+                        </div>
+                        <p className="text-sm font-medium text-slate-600 mb-8 leading-relaxed">
+                            Tem certeza que deseja <strong className="text-rose-600">excluir permanentemente</strong> este registro de venda? Esta ação não pode ser desfeita e removerá os dados do histórico.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setDeleteModal({ isOpen: false, purchaseId: null })}
+                                className="h-10 px-6 bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-200 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                className="h-10 px-6 bg-rose-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-rose-700 transition-colors shadow-lg shadow-rose-200"
+                            >
+                                Confirmar Exclusão
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

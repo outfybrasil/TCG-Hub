@@ -24,6 +24,7 @@ export default function PagamentoPage() {
     const [isMounted, setIsMounted] = useState(false);
     const [paymentApproved, setPaymentApproved] = useState(false);
     const brickKeyRef = useRef(0);
+    const hasFetchedPreference = useRef(false);
 
     const { items, total, clearCart } = useCart();
 
@@ -100,8 +101,12 @@ export default function PagamentoPage() {
 
     useEffect(() => {
         if (!dataReady || !isMounted || !user) return;
+        if (hasFetchedPreference.current) return;
 
         const generatePreference = async () => {
+            if (hasFetchedPreference.current) return;
+            hasFetchedPreference.current = true;
+
             try {
                 setPreferenceId(null);
                 const req = await fetch('/api/pagamento/preference', {
@@ -132,9 +137,11 @@ export default function PagamentoPage() {
                     }
                 } else {
                     console.error("Falha ao gerar preference:", res.error);
+                    hasFetchedPreference.current = false; // allow retry if failed
                 }
             } catch (err) {
                 console.error("Erro ao gerar API preference:", err);
+                hasFetchedPreference.current = false;
             }
         };
 
@@ -158,6 +165,13 @@ export default function PagamentoPage() {
                     clearInterval(interval);
                     setPaymentApproved(true);
                     clearCart();
+
+                    // Force cleanup of MP elements
+                    setTimeout(() => {
+                        const mpElements = document.querySelectorAll('.mercadopago-checkout-iframe, .mercadopago-checkout-iframe-container, #mercadopago-checkout-iframe-container');
+                        mpElements.forEach(el => el.remove());
+                    }, 500);
+
                     setTimeout(() => {
                         router.push('/minha-conta/pedidos?status=success');
                     }, 3500);
@@ -169,6 +183,27 @@ export default function PagamentoPage() {
 
         return () => clearInterval(interval);
     }, [createdPurchaseId, router, clearCart]);
+
+    // Cleanup MP elements on unmount or success
+    useEffect(() => {
+        if (paymentApproved) {
+            const cleanup = () => {
+                const mpElements = document.querySelectorAll('.mercadopago-checkout-iframe, .mercadopago-checkout-iframe-container, #mercadopago-checkout-iframe-container');
+                mpElements.forEach(el => el.remove());
+
+                // Remove some common classes MP uses for overlays
+                const overlays = document.querySelectorAll('[class*="mercadopago-checkout"]');
+                overlays.forEach(el => {
+                    const htmlEl = el as HTMLElement;
+                    if (htmlEl.tagName === 'DIV' && htmlEl.style?.position === 'fixed') htmlEl.remove();
+                });
+            };
+            cleanup();
+            // Short delay to catch any late-injected elements
+            const timer = setTimeout(cleanup, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [paymentApproved]);
 
     if (!isMounted) return null;
 

@@ -12,6 +12,7 @@ export default function InventoryPage() {
     const [editingCard, setEditingCard] = useState<any>(null);
     const [editPrice, setEditPrice] = useState('');
     const [editOriginalPrice, setEditOriginalPrice] = useState('');
+    const [editQuantity, setEditQuantity] = useState('');
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({ totalValue: 0, itemsCount: 0, salesCount: 0 });
 
@@ -97,17 +98,19 @@ export default function InventoryPage() {
         }
     };
 
-    const handleUpdatePrice = async () => {
+    const handleUpdateItem = async () => {
         if (!editingCard) return;
         try {
             const newPrice = parseFloat(editPrice);
             const originalPrice = editOriginalPrice ? parseFloat(editOriginalPrice) : null;
+            const newQuantity = parseInt(editQuantity);
 
             const { error } = await supabase
                 .from('inventory')
                 .update({
                     price: newPrice,
-                    original_price: originalPrice
+                    original_price: originalPrice,
+                    quantity: newQuantity
                 })
                 .eq('id', editingCard.id);
 
@@ -115,13 +118,13 @@ export default function InventoryPage() {
 
             setCards(prev => prev.map(c =>
                 c.id === editingCard.id
-                    ? { ...c, price: newPrice, originalPrice: originalPrice || undefined }
+                    ? { ...c, price: newPrice, originalPrice: originalPrice || undefined, quantity: newQuantity }
                     : c
             ));
             setEditingCard(null);
         } catch (error) {
-            console.error("Erro ao atualizar preço:", error);
-            alert("Erro ao atualizar preço.");
+            console.error("Erro ao atualizar item:", error);
+            alert("Erro ao atualizar item.");
         }
     };
 
@@ -208,12 +211,13 @@ export default function InventoryPage() {
                     <CardGallery
                         cards={cards}
                         onDelete={handleDelete}
-                        onUpdatePrice={(id) => {
+                        onEditCard={(id, price, originalPrice, quantity) => {
                             const card = cards.find(c => c.id === id);
                             if (card) {
                                 setEditingCard(card);
-                                setEditPrice(card.price.toString());
-                                setEditOriginalPrice(card.originalPrice?.toString() || '');
+                                setEditPrice(price.toString());
+                                setEditOriginalPrice(originalPrice?.toString() || '');
+                                setEditQuantity(quantity?.toString() || '1');
                             }
                         }}
                     />
@@ -244,6 +248,15 @@ export default function InventoryPage() {
                                         />
                                         <p className="text-[9px] text-slate-400 font-bold ml-1 uppercase">Deixe vazio se não houver desconto</p>
                                     </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Quantidade em Estoque</label>
+                                        <input
+                                            type="number"
+                                            value={editQuantity}
+                                            onChange={(e) => setEditQuantity(e.target.value)}
+                                            className="w-full h-14 px-6 rounded-2xl border border-slate-100 bg-slate-50 text-slate-900 font-black focus:border-rose-600 transition-all outline-none"
+                                        />
+                                    </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4 mt-10">
                                     <button
@@ -253,7 +266,7 @@ export default function InventoryPage() {
                                         Cancelar
                                     </button>
                                     <button
-                                        onClick={handleUpdatePrice}
+                                        onClick={handleUpdateItem}
                                         className="h-14 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20"
                                     >
                                         Salvar
