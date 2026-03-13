@@ -1,17 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import React, { useEffect, useState } from 'react';
+
 import CardGallery from '@/components/CardGallery';
 import FilterSidebar from '@/components/FilterSidebar';
+import { supabase } from '@/lib/supabase';
 
 interface InventoryCard {
-    id: string; name?: string; set?: string;
-    official_name?: string; official_set_name?: string;
-    official_image_url?: string; image_url?: string;
-    price?: number; original_price?: number; grade?: string; finish?: string;
-    is_promo?: boolean; isPromo?: boolean;
-    quantity?: number; number?: string; local_id?: string;
+    id: string;
+    card_id?: string | null;
+    name?: string;
+    set?: string;
+    official_name?: string;
+    official_set_name?: string;
+    official_image_url?: string;
+    image_url?: string;
+    price?: number;
+    original_price?: number;
+    grade?: string;
+    finish?: string;
+    is_promo?: boolean;
+    isPromo?: boolean;
+    quantity?: number;
+    number?: string;
+    local_id?: string;
     marketPrices?: Record<string, number>;
     marketPriceLinks?: Record<string, string>;
     rarity?: string;
@@ -19,21 +31,61 @@ interface InventoryCard {
     language?: string;
 }
 
+interface PokemonCardTypeRow {
+    id?: string;
+    name: string;
+    set_name: string;
+    types: string[] | null;
+}
+
+const FALLBACK_TYPES = ['GRAMA', 'FOGO', 'AGUA', 'ELETRICO', 'PSIQUICO', 'LUTA', 'SOMBRIO', 'METAL', 'FADA', 'DRAGAO', 'INCOLOR'];
+
+const TYPE_ALIASES: Record<string, string> = {
+    GRASS: 'GRAMA',
+    FIRE: 'FOGO',
+    WATER: 'AGUA',
+    LIGHTNING: 'ELETRICO',
+    ELECTRIC: 'ELETRICO',
+    PSYCHIC: 'PSIQUICO',
+    FIGHTING: 'LUTA',
+    DARKNESS: 'SOMBRIO',
+    DARK: 'SOMBRIO',
+    METAL: 'METAL',
+    STEEL: 'METAL',
+    FAIRY: 'FADA',
+    DRAGON: 'DRAGAO',
+    COLORLESS: 'INCOLOR',
+    NORMAL: 'INCOLOR',
+};
+
+function normalizeTypeLabel(value: string) {
+    const normalized = value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toUpperCase();
+
+    return TYPE_ALIASES[normalized] || normalized;
+}
+
+function buildCardLookupKey(name?: string | null, setName?: string | null) {
+    return `${(name || '').trim().toLowerCase()}::${(setName || '').trim().toLowerCase()}`;
+}
+
 export default function MarketplacePage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [cards, setCards] = useState<InventoryCard[]>([]);
     const [loading, setLoading] = useState(true);
-
-    // Filter & Sort State
     const [selectedSets, setSelectedSets] = useState<string[]>([]);
     const [selectedRarities, setSelectedRarities] = useState<string[]>([]);
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<'price_desc' | 'price_asc' | 'newest'>('price_desc');
     const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+
     const sortOptions: Array<{ id: 'price_desc' | 'price_asc' | 'newest'; label: string }> = [
-        { id: 'price_desc', label: 'Maior Valor' },
-        { id: 'price_asc', label: 'Menor Valor' },
-        { id: 'newest', label: 'Novos Ativos' }
+        { id: 'price_desc', label: 'Maior valor' },
+        { id: 'price_asc', label: 'Menor valor' },
+        { id: 'newest', label: 'Recem listadas' },
     ];
 
     useEffect(() => {
@@ -44,11 +96,50 @@ export default function MarketplacePage() {
                 .order('price', { ascending: false });
 
             if (data) {
+                const requestedCardIds = Array.from(new Set(
+                    data.map((card) => card.card_id).filter(Boolean),
+                )) as string[];
+                const requestedNames = Array.from(new Set(
+                    data.flatMap((card) => [card.official_name, card.name]).filter(Boolean),
+                )) as string[];
+
+                let pokemonTypeMap = new Map<string, string[]>();
+                let pokemonTypeById = new Map<string, string[]>();
+
+                if (requestedCardIds.length > 0) {
+                    const { data: pokemonCardRowsById } = await supabase
+                        .from('pokemon_cards')
+                        .select('id, name, set_name, types')
+                        .in('id', requestedCardIds);
+
+                    pokemonTypeById = new Map(
+                        ((pokemonCardRowsById || []) as PokemonCardTypeRow[])
+                            .filter((row) => row.id && Array.isArray(row.types) && row.types.length > 0)
+                            .map((row) => [row.id as string, row.types || []]),
+                    );
+                }
+
+                if (requestedNames.length > 0) {
+                    const { data: pokemonCardRowsByName } = await supabase
+                        .from('pokemon_cards')
+                        .select('id, name, set_name, types')
+                        .in('name', requestedNames);
+
+                    pokemonTypeMap = new Map(
+                        ((pokemonCardRowsByName || []) as PokemonCardTypeRow[])
+                            .filter((row) => Array.isArray(row.types) && row.types.length > 0)
+                            .map((row) => [
+                                buildCardLookupKey(row.name, row.set_name),
+                                row.types || [],
+                            ]),
+                    );
+                }
+
                 const summaryRes = await fetch('/api/prices/summary', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        cards: data.map(card => ({
+                        cards: data.map((card) => ({
                             id: card.id,
                             name: card.name,
                             official_name: card.official_name,
@@ -58,42 +149,50 @@ export default function MarketplacePage() {
                             grade: card.grade,
                             finish: card.finish,
                             language: card.language,
-                        }))
-                    })
+                        })),
+                    }),
                 });
+
                 const summaryJson = summaryRes.ok ? await summaryRes.json() : { summaries: {} };
                 const marketPricesMap = Object.fromEntries(
-                    Object.entries(summaryJson.summaries || {}).map(([cardId, summary]) => [cardId, (summary as { storePrices?: Record<string, number> }).storePrices || {}])
+                    Object.entries(summaryJson.summaries || {}).map(([cardId, summary]) => [cardId, (summary as { storePrices?: Record<string, number> }).storePrices || {}]),
                 ) as Record<string, Record<string, number>>;
                 const marketPriceLinksMap = Object.fromEntries(
-                    Object.entries(summaryJson.summaries || {}).map(([cardId, summary]) => [cardId, (summary as { storeUrls?: Record<string, string> }).storeUrls || {}])
+                    Object.entries(summaryJson.summaries || {}).map(([cardId, summary]) => [cardId, (summary as { storeUrls?: Record<string, string> }).storeUrls || {}]),
                 ) as Record<string, Record<string, string>>;
 
-                const enrichedCards = data.map(card => ({
+                setCards(data.map((card) => ({
                     ...card,
+                    types:
+                        (Array.isArray(card.types) && card.types.length > 0 ? card.types : null) ||
+                        (card.card_id ? pokemonTypeById.get(card.card_id) : null) ||
+                        pokemonTypeMap.get(
+                            buildCardLookupKey(
+                                card.official_name || card.name,
+                                card.official_set_name || card.set,
+                            ),
+                        ) ||
+                        pokemonTypeMap.get(buildCardLookupKey(card.name, card.set)) ||
+                        [],
                     marketPrices: marketPricesMap[card.id] || {},
                     marketPriceLinks: marketPriceLinksMap[card.id] || {},
-                }));
-
-                setCards(enrichedCards);
+                })));
             }
+
             setLoading(false);
         };
 
-        fetchCards();
+        void fetchCards();
 
-        // Real-time subscription for inventory changes
         const channel = supabase
             .channel('inventory-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, (payload) => {
                 if (payload.eventType === 'UPDATE') {
-                    setCards(prev => prev.map(card =>
-                        card.id === payload.new.id ? { ...card, ...(payload.new as InventoryCard) } : card
-                    ));
+                    setCards((prev) => prev.map((card) => (card.id === payload.new.id ? { ...card, ...(payload.new as InventoryCard) } : card)));
                 } else if (payload.eventType === 'INSERT') {
-                    setCards(prev => [...prev, payload.new as InventoryCard]);
+                    setCards((prev) => [...prev, payload.new as InventoryCard]);
                 } else if (payload.eventType === 'DELETE') {
-                    setCards(prev => prev.filter(card => card.id !== payload.old.id));
+                    setCards((prev) => prev.filter((card) => card.id !== payload.old.id));
                 }
             })
             .subscribe();
@@ -103,28 +202,29 @@ export default function MarketplacePage() {
         };
     }, []);
 
-    // Extract dynamic filters from data
     const filterOptions = {
-        sets: Array.from(new Set(cards.map(c => c.official_set_name || c.set).filter(Boolean))) as string[],
-        rarities: Array.from(new Set(cards.map(c => c.rarity || c.finish).filter(Boolean))) as string[],
-        // Since types might not be in the flat table directly or require more joins, 
-        // we'll keep the standard Pokemon types for now but make them functional
-        types: ["GRAMA", "FOGO", "ÁGUA", "ELÉTRICO", "PSÍQUICO", "LUTA", "SOMBRIO", "METAL", "FADA", "DRAGÃO"]
+        sets: Array.from(new Set(cards.map((card) => card.official_set_name || card.set).filter(Boolean))) as string[],
+        rarities: Array.from(new Set(cards.map((card) => card.rarity || card.finish).filter(Boolean))) as string[],
+        types: Array.from(
+            new Set(
+                cards.flatMap((card) => (card.types || []).map((type) => normalizeTypeLabel(type))),
+            ),
+        ),
     };
+
+    if (filterOptions.types.length === 0) {
+        filterOptions.types = FALLBACK_TYPES;
+    }
 
     const toggleFilter = (category: string, value: string) => {
         const setters: Record<string, [string[], React.Dispatch<React.SetStateAction<string[]>>]> = {
             sets: [selectedSets, setSelectedSets],
             rarities: [selectedRarities, setSelectedRarities],
-            types: [selectedTypes, setSelectedTypes]
+            types: [selectedTypes, setSelectedTypes],
         };
 
-        const [selected, set] = setters[category];
-        if (selected.includes(value)) {
-            set(selected.filter(v => v !== value));
-        } else {
-            set([...selected, value]);
-        }
+        const [selected, setSelected] = setters[category];
+        setSelected(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
     };
 
     const clearFilters = () => {
@@ -134,8 +234,9 @@ export default function MarketplacePage() {
         setSearchTerm('');
     };
 
-    const filteredCards = cards.filter(card => {
-        const matchesSearch = (card.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const filteredCards = cards.filter((card) => {
+        const matchesSearch =
+            (card.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (card.set ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (card.official_set_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (card.number ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -143,127 +244,123 @@ export default function MarketplacePage() {
 
         const matchesSet = selectedSets.length === 0 || selectedSets.includes(card.official_set_name || card.set || '');
         const matchesRarity = selectedRarities.length === 0 || selectedRarities.includes(card.rarity || card.finish || '');
-
-        // Type matching: checks if any selected type matches the card's types array
-        const matchesType = selectedTypes.length === 0 || (card.types && card.types.some(t =>
-            selectedTypes.some(selected => selected.toUpperCase() === t.toUpperCase())
-        ));
+        const cardTypes = (card.types || []).map((type) => normalizeTypeLabel(type));
+        const matchesType = selectedTypes.length === 0 || cardTypes.some((type) => selectedTypes.includes(type));
 
         return matchesSearch && matchesSet && matchesRarity && matchesType;
     });
 
-    // Apply Sorting
-    const sortedCards = [...filteredCards].sort((a, b) => {
-        if (sortBy === 'price_desc') return (b.price || 0) - (a.price || 0);
-        if (sortBy === 'price_asc') return (a.price || 0) - (b.price || 0);
-        if (sortBy === 'newest') return b.id.localeCompare(a.id);
+    const sortedCards = [...filteredCards].sort((left, right) => {
+        if (sortBy === 'price_desc') return (right.price || 0) - (left.price || 0);
+        if (sortBy === 'price_asc') return (left.price || 0) - (right.price || 0);
+        if (sortBy === 'newest') return right.id.localeCompare(left.id);
         return 0;
     });
 
-    const getSortLabel = () => {
-        if (sortBy === 'price_desc') return 'Valor (Maior)';
-        if (sortBy === 'price_asc') return 'Valor (Menor)';
-        if (sortBy === 'newest') return 'Recentemente';
-        return '';
-    };
+    const activeFilters = selectedSets.length + selectedRarities.length + selectedTypes.length;
+    const availableCards = cards.filter((card) => (card.quantity || 0) > 0).length;
+    const averagePrice = cards.length > 0
+        ? cards.reduce((acc, card) => acc + (card.price || 0), 0) / cards.length
+        : 0;
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-12 animate-fade-up">
-            {/* Search & Global Index */}
-            <div className="flex flex-col lg:flex-row justify-between items-start gap-12 mb-16 border-b border-slate-200 pb-12">
-                <div className="space-y-6 flex-1 w-full">
-                    <div className="space-y-4">
-                        <div className="inline-flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
-                            <span className="h-1.5 w-1.5 rounded-full bg-rose-600"></span>
-                            <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Estoque Privado Certificado</span>
-                        </div>
-                        <h1 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
-                            Catálogo <span className="text-rose-600">Premium.</span>
+        <div className="animate-fade-up pb-20 pt-10">
+            <section className="page-frame page-hero space-y-6">
+                <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+                    <div className="max-w-3xl space-y-4">
+                        <span className="eyebrow">Marketplace premium</span>
+                        <h1 className="text-3xl font-black leading-[0.95] tracking-[-0.04em] text-slate-950 sm:text-4xl lg:text-5xl">
+                            Catalogo organizado para leitura rapida, filtro util e compra direta.
                         </h1>
-                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest max-w-lg">Coleção exclusiva de ativos Pokémon TCG para colecionadores de alto nível.</p>
+                        <p className="max-w-2xl text-sm leading-7 text-slate-600">
+                            Em vez de blocos repetidos, a pagina agora concentra busca, filtros e contexto de mercado numa hierarquia mais simples.
+                        </p>
                     </div>
 
-                    <div className="relative max-w-2xl">
+                    <div className="grid gap-6 sm:grid-cols-3">
+                        {[
+                            ['Ativos', `${availableCards}`],
+                            ['Filtros', activeFilters > 0 ? `${activeFilters} ativos` : 'Sem filtros'],
+                            ['Preco medio', averagePrice > 0 ? `R$ ${averagePrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Sem dados'],
+                        ].map(([label, value]) => (
+                            <div key={label} className="surface-card p-5 transition-all hover:scale-[1.02]">
+                                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
+                                <p className="mt-3 text-lg font-black tracking-[-0.03em] text-slate-950">{value}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                    <div className="relative">
                         <input
                             type="text"
-                            placeholder="Pesquisar por nome, edição ou certificação..."
-                            className="w-full h-14 pl-12 pr-6 bg-white border border-slate-200 rounded-2xl focus:border-blue-500 focus:shadow-xl focus:shadow-blue-500/5 outline-none transition-all font-bold text-sm"
+                            placeholder="Pesquisar por nome, edicao, numero ou certificacao"
+                            className="h-[52px] w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-5 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-rose-300 focus:shadow-[0_20px_50px_-35px_rgba(225,29,72,0.45)]"
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onChange={(event) => setSearchTerm(event.target.value)}
                         />
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 opacity-30">🔍</span>
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">🔎</span>
                     </div>
-                </div>
 
-                <div className="flex flex-wrap gap-4 pt-10 lg:pt-0">
-                    <button className="h-12 px-8 bg-slate-900 text-white font-black uppercase tracking-widest text-[9px] rounded-xl shadow-lg hover:bg-rose-600 transition-all">Novidades</button>
-                    <button className="h-12 px-8 bg-white border border-slate-200 text-slate-500 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-slate-50 transition-all">Filtros Avançados</button>
+                    <button
+                        onClick={() => setIsSortModalOpen(true)}
+                        className="inline-flex h-14 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-[10px] font-black uppercase tracking-[0.22em] text-slate-600 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
+                    >
+                        Ordenar: {sortOptions.find((option) => option.id === sortBy)?.label}
+                    </button>
                 </div>
-            </div>
+            </section>
 
-            <div className="flex flex-col lg:flex-row gap-12">
-                {/* Sidebar Filters */}
-                <aside className="w-full lg:w-72 shrink-0">
-                    <div className="sticky top-32 space-y-8">
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900">Refinar Busca</h2>
-                            <div className="h-[1px] flex-1 bg-slate-100"></div>
-                        </div>
-                        <FilterSidebar
-                            options={filterOptions}
-                            selected={{
-                                sets: selectedSets,
-                                rarities: selectedRarities,
-                                types: selectedTypes
-                            }}
-                            onToggle={toggleFilter}
-                            onClear={clearFilters}
-                        />
-                    </div>
+            <section className="page-frame mt-8 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
+                <aside className="lg:sticky lg:top-28 lg:self-start">
+                    <FilterSidebar
+                        options={filterOptions}
+                        selected={{ sets: selectedSets, rarities: selectedRarities, types: selectedTypes }}
+                        onToggle={toggleFilter}
+                        onClear={clearFilters}
+                    />
                 </aside>
 
-                {/* Results Area */}
-                <main className="flex-1 space-y-12">
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 pb-6">
-                        <span>Exibindo {sortedCards.length} Ativos Premium</span>
-                        <div className="flex gap-6 items-center">
-                            <span>Ordem: {getSortLabel()}</span>
-                            <span
-                                onClick={() => setIsSortModalOpen(true)}
-                                className="cursor-pointer text-rose-600 hover:text-rose-700 transition-colors bg-rose-50 px-4 py-1.5 rounded-full border border-rose-100 flex items-center gap-2"
-                            >
-                                <span className="w-1 h-1 rounded-full bg-rose-600"></span>
-                                Alterar
-                            </span>
+                <main className="space-y-6">
+                    <div className="surface-card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Resultado atual</p>
+                            <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">
+                                {sortedCards.length} carta{sortedCards.length === 1 ? '' : 's'} visiveis
+                            </h2>
                         </div>
+                        <p className="max-w-xl text-sm leading-7 text-slate-600">
+                            O catalogo mostra o preco da TCG Hub e o comparativo enxuto com Liga e MYP dentro dos cards.
+                        </p>
                     </div>
 
-                    {/* Sort Modal */}
                     {isSortModalOpen && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-                            <div className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl animate-fade-up">
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8">Escolha a Ordem</h3>
-                                <div className="space-y-3">
-                                    {sortOptions.map((opt) => (
+                        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/35 p-6 backdrop-blur-sm">
+                            <div className="surface-card w-full max-w-sm p-8">
+                                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Ordenacao</p>
+                                <h3 className="mt-3 text-2xl font-black tracking-[-0.05em] text-slate-950">Escolha a leitura do catalogo</h3>
+                                <div className="mt-6 space-y-3">
+                                    {sortOptions.map((option) => (
                                         <button
-                                            key={opt.id}
+                                            key={option.id}
                                             onClick={() => {
-                                                setSortBy(opt.id);
+                                                setSortBy(option.id);
                                                 setIsSortModalOpen(false);
                                             }}
-                                            className={`w-full h-14 flex items-center justify-between px-6 rounded-2xl border transition-all ${sortBy === opt.id
-                                                ? 'border-rose-600 bg-rose-50 text-rose-600 shadow-sm'
-                                                : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-300'
+                                            className={`flex h-14 w-full items-center justify-between rounded-2xl border px-5 text-left text-[11px] font-black uppercase tracking-[0.22em] transition-all ${sortBy === option.id
+                                                ? 'border-rose-600 bg-rose-600 text-white'
+                                                : 'border-slate-200 bg-white text-slate-500 hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600'
                                                 }`}
                                         >
-                                            <span className="text-[11px] font-black uppercase tracking-widest">{opt.label}</span>
-                                            {sortBy === opt.id && <span className="text-rose-600">●</span>}
+                                            <span>{option.label}</span>
+                                            <span>{sortBy === option.id ? '•' : ''}</span>
                                         </button>
                                     ))}
                                 </div>
                                 <button
                                     onClick={() => setIsSortModalOpen(false)}
-                                    className="w-full h-14 mt-8 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all shadow-lg"
+                                    className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-slate-950 text-[10px] font-black uppercase tracking-[0.22em] text-white transition-all hover:bg-rose-600"
                                 >
                                     Fechar
                                 </button>
@@ -272,35 +369,47 @@ export default function MarketplacePage() {
                     )}
 
                     {loading ? (
-                        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {[1, 2, 3, 4].map(i => (
-                                <div key={i} className="h-96 bg-slate-50 animate-pulse rounded-2xl border border-slate-100" />
+                        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                            {[1, 2, 3, 4, 5, 6].map((item) => (
+                                <div key={item} className="surface-card h-96 animate-pulse" />
                             ))}
                         </div>
+                    ) : sortedCards.length === 0 ? (
+                        <div className="surface-card flex min-h-[320px] flex-col items-center justify-center gap-4 p-10 text-center">
+                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Nenhum resultado</p>
+                            <h3 className="text-3xl font-black tracking-[-0.05em] text-slate-950">Nao encontramos cartas com essa combinacao.</h3>
+                            <p className="max-w-lg text-sm leading-7 text-slate-600">
+                                Limpe os filtros ou ajuste a busca para reabrir o catalogo completo.
+                            </p>
+                            <button
+                                onClick={clearFilters}
+                                className="inline-flex h-12 items-center justify-center rounded-2xl bg-rose-600 px-6 text-[10px] font-black uppercase tracking-[0.22em] text-white transition-all hover:bg-slate-950"
+                            >
+                                Limpar busca
+                            </button>
+                        </div>
                     ) : (
-                        <CardGallery cards={sortedCards.map(c => ({
-                            id: c.id,
-                            name: c.official_name ?? c.name ?? 'Desconhecido',
-                            set: c.official_set_name ?? c.set ?? 'Desconhecido',
-                            imageUrl: c.official_image_url ?? c.image_url ?? 'https://images.pokemontcg.io/base1/1.png',
-                            price: c.price ?? 0,
-                            originalPrice: c.original_price,
-                            grade: c.grade ?? 'NM',
-                            finish: c.finish ?? 'Normal',
-                            isPromo: c.is_promo ?? c.isPromo ?? false,
-                            quantity: c.quantity || 0,
-                            cardNumber: c.number,
-                            marketPrices: c.marketPrices,
-                            marketPriceLinks: c.marketPriceLinks,
-                            language: c.language
-                        }))} />
+                        <CardGallery
+                            cards={sortedCards.map((card) => ({
+                                id: card.id,
+                                name: card.official_name ?? card.name ?? 'Desconhecido',
+                                set: card.official_set_name ?? card.set ?? 'Desconhecido',
+                                imageUrl: card.official_image_url ?? card.image_url ?? 'https://images.pokemontcg.io/base1/1.png',
+                                price: card.price ?? 0,
+                                originalPrice: card.original_price,
+                                grade: card.grade ?? 'NM',
+                                finish: card.finish ?? 'Normal',
+                                isPromo: card.is_promo ?? card.isPromo ?? false,
+                                quantity: card.quantity || 0,
+                                cardNumber: card.number,
+                                marketPrices: card.marketPrices,
+                                marketPriceLinks: card.marketPriceLinks,
+                                language: card.language,
+                            }))}
+                        />
                     )}
-
-                    <div className="pt-20 text-center">
-                        <button className="h-14 px-12 border border-slate-200 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-900 hover:text-white transition-all">Carregar Mais Ativos</button>
-                    </div>
                 </main>
-            </div>
+            </section>
         </div>
     );
 }

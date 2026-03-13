@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import SaveCardModal from '@/components/SaveCardModal';
-
+import { supabase } from '@/lib/supabase';
 
 interface ProfileData {
     full_name: string;
@@ -18,27 +16,22 @@ export default function DadosContaPage() {
     const [profile, setProfile] = useState<ProfileData>({
         full_name: '',
         phone: '',
-        email: ''
+        email: '',
     });
-    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-    // Security states
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [newEmail, setNewEmail] = useState('');
 
-    // Saved Cards States
-    const [savedCards, setSavedCards] = useState<any[]>([]);
-    const [showCardModal, setShowCardModal] = useState(false);
-
-
     useEffect(() => {
-        fetchProfile();
+        void fetchProfile();
     }, []);
 
-    const fetchProfile = async () => {
+    async function fetchProfile() {
         setLoading(true);
+
         const { data: { user } } = await supabase.auth.getUser();
+
         if (user) {
             const { data: profileData } = await supabase
                 .from('profiles')
@@ -49,348 +42,284 @@ export default function DadosContaPage() {
             setProfile({
                 full_name: profileData?.full_name || user.user_metadata?.name || '',
                 phone: profileData?.phone || '',
-                email: user.email || ''
+                email: user.email || '',
             });
-
-            const { data: cardsData } = await supabase
-                .from('saved_cards')
-                .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
-
-            if (cardsData) {
-                setSavedCards(cardsData);
-            }
         }
+
         setLoading(false);
-    };
+    }
 
-    const handleDeleteCard = async (cardId: string) => {
-        if (!confirm('Deseja realmente remover este cartão?')) return;
-        setLoading(true);
-        try {
-            await fetch(`/api/pagamento/cartao/deletar?id=${cardId}`, { method: 'DELETE' });
-            setSavedCards(prev => prev.filter(c => c.id !== cardId));
-            setMessage({ type: 'success', text: 'Cartão removido.' });
-        } catch (err) {
-            setMessage({ type: 'error', text: 'Erro ao remover cartão.' });
-        }
-        setLoading(false);
-    };
-
-
-    const handleUpdateProfile = async (e: React.FormEvent) => {
-        e.preventDefault();
+    async function handleUpdateProfile(event: React.FormEvent) {
+        event.preventDefault();
         setSaving(true);
         setMessage(null);
 
         try {
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) {
+                return;
+            }
 
             const { error } = await supabase.from('profiles').upsert({
                 id: user.id,
                 full_name: profile.full_name,
                 phone: profile.phone,
-                updated_at: new Date().toISOString()
+                updated_at: new Date().toISOString(),
             });
 
-            if (error) throw error;
+            if (error) {
+                throw error;
+            }
 
-            // Update auth metadata too for fast greeting updates
             await supabase.auth.updateUser({
-                data: { name: profile.full_name }
+                data: { name: profile.full_name },
             });
 
-            setMessage({ type: 'success', text: 'Dados atualizados com sucesso!' });
-        } catch (err) {
-            console.error(err);
+            setMessage({ type: 'success', text: 'Dados atualizados com sucesso.' });
+        } catch (error) {
+            console.error(error);
             setMessage({ type: 'error', text: 'Erro ao atualizar dados.' });
         } finally {
             setSaving(false);
         }
-    };
+    }
 
-    const handleUpdatePassword = async (e: React.FormEvent) => {
-        e.preventDefault();
+    async function handleUpdatePassword(event: React.FormEvent) {
+        event.preventDefault();
+
         if (newPassword !== confirmPassword) {
-            setMessage({ type: 'error', text: 'As senhas não coincidem.' });
+            setMessage({ type: 'error', text: 'As senhas nao coincidem.' });
             return;
         }
 
         setSaving(true);
         const { error } = await supabase.auth.updateUser({ password: newPassword });
+
         if (error) {
             setMessage({ type: 'error', text: error.message });
         } else {
-            setMessage({ type: 'success', text: 'Senha alterada com sucesso!' });
+            setMessage({ type: 'success', text: 'Senha alterada com sucesso.' });
             setNewPassword('');
             setConfirmPassword('');
         }
-        setSaving(false);
-    };
 
-    const handleUpdateEmail = async (e: React.FormEvent) => {
-        e.preventDefault();
+        setSaving(false);
+    }
+
+    async function handleUpdateEmail(event: React.FormEvent) {
+        event.preventDefault();
         setSaving(true);
+
         const { error } = await supabase.auth.updateUser({ email: newEmail });
+
         if (error) {
             setMessage({ type: 'error', text: error.message });
         } else {
-            setMessage({ type: 'success', text: 'Um link de confirmação foi enviado para o novo e-mail.' });
+            setMessage({ type: 'success', text: 'Um link de confirmacao foi enviado para o novo email.' });
             setNewEmail('');
         }
-        setSaving(false);
-    };
 
-    if (loading) return (
-        <div className="max-w-4xl mx-auto px-6 py-32 text-center animate-pulse font-black text-slate-300 uppercase tracking-widest">
-            Carregando seus dados...
-        </div>
-    );
+        setSaving(false);
+    }
+
+    if (loading) {
+        return (
+            <div className="mx-auto max-w-4xl px-6 py-32 text-center text-sm font-black uppercase tracking-[0.22em] text-slate-300">
+                Carregando seus dados...
+            </div>
+        );
+    }
 
     return (
-        <div className="max-w-4xl mx-auto px-6 py-16 min-h-screen animate-fade-up">
+        <div className="mx-auto min-h-screen max-w-4xl px-6 py-16 animate-fade-up">
             <div className="mb-12 space-y-3">
-                <Link href="/minha-conta" className="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:underline flex items-center gap-2">
-                    ← Voltar para Painel
+                <Link href="/minha-conta" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-rose-600 hover:underline">
+                    ← Voltar para painel
                 </Link>
-                <h1 className="text-4xl font-black tracking-tighter text-slate-900">
-                    Dados da <span className="text-rose-600">Conta.</span>
+                <h1 className="text-4xl font-black tracking-[-0.04em] text-slate-900">
+                    Dados da <span className="text-rose-600">conta.</span>
                 </h1>
-                <p className="text-slate-400 text-sm">Atualize suas informações pessoais e segurança.</p>
+                <p className="text-sm text-slate-500">
+                    Atualize suas informacoes pessoais, senha e email. O gerenciamento de cartao fica direto no Mercado Pago.
+                </p>
             </div>
 
             {message && (
-                <div className={`mb-8 p-4 rounded-2xl flex items-center gap-3 animate-fade-in ${message.type === 'success' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
-                    }`}>
-                    <span className="text-lg">{message.type === 'success' ? '✓' : '⚠'}</span>
-                    <p className="text-xs font-bold uppercase tracking-widest">{message.text}</p>
+                <div className={`mb-8 flex items-center gap-3 rounded-2xl border p-4 ${message.type === 'success' ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-rose-100 bg-rose-50 text-rose-600'}`}>
+                    <span className="text-lg">{message.type === 'success' ? '✓' : '!'}</span>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em]">{message.text}</p>
                 </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                {/* Personal Info */}
+            <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
                 <div className="space-y-8">
-                    <div className="bg-white border border-slate-100 p-8 rounded-[40px] shadow-sm">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500">👤</div>
-                            <h2 className="text-lg font-black tracking-tight text-slate-900">Informações Pessoais</h2>
+                    <div className="rounded-[40px] border border-slate-100 bg-white p-8 shadow-sm">
+                        <div className="mb-8 flex items-center gap-4">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">P</div>
+                            <h2 className="text-lg font-black tracking-[-0.03em] text-slate-900">Informacoes pessoais</h2>
                         </div>
 
                         <form onSubmit={handleUpdateProfile} className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                                <label className="ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Nome completo</label>
                                 <input
                                     required
                                     type="text"
                                     value={profile.full_name}
-                                    onChange={e => setProfile({ ...profile, full_name: e.target.value })}
-                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none font-medium"
+                                    onChange={(event) => setProfile({ ...profile, full_name: event.target.value })}
+                                    className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
                                 />
                             </div>
+
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone / WhatsApp</label>
+                                <label className="ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Telefone / WhatsApp</label>
                                 <input
                                     type="text"
                                     placeholder="(00) 00000-0000"
                                     value={profile.phone}
-                                    onChange={e => setProfile({ ...profile, phone: e.target.value })}
-                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none font-medium"
+                                    onChange={(event) => setProfile({ ...profile, phone: event.target.value })}
+                                    className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
                                 />
                             </div>
+
                             <button
                                 disabled={saving}
-                                className="w-full h-12 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-rose-600 transition-all disabled:opacity-50"
+                                className="h-12 w-full rounded-xl bg-slate-900 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-rose-600 disabled:opacity-50"
                             >
-                                {saving ? 'Salvando...' : 'Salvar Alterações'}
+                                {saving ? 'Salvando...' : 'Salvar alteracoes'}
                             </button>
                         </form>
                     </div>
 
-                    <div className="bg-slate-900 p-8 rounded-[40px] text-white">
-                        <p className="text-[11px] font-black text-rose-500 uppercase tracking-[0.3em] mb-4">Proteção de Dados</p>
-                        <p className="text-slate-400 text-xs leading-relaxed font-medium">
-                            Seus dados são protegidos por criptografia AES-256 e tratados em total conformidade com a LGPD. Você tem o direito de acessar, exportar ou excluir seus dados a qualquer momento.
-                        </p>
-                    </div>
-
-                    {/* Saved Cards */}
-                    <div className="bg-white border border-slate-100 p-8 rounded-[40px] shadow-sm">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500">💳</div>
-                                <h2 className="text-lg font-black tracking-tight text-slate-900">Cartões Salvos</h2>
-                            </div>
-                            <button
-                                onClick={() => setShowCardModal(true)}
-                                className="h-10 px-4 bg-slate-900 text-white font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-rose-600 transition-all"
-                            >
-                                + Adicionar
-                            </button>
-                        </div>
-
-                        {savedCards.length === 0 ? (
-                            <p className="text-sm font-medium text-slate-400">Nenhum cartão salvo para pagamentos rápidos.</p>
-                        ) : (
-                            <div className="space-y-4">
-                                {savedCards.map(card => (
-                                    <div key={card.id} className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-8 bg-white border border-slate-200 rounded flex items-center justify-center font-black text-[10px] text-slate-900 uppercase">
-                                                {card.card_brand}
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-slate-900 tracking-wider">**** **** **** {card.last_four_digits}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Vence em {card.expiration_month}/{card.expiration_year}</p>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => handleDeleteCard(card.id)} className="text-slate-400 hover:text-rose-600 transition-colors" title="Remover Cartão">
-                                            ✕
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-6 flex items-center gap-2">
-                            <span>🔒</span> Ambente PCI-Compliant
+                    <div className="rounded-[40px] bg-slate-900 p-8 text-white">
+                        <p className="mb-4 text-[11px] font-black uppercase tracking-[0.24em] text-rose-500">Protecao de dados</p>
+                        <p className="text-xs leading-relaxed text-slate-300">
+                            Seus dados sao protegidos e tratados em conformidade com a LGPD. O site nao mantem uma area propria para cartoes salvos.
                         </p>
                     </div>
                 </div>
 
-                {/* Security Info */}
                 <div className="space-y-8">
-                    {/* Password Change */}
-                    <div className="bg-white border border-slate-100 p-8 rounded-[40px] shadow-sm">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500">🔒</div>
-                            <h2 className="text-lg font-black tracking-tight text-slate-900">Segurança</h2>
+                    <div className="rounded-[40px] border border-slate-100 bg-white p-8 shadow-sm">
+                        <div className="mb-8 flex items-center gap-4">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">S</div>
+                            <h2 className="text-lg font-black tracking-[-0.03em] text-slate-900">Seguranca</h2>
                         </div>
 
                         <form onSubmit={handleUpdatePassword} className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Alterar Senha</p>
+                            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Alterar senha</p>
                             <input
                                 required
                                 type="password"
-                                placeholder="Nova Senha"
+                                placeholder="Nova senha"
                                 value={newPassword}
-                                onChange={e => setNewPassword(e.target.value)}
-                                className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none font-medium"
+                                onChange={(event) => setNewPassword(event.target.value)}
+                                className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
                             />
                             <input
                                 required
                                 type="password"
-                                placeholder="Confirmar Nova Senha"
+                                placeholder="Confirmar nova senha"
                                 value={confirmPassword}
-                                onChange={e => setConfirmPassword(e.target.value)}
-                                className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none font-medium"
+                                onChange={(event) => setConfirmPassword(event.target.value)}
+                                className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
                             />
                             <button
                                 disabled={saving}
-                                className="w-full h-12 border border-slate-200 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50"
+                                className="h-12 w-full rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 transition-all hover:bg-slate-50 disabled:opacity-50"
                             >
-                                Atualizar Senha
+                                Atualizar senha
                             </button>
                         </form>
 
-                        <div className="h-[1px] bg-slate-50 my-8"></div>
+                        <div className="my-8 h-px bg-slate-50" />
 
-                        {/* Email Change */}
                         <form onSubmit={handleUpdateEmail} className="space-y-4">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Alterar E-mail</p>
+                            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Alterar email</p>
                             <div className="space-y-1">
-                                <p className="text-[9px] text-slate-400 font-bold ml-1 italic">Atual: {profile.email}</p>
+                                <p className="ml-1 text-[9px] font-bold italic text-slate-400">Atual: {profile.email}</p>
                                 <input
                                     required
                                     type="email"
-                                    placeholder="Novo E-mail"
+                                    placeholder="Novo email"
                                     value={newEmail}
-                                    onChange={e => setNewEmail(e.target.value)}
-                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none font-medium"
+                                    onChange={(event) => setNewEmail(event.target.value)}
+                                    className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
                                 />
                             </div>
                             <button
                                 disabled={saving}
-                                className="w-full h-12 border border-slate-200 text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50"
+                                className="h-12 w-full rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 transition-all hover:bg-slate-50 disabled:opacity-50"
                             >
-                                Alterar E-mail
+                                Alterar email
                             </button>
                         </form>
                     </div>
 
-                    {/* LGPD Section */}
-                    <div className="bg-white border border-slate-100 p-8 rounded-[40px] shadow-sm">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="h-10 w-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500">⚖️</div>
-                            <h2 className="text-lg font-black tracking-tight text-slate-900 uppercase">Sua Privacidade (LGPD)</h2>
+                    <div className="rounded-[40px] border border-slate-100 bg-white p-8 shadow-sm">
+                        <div className="mb-6 flex items-center gap-4">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">L</div>
+                            <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-slate-900">Sua privacidade</h2>
                         </div>
 
-                        <p className="text-xs text-slate-500 font-medium leading-relaxed mb-8">
-                            Em conformidade com a Lei Geral de Proteção de Dados, você tem total controle sobre suas informações.
+                        <p className="mb-8 text-xs leading-relaxed text-slate-500">
+                            Em conformidade com a LGPD, voce tem controle sobre seus dados e pode exportar ou excluir sua conta.
                         </p>
 
                         <div className="space-y-4">
                             <button
                                 onClick={() => {
-                                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(profile));
+                                    const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(profile))}`;
                                     const downloadAnchorNode = document.createElement('a');
-                                    downloadAnchorNode.setAttribute("href", dataStr);
-                                    downloadAnchorNode.setAttribute("download", "meus_dados_tcghub.json");
+                                    downloadAnchorNode.setAttribute('href', dataStr);
+                                    downloadAnchorNode.setAttribute('download', 'meus_dados_tcghub.json');
                                     document.body.appendChild(downloadAnchorNode);
                                     downloadAnchorNode.click();
                                     downloadAnchorNode.remove();
-                                    setMessage({ type: 'success', text: 'Exportação de dados iniciada!' });
+                                    setMessage({ type: 'success', text: 'Exportacao de dados iniciada.' });
                                 }}
-                                className="w-full h-12 flex items-center justify-between px-6 bg-slate-50 text-slate-600 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-slate-100 transition-all group"
+                                className="group flex h-12 w-full items-center justify-between rounded-xl bg-slate-50 px-6 text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 transition-all hover:bg-slate-100"
                             >
-                                Solicitar Exportação de Dados
-                                <span className="opacity-0 group-hover:opacity-100 transition-opacity">↓</span>
+                                Solicitar exportacao de dados
+                                <span className="opacity-0 transition-opacity group-hover:opacity-100">↓</span>
                             </button>
 
                             <button
                                 onClick={async () => {
-                                    if (confirm('ATENÇÃO: A exclusão da conta é permanente e você perderá todo o seu histórico e saldo de cashback. Deseja continuar?')) {
-                                        setSaving(true);
-                                        const { data: { user } } = await supabase.auth.getUser();
-                                        if (user) {
-                                            // RPC call for clean deletion
-                                            const { error } = await supabase.rpc('delete_user_account');
-                                            if (error) {
-                                                setMessage({ type: 'error', text: 'Erro ao excluir conta. Contate o suporte.' });
-                                            } else {
-                                                await supabase.auth.signOut();
-                                                window.location.href = '/';
-                                            }
-                                        }
-                                        setSaving(false);
+                                    if (!confirm('A exclusao da conta e permanente. Deseja continuar?')) {
+                                        return;
                                     }
+
+                                    setSaving(true);
+                                    const { data: { user } } = await supabase.auth.getUser();
+
+                                    if (user) {
+                                        const { error } = await supabase.rpc('delete_user_account');
+                                        if (error) {
+                                            setMessage({ type: 'error', text: 'Erro ao excluir conta. Contate o suporte.' });
+                                        } else {
+                                            await supabase.auth.signOut();
+                                            window.location.href = '/';
+                                        }
+                                    }
+
+                                    setSaving(false);
                                 }}
-                                className="w-full h-12 flex items-center justify-between px-6 bg-rose-50 text-rose-600 font-black uppercase tracking-widest text-[9px] rounded-xl hover:bg-rose-100 transition-all group"
+                                className="group flex h-12 w-full items-center justify-between rounded-xl bg-rose-50 px-6 text-[9px] font-black uppercase tracking-[0.2em] text-rose-600 transition-all hover:bg-rose-100"
                             >
-                                Excluir Minha Conta Permanentemente
-                                <span className="text-xl opacity-0 group-hover:opacity-100 transition-opacity">🗑️</span>
+                                Excluir minha conta permanentemente
+                                <span className="opacity-0 transition-opacity group-hover:opacity-100">X</span>
                             </button>
                         </div>
 
-                        <div className="mt-8 pt-6 border-t border-slate-50 text-center">
-                            <Link href="/privacidade" className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-rose-600">
-                                Ver Política de Privacidade Completa
+                        <div className="mt-8 border-t border-slate-50 pt-6 text-center">
+                            <Link href="/privacidade" className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 hover:text-rose-600">
+                                Ver politica de privacidade completa
                             </Link>
                         </div>
                     </div>
                 </div>
             </div>
-
-            {showCardModal && (
-                <SaveCardModal
-                    onClose={() => setShowCardModal(false)}
-                    onSuccess={() => {
-                        setShowCardModal(false);
-                        setMessage({ type: 'success', text: 'Cartão cadastrado com sucesso e protegido de forma segura!' });
-                        fetchProfile();
-                    }}
-                />
-            )}
         </div>
     );
 }

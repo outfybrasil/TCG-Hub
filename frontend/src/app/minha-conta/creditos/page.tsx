@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -38,7 +39,7 @@ let mpInitialized = false;
 
 export default function CreditosPage() {
     const router = useRouter();
-    const [user, setUser] = useState<any>(null);
+    const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [credits, setCredits] = useState<CreditData>({ balance: 0, locked: 0 });
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -79,8 +80,13 @@ export default function CreditosPage() {
     }, [router]);
 
     const handleGeneratePreference = async () => {
-        if (!depositAmount || parseFloat(depositAmount) < 10) {
-            setDepositError('Valor mínimo: R$ 10,00');
+        if (!user) {
+            setDepositError('Usuario nao autenticado.');
+            return;
+        }
+
+        if (!depositAmount || parseFloat(depositAmount) < 0.01) {
+            setDepositError('Valor mínimo: R$ 0,01');
             return;
         }
 
@@ -105,9 +111,9 @@ export default function CreditosPage() {
 
             setPreferenceId(data.id);
             setStep(2);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
-            setDepositError(err.message || 'Erro ao gerar Checkout.');
+            setDepositError(err instanceof Error ? err.message : 'Erro ao gerar Checkout.');
         } finally {
             setDepositing(false);
         }
@@ -129,7 +135,7 @@ export default function CreditosPage() {
                     ← Minha Conta
                 </Link>
                 <div className="flex items-center gap-4">
-                    <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase leading-none">
+                    <h1 className="text-4xl font-black tracking-[-0.04em] text-slate-900 uppercase leading-none sm:text-5xl">
                         Meus <span className="text-rose-600">Créditos.</span>
                     </h1>
                 </div>
@@ -177,13 +183,13 @@ export default function CreditosPage() {
                         <div className="space-y-6 animate-fade-in">
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Quanto deseja adicionar?</p>
                             <div className="grid grid-cols-3 gap-3">
-                                {[50, 100, 200, 500, 1000, 2000].map(v => (
+                                {[0.01, 10, 50, 100, 200, 500].map(v => (
                                     <button
                                         key={v}
                                         onClick={() => setDepositAmount(String(v))}
                                         className={`h-12 text-xs font-black rounded-2xl border-2 transition-all ${depositAmount === String(v) ? 'bg-rose-600 text-white border-rose-600 shadow-lg shadow-rose-900/20' : 'bg-white border-slate-100 text-slate-600 hover:border-slate-200'}`}
                                     >
-                                        R$ {v}
+                                        R$ {v.toLocaleString('pt-BR', { minimumFractionDigits: v < 1 ? 2 : 0, maximumFractionDigits: 2 })}
                                     </button>
                                 ))}
                             </div>
@@ -199,7 +205,7 @@ export default function CreditosPage() {
                             </div>
                             <button
                                 onClick={handleGeneratePreference}
-                                disabled={depositing || !depositAmount || parseFloat(depositAmount) < 10}
+                                disabled={depositing || !depositAmount || parseFloat(depositAmount) < 0.01}
                                 className="w-full h-14 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all shadow-xl disabled:opacity-50"
                             >
                                 {depositing ? 'Gerando Checkout...' : 'Continuar para Pagamento'}
@@ -221,12 +227,10 @@ export default function CreditosPage() {
                                 </div>
                             </div>
 
-                            <Wallet
-                                initialization={{ preferenceId, redirectMode: 'modal' as any }}
-                            />
+                            <Wallet initialization={{ preferenceId, redirectMode: 'blank' }} />
 
                             <p className="text-center text-[10px] text-slate-400 font-bold max-w-sm mx-auto">
-                                Clique acima para abrir a janela segura do Mercado Pago e concluir sua recarga.
+                                Clique acima para abrir o checkout seguro do Mercado Pago em uma nova aba e concluir sua recarga.
                             </p>
                         </div>
                     )}
@@ -247,7 +251,7 @@ export default function CreditosPage() {
                         <ul className="space-y-3">
                             <li className="flex gap-3 text-[10px] font-bold text-slate-300">
                                 <span className="text-rose-500">●</span>
-                                Valor mínimo de recarga: R$ 10,00
+                                Valor mínimo de recarga: R$ 0,01
                             </li>
                             <li className="flex gap-3 text-[10px] font-bold text-slate-300">
                                 <span className="text-rose-500">●</span>

@@ -16,7 +16,7 @@ interface Purchase {
     payment_method: string;
     tracking_code: string | null;
     carrier: string | null;
-    items: any[];
+    items: Array<Record<string, unknown>>;
 }
 
 const statusSteps = ['pending', 'approved', 'shipped', 'delivered'];
@@ -29,6 +29,16 @@ const statusLabels: Record<string, string> = {
     canceled: 'Cancelado',
     rejected: 'Recusado'
 };
+
+async function getAuthHeaders(headers: HeadersInit = {}) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    return {
+        ...headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+}
 
 function OrderStatusBar({ status }: { status: string }) {
     const currentStep = statusSteps.indexOf(status);
@@ -80,11 +90,13 @@ function MeusPedidosContent() {
     const searchParams = useSearchParams();
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [loading, setLoading] = useState(true);
-    const { clearCart } = useCart();
+    const { clearCart, items } = useCart();
+    const purchaseId = searchParams.get('purchaseId');
     const checkoutStatus = searchParams.get('status');
+    const [resolvedCheckoutStatus, setResolvedCheckoutStatus] = useState(checkoutStatus);
 
     useEffect(() => {
-        const init = async () => {
+        const loadPurchases = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) { router.replace('/auth/login'); return; }
 
@@ -97,14 +109,78 @@ function MeusPedidosContent() {
             setPurchases(data || []);
             setLoading(false);
         };
-        init();
+        void loadPurchases();
     }, [router]);
 
     useEffect(() => {
-        if (checkoutStatus === 'success' || checkoutStatus === 'pending') {
+        setResolvedCheckoutStatus(checkoutStatus);
+    }, [checkoutStatus]);
+
+    useEffect(() => {
+        if ((checkoutStatus === 'success' || checkoutStatus === 'pending') && items.length > 0) {
             clearCart();
         }
-    }, [checkoutStatus, clearCart]);
+    }, [checkoutStatus, clearCart, items.length]);
+
+    useEffect(() => {
+        if (!purchaseId || (checkoutStatus !== 'pending' && checkoutStatus !== 'success')) {
+            return;
+        }
+
+        let cancelled = false;
+        let attempts = 0;
+
+        const interval = setInterval(async () => {
+            attempts += 1;
+
+            try {
+                const res = await fetch(`/api/pagamento/status?id=${purchaseId}`, {
+                    method: 'POST',
+                    headers: await getAuthHeaders(),
+                });
+                const json = await res.json();
+
+                if (cancelled) {
+                    return;
+                }
+
+                if (json.status === 'approved') {
+                    setResolvedCheckoutStatus('success');
+
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) {
+                        clearInterval(interval);
+                        return;
+                    }
+
+                    const { data } = await supabase
+                        .from('purchases')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .order('created_at', { ascending: false });
+
+                    if (!cancelled) {
+                        setPurchases(data || []);
+                    }
+
+                    clearInterval(interval);
+                    return;
+                }
+
+                if (attempts >= 20) {
+                    clearInterval(interval);
+                }
+            } catch (error) {
+                console.error('Erro ao revalidar pedido apos checkout:', error);
+                clearInterval(interval);
+            }
+        }, 3000);
+
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, [checkoutStatus, purchaseId]);
 
     if (loading) return (
         <div className="flex items-center justify-center py-44">
@@ -123,14 +199,14 @@ function MeusPedidosContent() {
                 </h1>
             </div>
 
-            {checkoutStatus === 'success' && (
+            {resolvedCheckoutStatus === 'success' && (
                 <div className="mb-8 rounded-[32px] border border-emerald-100 bg-emerald-50 px-6 py-5">
                     <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Pagamento confirmado</p>
                     <p className="mt-2 text-sm font-medium text-emerald-900">Sua compra foi aprovada e ja aparece no seu historico.</p>
                 </div>
             )}
 
-            {checkoutStatus === 'pending' && (
+            {resolvedCheckoutStatus === 'pending' && (
                 <div className="mb-8 rounded-[32px] border border-amber-100 bg-amber-50 px-6 py-5">
                     <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Pagamento em analise</p>
                     <p className="mt-2 text-sm font-medium text-amber-900">Recebemos o pedido e estamos aguardando a confirmacao do Mercado Pago.</p>

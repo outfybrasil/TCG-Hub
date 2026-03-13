@@ -6,9 +6,31 @@ import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
 import Link from 'next/link';
+import type { CartItem } from '@/context/CartContext';
 
 // Module-level singleton to prevent double-init in React 18 Strict Mode
 let mpInitialized = false;
+
+async function getAuthHeaders(headers: HeadersInit = {}) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    return {
+        ...headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+}
+
+interface UserAddress {
+    city: string;
+    id: string;
+    is_default?: boolean;
+    label: string;
+    neighborhood: string;
+    number: string;
+    state: string;
+    street: string;
+}
 
 function PagamentoContent() {
 
@@ -19,7 +41,7 @@ function PagamentoContent() {
     const [walletBalance, setWalletBalance] = useState<number>(0);
     const [useCashback, setUseCashback] = useState<boolean>(false);
     const [shippingCost, setShippingCost] = useState<number>(0);
-    const [addresses, setAddresses] = useState<any[]>([]);
+    const [addresses, setAddresses] = useState<UserAddress[]>([]);
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
     const [dataReady, setDataReady] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
@@ -44,6 +66,8 @@ function PagamentoContent() {
 
     // Shipping Logic
     const calculateShipping = (uf: string, subtotal: number) => {
+        void uf;
+        void subtotal;
         return 0; // Removido temporariamente para testes
     };
 
@@ -88,7 +112,7 @@ function PagamentoContent() {
 
             if (!addressRes.error && addressRes.data) {
                 setAddresses(addressRes.data);
-                const defaultAddr = addressRes.data.find((a: any) => a.is_default) || addressRes.data[0];
+                const defaultAddr = addressRes.data.find((address: UserAddress) => address.is_default) || addressRes.data[0];
                 if (defaultAddr) {
                     setSelectedAddressId(defaultAddr.id);
                     setShippingCost(calculateShipping(defaultAddr.state, total));
@@ -121,7 +145,7 @@ function PagamentoContent() {
                 setPreferenceId(null);
                 const req = await fetch('/api/pagamento/preference', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({
                         userId: user.id,
                         useCashback,
@@ -129,7 +153,7 @@ function PagamentoContent() {
                         totalAmount: total,
                         shippingCost: shippingCost,
                         shippingAddress: addresses.find(a => a.id === selectedAddressId),
-                        items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity, imageUrl: i.imageUrl })),
+                        items: items.map((i: CartItem) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity, imageUrl: i.imageUrl })),
                         payer: { email: user.email }
                     }),
                 });
@@ -162,7 +186,7 @@ function PagamentoContent() {
         }, 500);
 
         return () => clearTimeout(timeout);
-    }, [dataReady, isMounted, total, useCashback, discount, selectedAddressId, items, user, addresses]);
+    }, [addresses, dataReady, discount, isMounted, items, selectedAddressId, shippingCost, total, useCashback, user]);
 
     // Pool order status to handle redirect for PIX automatically
     useEffect(() => {
@@ -170,7 +194,10 @@ function PagamentoContent() {
 
         const interval = setInterval(async () => {
             try {
-                const req = await fetch(`/api/pagamento/status?id=${createdPurchaseId}`);
+                const req = await fetch(`/api/pagamento/status?id=${createdPurchaseId}`, {
+                    method: 'POST',
+                    headers: await getAuthHeaders(),
+                });
                 const res = await req.json();
 
                 if (res.status === 'approved') {
@@ -185,7 +212,7 @@ function PagamentoContent() {
                     }, 500);
 
                     setTimeout(() => {
-                        router.push('/minha-conta/pedidos?status=success');
+                        router.push(`/minha-conta/pedidos?status=success&purchaseId=${createdPurchaseId}`);
                     }, 3500);
                 }
             } catch (error) {
@@ -359,7 +386,7 @@ function PagamentoContent() {
                                         // Mock do checkout com cashback total (API lida retornando isCashbackOnly)
                                         const req = await fetch('/api/pagamento/preference', {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
+                                            headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                                             body: JSON.stringify({
                                                 totalAmount: total,
                                                 shippingCost: shippingCost,
@@ -367,7 +394,7 @@ function PagamentoContent() {
                                                 discountAmount: discount,
                                                 userId: user?.id,
                                                 payer: { email: user?.email },
-                                                items: items.map((i) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity, imageUrl: i.imageUrl })),
+                                                items: items.map((i: CartItem) => ({ id: i.id, title: i.name, unit_price: i.price, quantity: i.quantity, imageUrl: i.imageUrl })),
                                                 shippingAddress: addresses.find(a => a.id === selectedAddressId),
                                             }),
                                         });
@@ -375,7 +402,7 @@ function PagamentoContent() {
                                         setPaymentApproved(true);
                                         clearCart();
                                         setTimeout(() => {
-                                            router.push('/minha-conta/pedidos?status=success');
+                                            router.push(`/minha-conta/pedidos?status=success&purchaseId=${res.purchaseId || createdPurchaseId || ''}`);
                                         }, 3500);
                                     } catch (e) { console.error(e); alert('Erro no fechamento do pedido.'); }
                                     finally { setLoading(false); }
@@ -402,8 +429,11 @@ function PagamentoContent() {
                                 </div>
                             )}
                             <Wallet
-                                initialization={{ preferenceId, redirectMode: 'self' }}
+                                initialization={{ preferenceId, redirectMode: 'blank' }}
                             />
+                            <p className="mt-4 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                                O checkout abre em outra aba para esta pagina confirmar o pagamento automaticamente.
+                            </p>
                         </div>
                     )}
                 </div>

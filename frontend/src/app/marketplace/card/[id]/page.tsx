@@ -173,6 +173,11 @@ export default function CardDetailsPage({ params }: { params: Promise<{ id: stri
                             <img
                                 src={card.image_url || card.official_image_url}
                                 alt={displayName}
+                                loading="eager"
+                                decoding="async"
+                                fetchPriority="high"
+                                width={744}
+                                height={1038}
                                 className="relative z-10 max-h-full max-w-full object-contain drop-shadow-[0_26px_45px_rgba(15,23,42,0.28)]"
                             />
                         </div>

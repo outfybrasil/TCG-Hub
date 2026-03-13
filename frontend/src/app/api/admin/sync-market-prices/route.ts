@@ -7,6 +7,7 @@ import {
     buildPriceHistoryRows,
     type MarketCardLike,
 } from '@/lib/market-cache';
+import { requireAdmin } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -20,6 +21,11 @@ interface InventorySyncCard extends MarketCardLike {
 }
 
 export async function POST(request: Request) {
+    const auth = await requireAdmin(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const body = await request.json().catch(() => ({}));
         const limit = Math.min(Math.max(Number(body.limit) || DEFAULT_LIMIT, 1), 100);

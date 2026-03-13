@@ -4,17 +4,32 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 const preference = new Preference(client);
 
+interface CreditsPreferenceBody {
+    amount?: number;
+    payerEmail?: string;
+    payerFirstName?: string;
+    payerLastName?: string;
+    userId?: string;
+}
+
+interface MercadoPagoRouteError {
+    apiResponse?: { body?: { message?: string } };
+    cause?: Array<{ description?: string }>;
+    message?: string;
+    status?: number;
+}
+
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
+        const body = await req.json() as CreditsPreferenceBody;
         const { amount, userId, payerEmail, payerFirstName, payerLastName } = body;
 
         if (!amount || !userId) {
             return NextResponse.json({ error: 'Dados obrigatórios ausentes.' }, { status: 400 });
         }
 
-        if (amount < 10) {
-            return NextResponse.json({ error: 'Valor mínimo para depósito é R$ 10,00.' }, { status: 400 });
+        if (amount < 0.01) {
+            return NextResponse.json({ error: 'Valor minimo para deposito e R$ 0,01.' }, { status: 400 });
         }
 
         let email = payerEmail;
@@ -22,8 +37,8 @@ export async function POST(req: Request) {
             email = 'guest@tcghub.com.br';
         }
 
-        let host = req.headers.get('host') || 'localhost:3000';
-        let protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
+        const host = req.headers.get('host') || 'localhost:3000';
+        const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
         let BASE_URL = `${protocol}://${host}`;
         if (BASE_URL.includes('null')) BASE_URL = 'http://localhost:3000';
 
@@ -43,7 +58,7 @@ export async function POST(req: Request) {
             currency_id: 'BRL',
         }];
 
-        const preferenceRequest: any = {
+        const preferenceRequest = {
             body: {
                 payment_methods: {
                     excluded_payment_methods: [],
@@ -77,9 +92,10 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ id: result.id, init_point: result.init_point });
 
-    } catch (error: any) {
-        console.error('Mercado Pago Preference Error for Credits:', error);
-        const detail = error.cause?.[0]?.description || error.apiResponse?.body?.message || error.message || 'Erro ao gerar Checkout do Mercado Pago';
-        return NextResponse.json({ error: detail }, { status: error.status || 500 });
+    } catch (error: unknown) {
+        const mpError = error as MercadoPagoRouteError;
+        console.error('Mercado Pago Preference Error for Credits:', mpError);
+        const detail = mpError.cause?.[0]?.description || mpError.apiResponse?.body?.message || mpError.message || 'Erro ao gerar Checkout do Mercado Pago';
+        return NextResponse.json({ error: detail }, { status: mpError.status || 500 });
     }
 }

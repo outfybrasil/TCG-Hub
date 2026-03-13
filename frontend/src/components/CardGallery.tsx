@@ -115,6 +115,11 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                 <img
                     src={currentImageUrl}
                     alt={name}
+                    loading="lazy"
+                    decoding="async"
+                    fetchPriority="low"
+                    width={600}
+                    height={840}
                     onError={() => {
                         if (!imageError && currentImageUrl) {
                             setImageError(true);
@@ -135,13 +140,13 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
             {/* Card Info Section (Center-aligned) */}
             <div className="flex flex-col items-center text-center space-y-3 pb-6">
                 <div className="space-y-1">
-                    <h3 className="text-lg font-black tracking-tight text-slate-900 group-hover:text-rose-600 transition-colors uppercase leading-tight">
+                    <h3 className="min-h-[2.75rem] text-base font-black leading-tight tracking-[-0.03em] text-slate-900 transition-colors group-hover:text-rose-600 sm:text-lg">
                         {name}
                     </h3>
                     {cardNumber && (
                         <p className="text-[11px] font-bold text-slate-400">({cardNumber})</p>
                     )}
-                    <p className="text-[11px] font-medium text-slate-500 italic">
+                    <p className="text-[11px] font-medium text-slate-500">
                         {set}
                     </p>
                 </div>
@@ -154,7 +159,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                                 R$ {originalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                         )}
-                        <span className={`text-2xl font-black tracking-tighter ${originalPrice && price && originalPrice > price ? 'text-rose-600' : 'text-slate-900'}`}>
+                        <span className={`text-[1.65rem] font-black tracking-[-0.04em] ${originalPrice && price && originalPrice > price ? 'text-rose-600' : 'text-slate-900'}`}>
                             R$ {(price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                     </div>

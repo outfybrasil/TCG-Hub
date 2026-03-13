@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireAdmin } from '@/lib/server-auth';
 
-export async function GET() {
+export async function GET(request: Request) {
+    const auth = await requireAdmin(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const { count, error } = await supabaseAdmin
             .from('pokemon_cards')

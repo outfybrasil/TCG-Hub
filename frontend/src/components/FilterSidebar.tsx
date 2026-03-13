@@ -15,113 +15,73 @@ interface FilterSidebarProps {
     onClear: () => void;
 }
 
+function FilterSection({
+    items,
+    title,
+    values,
+    onToggle,
+    category,
+}: {
+    items: string[];
+    title: string;
+    values: string[];
+    onToggle: (category: string, value: string) => void;
+    category: string;
+}) {
+    return (
+        <section className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">{title}</h3>
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-300">{items.length}</span>
+            </div>
+
+            {items.length === 0 ? (
+                <p className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-xs font-medium text-slate-400">
+                    Nenhuma opcao disponivel agora.
+                </p>
+            ) : (
+                <div className="flex flex-wrap gap-2">
+                    {items.map((item) => {
+                        const selected = values.includes(item);
+
+                        return (
+                            <button
+                                key={item}
+                                onClick={() => onToggle(category, item)}
+                                className={`rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.12em] transition-all ${selected
+                                    ? 'border border-rose-600 bg-rose-600 text-white'
+                                    : 'border border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600'
+                                    }`}
+                            >
+                                {item}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </section>
+    );
+}
+
 export default function FilterSidebar({ options, selected, onToggle, onClear }: FilterSidebarProps) {
     return (
-        <div className="w-full flex-shrink-0 space-y-10 animate-fade-in lg:block">
-            {/* Project Header Branding */}
-            <div className="pb-4">
-                <div className="flex items-center gap-4">
-                    <div className="h-6 w-1.5 bg-rose-600 rounded-full"></div>
-                    <h2 className="text-[14px] font-black uppercase tracking-[0.2em] text-slate-900">Refinar Busca</h2>
+        <div className="surface-card space-y-8 p-6 animate-fade-in">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Refinar busca</p>
+                    <h2 className="mt-2 text-xl font-black tracking-[-0.03em] text-slate-950">Filtros ativos</h2>
                 </div>
-            </div>
-
-            {/* Arquivos Section */}
-            <div className="space-y-4">
-                <h3 className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.15em] ml-5">
-                    Arquivos
-                </h3>
-                <div className="flex flex-col gap-2">
-                    {options.sets.map((set) => {
-                        const isSelected = selected.sets.includes(set);
-                        return (
-                            <button
-                                key={set}
-                                onClick={() => onToggle('sets', set)}
-                                className={`flex items-center justify-between px-5 py-3 border rounded-2xl transition-all group ${isSelected
-                                    ? 'border-rose-600 bg-rose-50 shadow-sm'
-                                    : 'border-slate-100 bg-white hover:border-rose-200 hover:shadow-sm'
-                                    }`}
-                            >
-                                <span className={`text-[11px] font-black tracking-wider transition-colors ${isSelected ? 'text-rose-600' : 'text-slate-500 group-hover:text-slate-900'
-                                    }`}>{set}</span>
-                                <div className={`h-2.5 w-2.5 rounded-full border transition-all ${isSelected
-                                    ? 'border-rose-600 bg-rose-600 scale-110'
-                                    : 'border-slate-200 group-hover:border-rose-600 group-hover:bg-rose-600'
-                                    }`}></div>
-                            </button>
-                        );
-                    })}
-                    {options.sets.length === 0 && (
-                        <p className="text-[10px] text-slate-400 italic ml-5">Nenhuma edição disponível</p>
-                    )}
-                </div>
-            </div>
-
-            {/* Condição e Raridade Section */}
-            <div className="space-y-4">
-                <h3 className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.15em] ml-5">
-                    Condição e Raridade
-                </h3>
-                <div className="flex flex-col gap-2">
-                    {options.rarities.map((rarity) => {
-                        const isSelected = selected.rarities.includes(rarity);
-                        return (
-                            <button
-                                key={rarity}
-                                onClick={() => onToggle('rarities', rarity)}
-                                className={`flex items-center justify-between px-5 py-3 border rounded-2xl transition-all group ${isSelected
-                                    ? 'border-rose-600 bg-rose-50 shadow-sm'
-                                    : 'border-slate-100 bg-white hover:border-rose-200 hover:shadow-sm'
-                                    }`}
-                            >
-                                <span className={`text-[11px] font-black tracking-wider transition-colors ${isSelected ? 'text-rose-600' : 'text-slate-500 group-hover:text-slate-900'
-                                    }`}>{rarity}</span>
-                                <div className={`h-4 w-4 rounded-md border-2 transition-all flex items-center justify-center ${isSelected
-                                    ? 'border-rose-600 bg-rose-600'
-                                    : 'border-slate-100 group-hover:border-rose-600'
-                                    }`}>
-                                    {isSelected && <span className="text-[10px] text-white">✓</span>}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Elementos Essenciais Section */}
-            <div className="space-y-4">
-                <h3 className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.15em] ml-5">
-                    Elementos
-                </h3>
-                <div className="grid grid-cols-2 gap-2">
-                    {options.types.map((type) => {
-                        const isSelected = selected.types.includes(type);
-                        return (
-                            <button
-                                key={type}
-                                onClick={() => onToggle('types', type)}
-                                className={`h-10 border text-[9px] font-black uppercase tracking-widest transition-all rounded-xl ${isSelected
-                                    ? 'border-rose-600 bg-rose-600 text-white shadow-md shadow-rose-600/20'
-                                    : 'border-slate-100 bg-white text-slate-500 hover:border-rose-600 hover:text-rose-600 hover:shadow-sm'
-                                    }`}
-                            >
-                                {type}
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Clear Filters Button */}
-            <div className="pt-4">
                 <button
                     onClick={onClear}
-                    className="w-full h-12 bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all rounded-2xl border border-slate-100 border-dashed"
+                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
                 >
-                    Limpar Filtros
+                    Limpar
                 </button>
             </div>
+
+            <FilterSection category="sets" items={options.sets} title="Edicoes" values={selected.sets} onToggle={onToggle} />
+            <FilterSection category="rarities" items={options.rarities} title="Raridade e condicao" values={selected.rarities} onToggle={onToggle} />
+            <FilterSection category="types" items={options.types} title="Tipos" values={selected.types} onToggle={onToggle} />
         </div>
     );
 }

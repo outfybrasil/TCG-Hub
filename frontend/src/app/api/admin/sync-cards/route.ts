@@ -1,10 +1,16 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireAdmin } from '@/lib/server-auth';
 
 // TCGdex API Base URL
 const TCGDEX_API = 'https://api.tcgdex.net/v2/pt';
 
 export async function POST(request: Request) {
+    const auth = await requireAdmin(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const { setId } = await request.json();
 

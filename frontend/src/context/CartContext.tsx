@@ -63,7 +63,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         }
     }, [items]);
 
-    const addItem = (newItem: Omit<CartItem, 'quantity'>) => {
+    const addItem = useCallback((newItem: Omit<CartItem, 'quantity'>) => {
         setItems(prev => {
             const existing = prev.find(item => item.id === newItem.id);
             if (existing) {
@@ -77,9 +77,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
             return [...prev, { ...newItem, quantity: 1, maxStock: newItem.maxStock }];
         });
         setIsOpen(true);
-    };
+    }, []);
 
-    const updateQuantity = (id: string, quantity: number) => {
+    const updateQuantity = useCallback((id: string, quantity: number) => {
         setItems(prev => {
             if (quantity <= 0) return prev.filter(item => item.id !== id);
             return prev.map(item => {
@@ -88,13 +88,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
                 return { ...item, quantity: Math.min(quantity, max) };
             });
         });
-    };
+    }, []);
 
-    const removeItem = (id: string) => {
+    const removeItem = useCallback((id: string) => {
         setItems(prev => prev.filter(item => item.id !== id));
-    };
+    }, []);
 
-    const clearCart = () => setItems([]);
+    const clearCart = useCallback(() => {
+        setItems(prev => prev.length === 0 ? prev : []);
+    }, []);
 
     const total = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 

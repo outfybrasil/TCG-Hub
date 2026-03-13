@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import { ADMIN_EMAILS } from '@/lib/auth-constants';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-
-const ADMIN_EMAILS = ['admin@tcghub.com.br', 'contato@tcgmegastore.com.br'];
 
 export default function AdminGuard({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<{ id: string; email?: string } | null>(null);

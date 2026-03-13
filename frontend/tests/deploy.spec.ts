@@ -22,7 +22,7 @@ test('verify frontend accessibility and redirect loop', async ({ page }) => {
             console.log('Frontend returned non-200 status');
         }
     } catch (error) {
-        console.error('Navigation failed:', error.message);
+        console.error('Navigation failed:', error instanceof Error ? error.message : error);
     }
 });
 
@@ -40,6 +40,6 @@ test('verify backend accessibility', async ({ page }) => {
             console.log('Backend Docs are accessible!');
         }
     } catch (error) {
-        console.error('Backend navigation failed:', error.message);
+        console.error('Backend navigation failed:', error instanceof Error ? error.message : error);
     }
 });

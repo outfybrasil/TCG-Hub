@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { buildMarketSearchKeysFromCard, type MarketCardLike } from '@/lib/market-cache';
+import { requireAdmin } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +14,12 @@ interface CachedRow {
     fetched_at: string | null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+    const auth = await requireAdmin(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const [inventoryRes, cacheRes, historyRes] = await Promise.all([
             supabaseAdmin

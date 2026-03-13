@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
+import { markPurchaseCanceled } from '@/lib/purchase-status';
+import { requireAdmin } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
     try {
@@ -9,43 +11,28 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Dados insuficientes para o reembolso.' }, { status: 400 });
         }
 
-        // 1. Verify admin permissions
-        const authHeader = req.headers.get('Authorization');
-        const token = authHeader?.replace('Bearer ', '');
-
-        if (!token) {
-            return NextResponse.json({ error: 'Não autorizado. Token ausente.' }, { status: 401 });
+        const auth = await requireAdmin(req);
+        if ('response' in auth) {
+            return auth.response;
         }
 
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-        if (authError || !user) {
-            return NextResponse.json({ error: 'Não autorizado. Sessão inválida.' }, { status: 401 });
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('is_admin')
-            .eq('id', user.id)
+        const { data: purchaseData, error: fetchError } = await supabaseAdmin
+            .from('purchases')
+            .select('status')
+            .eq('id', purchaseId)
             .single();
 
-        // If is_admin doesn't exist yet, we check user role and emails
-        if (!profile?.is_admin) {
-            const allowedEmails = ['contato@tcgmegastore.com.br', 'admin@tcghub.com.br'];
-            const userEmail = user.email || '';
-
-            if (user.user_metadata?.role !== 'admin' && !allowedEmails.includes(userEmail)) {
-                return NextResponse.json({ error: 'Acesso negado. Apenas administradores podem reembolsar.' }, { status: 403 });
-            }
+        if (fetchError || !purchaseData) {
+            return NextResponse.json({ error: 'Compra nao encontrada para o reembolso.' }, { status: 404 });
         }
 
-        // 2. Call Mercado Pago Refund API
         const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}/refunds`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`,
+                Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
                 'Content-Type': 'application/json',
-                'X-Idempotency-Key': `refund_${purchaseId}`
-            }
+                'X-Idempotency-Key': `refund_${purchaseId}`,
+            },
         });
 
         const result = await response.json();
@@ -54,53 +41,25 @@ export async function POST(req: Request) {
             console.error('Erro MP Refund:', result);
             return NextResponse.json({
                 error: 'Erro no Mercado Pago ao processar reembolso.',
-                details: result.message || 'Erro desconhecido'
+                details: result.message || 'Erro desconhecido',
             }, { status: response.status });
         }
 
-        // 3. Get purchase items to restore inventory
-        const { data: purchaseData, error: fetchError } = await supabaseAdmin
-            .from('purchases')
-            .select('items')
-            .eq('id', purchaseId)
-            .single();
-
-        // 4. Update Purchase status in Supabase
-        const { error: updateError } = await supabaseAdmin
-            .from('purchases')
-            .update({
-                status: 'canceled', // Changed from refunded to canceled per user request
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', purchaseId);
-
-        // 5. Restore inventory if successful
-        if (!updateError && purchaseData?.items) {
-            for (const item of purchaseData.items) {
-                if (item.id && !item.is_auction) {
-                    await supabaseAdmin.rpc('restore_inventory', {
-                        p_item_id: item.id,
-                        p_quantity: item.quantity || 1
-                    });
-                }
-            }
-        }
-
-        if (updateError) {
-            console.error('Erro ao atualizar status da compra:', updateError);
-            // Even if DB update fails, the refund happened at MP.
+        try {
+            await markPurchaseCanceled(supabaseAdmin, purchaseId, 'canceled');
+        } catch (inventoryError) {
+            console.error('Erro ao restaurar inventario no reembolso:', inventoryError);
             return NextResponse.json({
-                warning: 'Reembolso processado no MP, mas falha ao atualizar banco de dados.',
-                mpResult: result
-            }, { status: 200 });
+                error: 'Reembolso feito no Mercado Pago, mas a carta nao voltou ao estoque.',
+                details: inventoryError instanceof Error ? inventoryError.message : 'Falha desconhecida',
+            }, { status: 500 });
         }
 
         return NextResponse.json({
             success: true,
-            message: 'Reembolso processado com sucesso!',
-            result
+            message: 'Reembolso processado com sucesso.',
+            result,
         });
-
     } catch (error) {
         console.error('Reembolso Error:', error);
         return NextResponse.json({ error: 'Ocorreu um erro interno no servidor.' }, { status: 500 });

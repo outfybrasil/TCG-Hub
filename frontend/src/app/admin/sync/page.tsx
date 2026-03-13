@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import AdminGuard from '@/components/AdminGuard';
+import { supabase } from '@/lib/supabase';
 
 interface TcgSet {
     id: string;
@@ -27,6 +28,16 @@ interface MarketSyncResponse {
     errors?: string[];
 }
 
+async function getAuthHeaders(headers: HeadersInit = {}) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+
+    return {
+        ...headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+}
+
 export default function SyncAdminPage() {
     const [loading, setLoading] = useState(false);
     const [marketSyncing, setMarketSyncing] = useState(false);
@@ -42,7 +53,9 @@ export default function SyncAdminPage() {
 
     const fetchStats = async () => {
         try {
-            const res = await fetch('/api/admin/sync-cards/stats');
+            const res = await fetch('/api/admin/sync-cards/stats', {
+                headers: await getAuthHeaders(),
+            });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             if (data.count !== undefined) setCardCount(data.count);
@@ -53,7 +66,9 @@ export default function SyncAdminPage() {
 
     const fetchMarketStats = async () => {
         try {
-            const res = await fetch('/api/admin/sync-market-prices/stats');
+            const res = await fetch('/api/admin/sync-market-prices/stats', {
+                headers: await getAuthHeaders(),
+            });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             setMarketStats(data);
@@ -75,7 +90,9 @@ export default function SyncAdminPage() {
 
         const fetchSyncedSets = async () => {
             try {
-                const res = await fetch('/api/admin/sync-cards/synced-sets');
+                const res = await fetch('/api/admin/sync-cards/synced-sets', {
+                    headers: await getAuthHeaders(),
+                });
                 if (!res.ok) return;
                 const data = await res.json();
                 if (data.success) {
@@ -111,7 +128,7 @@ export default function SyncAdminPage() {
                 setSyncProgress({ current: 'Buscando dados...', total: 1, done: 0 });
                 const res = await fetch('/api/admin/sync-cards', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ setId }),
                 });
 
@@ -141,7 +158,7 @@ export default function SyncAdminPage() {
 
                     const res = await fetch('/api/admin/sync-cards', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                         body: JSON.stringify({ setId: set.id }),
                     });
 
@@ -176,7 +193,7 @@ export default function SyncAdminPage() {
         try {
             const res = await fetch('/api/admin/sync-market-prices', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ limit: 24 }),
             });
 

@@ -1,46 +1,51 @@
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Link from "next/link";
-import "./globals.css";
-import UserNav from "@/components/UserNav";
-import { CartProvider } from "@/context/CartContext";
+
 import CartDrawer from "@/components/CartDrawer";
 import MobileNav from "@/components/MobileNav";
+import UserNav from "@/components/UserNav";
+import { CartProvider } from "@/context/CartContext";
+
+import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-// ... existing metadata ...
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="pt-BR" className={`light scroll-smooth ${inter.variable}`}>
       <body className="font-sans bg-[#F8F9FA] text-[#0F172A] antialiased selection:bg-[#3B82F6] selection:text-white pb-20 lg:pb-0">
         <CartProvider>
           <main className="min-h-screen">
-            {/* Pro Branding Bar */}
-            <div className="bg-rose-600 text-white py-2 px-6 text-[10px] font-black tracking-[0.2em] uppercase text-center">
-              Envio Grátis para todo o Brasil em compras acima de R$ 200
+            <div className="bg-rose-600 px-6 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] text-white">
+              Envio Gratis para todo o Brasil em compras acima de R$ 200
             </div>
 
-            <nav className="border-b border-slate-100 bg-white/90 backdrop-blur-md sticky top-0 z-[100]">
-              <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <nav className="sticky top-0 z-[100] border-b border-slate-100 bg-white/90 backdrop-blur-md">
+              <div className="max-w-7xl mx-auto flex h-20 items-center justify-between px-6">
                 <div className="flex items-center space-x-10">
-                  <Link href="/" className="flex items-center group transition-opacity hover:opacity-80">
-                    <div className="h-10 w-10 bg-rose-600 rounded-xl flex items-center justify-center text-white text-xl mr-3 shadow-lg shadow-rose-500/20">
+                  <Link href="/" className="group flex items-center transition-opacity hover:opacity-80">
+                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-600 text-xl text-white shadow-lg shadow-rose-500/20">
                       <span>⚡</span>
                     </div>
-                    <span className="text-2xl font-black tracking-tighter text-slate-900 uppercase">
+                    <span className="text-2xl font-black uppercase tracking-tighter text-slate-900">
                       TCG<span className="text-rose-600"> Mega Store</span>
                     </span>
                   </Link>
 
-                  <div className="hidden lg:flex items-center space-x-10">
-                    <Link href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Loja</Link>
-                    <Link href="/leilao" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Leilões</Link>
-                    <Link href="/suporte" className="text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-all">Suporte</Link>
+                  <div className="hidden items-center space-x-10 lg:flex">
+                    <Link href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-rose-600">
+                      Loja
+                    </Link>
+                    <Link href="/leilao" className="text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-rose-600">
+                      Leiloes
+                    </Link>
+                    <Link href="/suporte" className="text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-rose-600">
+                      Suporte
+                    </Link>
                   </div>
                 </div>
 
@@ -48,30 +53,33 @@ export default function RootLayout({
               </div>
             </nav>
 
-            <div className="relative">
-              {children}
-            </div>
+            <div className="relative">{children}</div>
 
             <MobileNav />
 
-            <footer className="mt-32 pt-20 pb-10 border-t border-slate-100 bg-white">
-              <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-16">
+            <footer className="mt-32 border-t border-slate-100 bg-white pb-10 pt-20">
+              <div className="max-w-7xl mx-auto grid grid-cols-1 gap-16 px-6 md:grid-cols-3">
                 <div className="space-y-4">
-                  <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-900 uppercase">Legal</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900">Legal</h3>
                   <div className="flex flex-col space-y-3">
-                    <Link href="/privacidade" className="text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-rose-600 transition-colors">Política de Privacidade</Link>
-                    <Link href="/privacidade#termos" className="text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-rose-600 transition-colors">Termos de Uso</Link>
+                    <Link href="/privacidade" className="text-[10px] font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-rose-600">
+                      Politica de Privacidade
+                    </Link>
+                    <Link href="/privacidade#termos" className="text-[10px] font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-rose-600">
+                      Termos de Uso
+                    </Link>
                   </div>
                 </div>
               </div>
-              <div className="mt-20 text-center text-[10px] font-bold uppercase tracking-widest text-zinc-400 space-y-2">
+
+              <div className="mt-20 space-y-2 text-center text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                 <p>© 2026 TCG Mega Store. Todos os direitos reservados.</p>
                 <div className="flex items-center justify-center gap-4 opacity-70">
                   <p>Em conformidade com a LGPD</p>
-                  <div className="h-1 w-1 bg-slate-300 rounded-full" />
+                  <div className="h-1 w-1 rounded-full bg-slate-300" />
                   <p>Pagamento Seguro</p>
                 </div>
-                <p className="opacity-50">Pokémon TCG e suas respectivas propriedades são copyright de The Pokémon Company.</p>
+                <p className="opacity-50">Pokemon TCG e suas respectivas propriedades pertencem a The Pokemon Company.</p>
               </div>
             </footer>
           </main>

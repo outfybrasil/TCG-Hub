@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireAdmin } from '@/lib/server-auth';
 
-export async function GET() {
+export async function GET(request: Request) {
+    const auth = await requireAdmin(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const { data, error } = await supabaseAdmin.rpc('get_unique_set_ids');
 
@@ -18,7 +24,10 @@ export async function GET() {
             return NextResponse.json({ success: true, synced_sets: uniqueIds });
         }
 
-        return NextResponse.json({ success: true, synced_sets: data?.map((d: any) => d.set_id) || [] });
+        return NextResponse.json({
+            success: true,
+            synced_sets: (data as Array<{ set_id: string }> | null)?.map((entry) => entry.set_id) || [],
+        });
 
     } catch (error) {
         return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
