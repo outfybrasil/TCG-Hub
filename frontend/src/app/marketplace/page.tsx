@@ -27,45 +27,7 @@ interface InventoryCard {
     marketPrices?: Record<string, number>;
     marketPriceLinks?: Record<string, string>;
     rarity?: string;
-    types?: string[];
     language?: string;
-}
-
-interface PokemonCardTypeRow {
-    id?: string;
-    name: string;
-    set_name: string;
-    types: string[] | null;
-}
-
-const FALLBACK_TYPES = ['GRAMA', 'FOGO', 'AGUA', 'ELETRICO', 'PSIQUICO', 'LUTA', 'SOMBRIO', 'METAL', 'FADA', 'DRAGAO', 'INCOLOR'];
-
-const TYPE_ALIASES: Record<string, string> = {
-    GRASS: 'GRAMA',
-    FIRE: 'FOGO',
-    WATER: 'AGUA',
-    LIGHTNING: 'ELETRICO',
-    ELECTRIC: 'ELETRICO',
-    PSYCHIC: 'PSIQUICO',
-    FIGHTING: 'LUTA',
-    DARKNESS: 'SOMBRIO',
-    DARK: 'SOMBRIO',
-    METAL: 'METAL',
-    STEEL: 'METAL',
-    FAIRY: 'FADA',
-    DRAGON: 'DRAGAO',
-    COLORLESS: 'INCOLOR',
-    NORMAL: 'INCOLOR',
-};
-
-function normalizeTypeLabel(value: string) {
-    const normalized = value
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .trim()
-        .toUpperCase();
-
-    return TYPE_ALIASES[normalized] || normalized;
 }
 
 function buildCardLookupKey(name?: string | null, setName?: string | null) {
@@ -78,7 +40,6 @@ export default function MarketplacePage() {
     const [loading, setLoading] = useState(true);
     const [selectedSets, setSelectedSets] = useState<string[]>([]);
     const [selectedRarities, setSelectedRarities] = useState<string[]>([]);
-    const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<'price_desc' | 'price_asc' | 'newest'>('price_desc');
     const [isSortModalOpen, setIsSortModalOpen] = useState(false);
 
@@ -96,45 +57,6 @@ export default function MarketplacePage() {
                 .order('price', { ascending: false });
 
             if (data) {
-                const requestedCardIds = Array.from(new Set(
-                    data.map((card) => card.card_id).filter(Boolean),
-                )) as string[];
-                const requestedNames = Array.from(new Set(
-                    data.flatMap((card) => [card.official_name, card.name]).filter(Boolean),
-                )) as string[];
-
-                let pokemonTypeMap = new Map<string, string[]>();
-                let pokemonTypeById = new Map<string, string[]>();
-
-                if (requestedCardIds.length > 0) {
-                    const { data: pokemonCardRowsById } = await supabase
-                        .from('pokemon_cards')
-                        .select('id, name, set_name, types')
-                        .in('id', requestedCardIds);
-
-                    pokemonTypeById = new Map(
-                        ((pokemonCardRowsById || []) as PokemonCardTypeRow[])
-                            .filter((row) => row.id && Array.isArray(row.types) && row.types.length > 0)
-                            .map((row) => [row.id as string, row.types || []]),
-                    );
-                }
-
-                if (requestedNames.length > 0) {
-                    const { data: pokemonCardRowsByName } = await supabase
-                        .from('pokemon_cards')
-                        .select('id, name, set_name, types')
-                        .in('name', requestedNames);
-
-                    pokemonTypeMap = new Map(
-                        ((pokemonCardRowsByName || []) as PokemonCardTypeRow[])
-                            .filter((row) => Array.isArray(row.types) && row.types.length > 0)
-                            .map((row) => [
-                                buildCardLookupKey(row.name, row.set_name),
-                                row.types || [],
-                            ]),
-                    );
-                }
-
                 const summaryRes = await fetch('/api/prices/summary', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -163,17 +85,6 @@ export default function MarketplacePage() {
 
                 setCards(data.map((card) => ({
                     ...card,
-                    types:
-                        (Array.isArray(card.types) && card.types.length > 0 ? card.types : null) ||
-                        (card.card_id ? pokemonTypeById.get(card.card_id) : null) ||
-                        pokemonTypeMap.get(
-                            buildCardLookupKey(
-                                card.official_name || card.name,
-                                card.official_set_name || card.set,
-                            ),
-                        ) ||
-                        pokemonTypeMap.get(buildCardLookupKey(card.name, card.set)) ||
-                        [],
                     marketPrices: marketPricesMap[card.id] || {},
                     marketPriceLinks: marketPriceLinksMap[card.id] || {},
                 })));
@@ -205,22 +116,12 @@ export default function MarketplacePage() {
     const filterOptions = {
         sets: Array.from(new Set(cards.map((card) => card.official_set_name || card.set).filter(Boolean))) as string[],
         rarities: Array.from(new Set(cards.map((card) => card.rarity || card.finish).filter(Boolean))) as string[],
-        types: Array.from(
-            new Set(
-                cards.flatMap((card) => (card.types || []).map((type) => normalizeTypeLabel(type))),
-            ),
-        ),
     };
-
-    if (filterOptions.types.length === 0) {
-        filterOptions.types = FALLBACK_TYPES;
-    }
 
     const toggleFilter = (category: string, value: string) => {
         const setters: Record<string, [string[], React.Dispatch<React.SetStateAction<string[]>>]> = {
             sets: [selectedSets, setSelectedSets],
             rarities: [selectedRarities, setSelectedRarities],
-            types: [selectedTypes, setSelectedTypes],
         };
 
         const [selected, setSelected] = setters[category];
@@ -230,7 +131,6 @@ export default function MarketplacePage() {
     const clearFilters = () => {
         setSelectedSets([]);
         setSelectedRarities([]);
-        setSelectedTypes([]);
         setSearchTerm('');
     };
 
@@ -244,10 +144,8 @@ export default function MarketplacePage() {
 
         const matchesSet = selectedSets.length === 0 || selectedSets.includes(card.official_set_name || card.set || '');
         const matchesRarity = selectedRarities.length === 0 || selectedRarities.includes(card.rarity || card.finish || '');
-        const cardTypes = (card.types || []).map((type) => normalizeTypeLabel(type));
-        const matchesType = selectedTypes.length === 0 || cardTypes.some((type) => selectedTypes.includes(type));
 
-        return matchesSearch && matchesSet && matchesRarity && matchesType;
+        return matchesSearch && matchesSet && matchesRarity;
     });
 
     const sortedCards = [...filteredCards].sort((left, right) => {
@@ -257,7 +155,7 @@ export default function MarketplacePage() {
         return 0;
     });
 
-    const activeFilters = selectedSets.length + selectedRarities.length + selectedTypes.length;
+    const activeFilters = selectedSets.length + selectedRarities.length;
     const availableCards = cards.filter((card) => (card.quantity || 0) > 0).length;
     const averagePrice = cards.length > 0
         ? cards.reduce((acc, card) => acc + (card.price || 0), 0) / cards.length
@@ -316,7 +214,7 @@ export default function MarketplacePage() {
                 <aside className="lg:sticky lg:top-28 lg:self-start">
                     <FilterSidebar
                         options={filterOptions}
-                        selected={{ sets: selectedSets, rarities: selectedRarities, types: selectedTypes }}
+                        selected={{ sets: selectedSets, rarities: selectedRarities }}
                         onToggle={toggleFilter}
                         onClear={clearFilters}
                     />

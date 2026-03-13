@@ -4,12 +4,10 @@ interface FilterSidebarProps {
     options: {
         sets: string[];
         rarities: string[];
-        types: string[];
     };
     selected: {
         sets: string[];
         rarities: string[];
-        types: string[];
     };
     onToggle: (category: string, value: string) => void;
     onClear: () => void;
@@ -81,7 +79,6 @@ export default function FilterSidebar({ options, selected, onToggle, onClear }: 
 
             <FilterSection category="sets" items={options.sets} title="Edicoes" values={selected.sets} onToggle={onToggle} />
             <FilterSection category="rarities" items={options.rarities} title="Raridade e condicao" values={selected.rarities} onToggle={onToggle} />
-            <FilterSection category="types" items={options.types} title="Tipos" values={selected.types} onToggle={onToggle} />
         </div>
     );
 }
