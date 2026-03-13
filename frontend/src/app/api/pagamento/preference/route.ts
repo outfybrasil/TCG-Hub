@@ -17,6 +17,18 @@ const supabaseAdmin = createClient(
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 const preference = new Preference(client);
 
+function buildRedirectUrl(baseUrl: string, path: string, params: Record<string, string | null | undefined>) {
+    const url = new URL(path, baseUrl);
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value) {
+            url.searchParams.set(key, value);
+        }
+    });
+
+    return url.toString();
+}
+
 export async function POST(req: Request) {
     try {
         const body = await req.json();
@@ -40,9 +52,8 @@ export async function POST(req: Request) {
         let BASE_URL = `${protocol}://${host}`;
         if (BASE_URL.includes('null')) BASE_URL = 'http://localhost:3000';
 
-        // Workaround: Mercado Pago's back_urls validation fails with http://localhost URLs
-        // Since we are using redirectMode: 'modal', the actual redirect does not happen,
-        // so we can safely use the production URL purely to pass validation when testing locally.
+        // Workaround: Mercado Pago's back_urls validation fails with http://localhost URLs.
+        // The checkout returns through back_urls in production, so we keep a valid public URL in local tests.
         if (BASE_URL.includes('localhost') || BASE_URL.includes('127.0.0.1')) {
             BASE_URL = 'https://tcg-hub.tonicoimbra.com';
         }
@@ -162,9 +173,9 @@ export async function POST(req: Request) {
                     // Let Mercado Pago handle the address input during checkout for simplicity
                 },
                 back_urls: {
-                    success: `${BASE_URL}/minha-conta/pedidos?status=success`,
-                    pending: `${BASE_URL}/minha-conta/pedidos?status=pending`,
-                    failure: `${BASE_URL}/pagamento?status=failure`
+                    success: buildRedirectUrl(BASE_URL, '/minha-conta/pedidos', { status: 'success', purchaseId }),
+                    pending: buildRedirectUrl(BASE_URL, '/minha-conta/pedidos', { status: 'pending', purchaseId }),
+                    failure: buildRedirectUrl(BASE_URL, '/pagamento', { status: 'failure', purchaseId })
                 },
                 auto_return: 'approved',
                 statement_descriptor: 'TCG HUB',

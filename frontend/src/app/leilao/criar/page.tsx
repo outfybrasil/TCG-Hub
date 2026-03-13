@@ -91,8 +91,16 @@ export default function CreateAuctionPage() {
             if (cardName) query = query.ilike('name', `%${cardName}%`);
             if (selectedSet) query = query.eq('set_id', selectedSet);
 
-            const { data, error } = await query.limit(20);
-            if (!error && data) setSearchResults(data);
+            const { data, error } = await query.limit(150);
+            if (!error && data) {
+                // Sort by numeric local_id (handles formats like "1/150")
+                const sortedData = [...data].sort((a, b) => {
+                    const numA = parseInt(a.local_id?.split('/')[0] || '0');
+                    const numB = parseInt(b.local_id?.split('/')[0] || '0');
+                    return numA - numB;
+                });
+                setSearchResults(sortedData);
+            }
         } finally {
             setSearching(false);
         }

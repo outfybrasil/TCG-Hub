@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useCart } from '@/context/CartContext';
 
 interface Purchase {
     id: string;
@@ -76,8 +77,11 @@ function OrderStatusBar({ status }: { status: string }) {
 
 export default function MeusPedidosPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [purchases, setPurchases] = useState<Purchase[]>([]);
     const [loading, setLoading] = useState(true);
+    const { clearCart } = useCart();
+    const checkoutStatus = searchParams.get('status');
 
     useEffect(() => {
         const init = async () => {
@@ -94,7 +98,13 @@ export default function MeusPedidosPage() {
             setLoading(false);
         };
         init();
-    }, []);
+    }, [router]);
+
+    useEffect(() => {
+        if (checkoutStatus === 'success' || checkoutStatus === 'pending') {
+            clearCart();
+        }
+    }, [checkoutStatus, clearCart]);
 
     if (loading) return (
         <div className="flex items-center justify-center py-44">
@@ -112,6 +122,20 @@ export default function MeusPedidosPage() {
                     Meus <span className="text-rose-600">Pedidos.</span>
                 </h1>
             </div>
+
+            {checkoutStatus === 'success' && (
+                <div className="mb-8 rounded-[32px] border border-emerald-100 bg-emerald-50 px-6 py-5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-700">Pagamento confirmado</p>
+                    <p className="mt-2 text-sm font-medium text-emerald-900">Sua compra foi aprovada e ja aparece no seu historico.</p>
+                </div>
+            )}
+
+            {checkoutStatus === 'pending' && (
+                <div className="mb-8 rounded-[32px] border border-amber-100 bg-amber-50 px-6 py-5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Pagamento em analise</p>
+                    <p className="mt-2 text-sm font-medium text-amber-900">Recebemos o pedido e estamos aguardando a confirmacao do Mercado Pago.</p>
+                </div>
+            )}
 
             {purchases.length === 0 ? (
                 <div className="text-center py-24 border border-dashed border-slate-200 rounded-[40px]">

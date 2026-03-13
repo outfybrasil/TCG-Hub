@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
 import { supabase } from '@/lib/supabase';
 import { useCart } from '@/context/CartContext';
@@ -13,6 +13,7 @@ let mpInitialized = false;
 export default function PagamentoPage() {
 
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [user, setUser] = useState<{ id: string; email?: string; name?: string } | null>(null);
     const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -23,14 +24,23 @@ export default function PagamentoPage() {
     const [dataReady, setDataReady] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [paymentApproved, setPaymentApproved] = useState(false);
-    const brickKeyRef = useRef(0);
+    const [paymentError, setPaymentError] = useState('');
     const hasFetchedPreference = useRef(false);
 
     const { items, total, clearCart } = useCart();
+    const paymentStatus = searchParams.get('status');
 
     useEffect(() => {
         setIsMounted(true);
     }, []);
+
+    useEffect(() => {
+        if (paymentStatus === 'failure') {
+            setPaymentError('O pagamento nao foi concluido. Voce pode tentar novamente.');
+        } else {
+            setPaymentError('');
+        }
+    }, [paymentStatus]);
 
     // Shipping Logic
     const calculateShipping = (uf: string, subtotal: number) => {
@@ -138,10 +148,12 @@ export default function PagamentoPage() {
                 } else {
                     console.error("Falha ao gerar preference:", res.error);
                     hasFetchedPreference.current = false; // allow retry if failed
+                    setPaymentError(res.error || 'Falha ao preparar checkout.');
                 }
             } catch (err) {
                 console.error("Erro ao gerar API preference:", err);
                 hasFetchedPreference.current = false;
+                setPaymentError(err instanceof Error ? err.message : 'Erro ao preparar checkout.');
             }
         };
 
@@ -390,11 +402,19 @@ export default function PagamentoPage() {
                                 </div>
                             )}
                             <Wallet
-                                initialization={{ preferenceId, redirectMode: 'modal' as any }}
+                                initialization={{ preferenceId, redirectMode: 'self' }}
                             />
                         </div>
                     )}
                 </div>
+
+                {paymentError && (
+                    <div className="mt-8 rounded-[28px] border border-rose-100 bg-rose-50 px-6 py-5 text-center">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-rose-600">
+                            {paymentError}
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );

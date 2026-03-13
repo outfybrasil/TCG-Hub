@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, ShieldCheck } from 'lucide-react';
 import PriceChart from '@/components/PriceChart';
-import PriceComparison from '@/components/PriceComparison';
 import { useCart } from '@/context/CartContext';
 
 interface InventoryCard {
     id: string;
+    card_id?: string | null;
     local_id: string;
     name: string;
     set: string;
@@ -25,6 +25,27 @@ interface InventoryCard {
     number?: string;
     seller_name?: string;
     rarity?: string;
+    language?: string;
+}
+
+function formatPrice(value: number | null | undefined) {
+    if (value === null || value === undefined) {
+        return 'Sem preco';
+    }
+
+    return `R$ ${value.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`;
+}
+
+function MetaPill({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-[20px] border border-slate-200 bg-white/80 px-4 py-3">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{label}</p>
+            <p className="mt-2 text-sm font-black tracking-tight text-slate-900">{value}</p>
+        </div>
+    );
 }
 
 export default function CardDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -32,6 +53,7 @@ export default function CardDetailsPage({ params }: { params: Promise<{ id: stri
     const router = useRouter();
     const [card, setCard] = useState<InventoryCard | null>(null);
     const [marketPrices, setMarketPrices] = useState<Record<string, number>>({});
+    const [marketPriceLinks, setMarketPriceLinks] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const { addItem } = useCart();
 
@@ -45,179 +67,190 @@ export default function CardDetailsPage({ params }: { params: Promise<{ id: stri
 
             if (data) {
                 setCard(data);
-                // Fetch market history for initial comparison
-                const { data: history } = await supabase
-                    .from('price_history')
-                    .select('store_name, price')
-                    .eq('card_id', id)
-                    .order('recorded_at', { ascending: false });
-
-                const latestPrices: Record<string, number> = {};
-                history?.forEach(h => {
-                    if (!latestPrices[h.store_name]) latestPrices[h.store_name] = Number(h.price);
+                const summaryRes = await fetch('/api/prices/summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cards: [{
+                            id: data.id,
+                            name: data.name,
+                            official_name: data.official_name,
+                            set: data.set,
+                            official_set_name: data.official_set_name,
+                            number: data.number,
+                            grade: data.grade,
+                            finish: data.finish,
+                            language: data.language,
+                        }],
+                    }),
                 });
-                setMarketPrices(latestPrices);
+                const summaryJson = summaryRes.ok ? await summaryRes.json() : { summaries: {} };
+                const summary = summaryJson.summaries?.[data.id];
+                setMarketPrices(summary?.storePrices || {});
+                setMarketPriceLinks(summary?.storeUrls || {});
             } else {
                 console.error(error);
             }
+
             setLoading(false);
         };
 
         if (id) {
-            fetchCard();
+            void fetchCard();
         }
     }, [id]);
 
     if (loading) {
         return (
-            <div className="min-h-screen pt-32 px-6 pb-24 max-w-7xl mx-auto flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-slate-200 border-t-rose-600 rounded-full animate-spin"></div>
+            <div className="min-h-screen px-6 pb-24 pt-32">
+                <div className="mx-auto flex max-w-7xl items-center justify-center">
+                    <div className="h-12 w-12 rounded-full border-4 border-slate-200 border-t-rose-600 animate-spin" />
+                </div>
             </div>
         );
     }
 
     if (!card) {
         return (
-            <div className="min-h-screen pt-32 px-6 pb-24 max-w-7xl mx-auto text-center">
-                <h1 className="text-2xl font-black text-slate-900">Carta não encontrada</h1>
-                <button onClick={() => router.back()} className="mt-4 text-blue-600 hover:underline">Voltar</button>
+            <div className="min-h-screen px-6 pb-24 pt-32">
+                <div className="mx-auto max-w-4xl rounded-[40px] border border-slate-200 bg-white p-12 text-center shadow-sm">
+                    <h1 className="text-2xl font-black tracking-tight text-slate-900">Carta nao encontrada</h1>
+                    <button onClick={() => router.back()} className="mt-6 text-sm font-bold text-rose-600 hover:underline">
+                        Voltar
+                    </button>
+                </div>
             </div>
         );
     }
 
     const isOutOfStock = card.quantity <= 0;
+    const displayName = card.name || card.official_name;
+    const displaySet = card.official_set_name || card.set || 'Set nao informado';
 
     return (
-        <div className="min-h-[100dvh] bg-slate-50 selection:bg-rose-500/30 selection:text-rose-900 pb-20 pt-24">
-            <div className="max-w-6xl mx-auto px-6">
+        <div className="min-h-[100dvh] overflow-hidden bg-[#f4f1ea] pb-20 pt-24 text-slate-950 selection:bg-amber-300/50 selection:text-slate-950">
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute left-[-10rem] top-12 h-72 w-72 rounded-full bg-amber-200/25 blur-3xl" />
+                <div className="absolute right-[-8rem] top-20 h-80 w-80 rounded-full bg-sky-200/20 blur-3xl" />
+            </div>
 
-                {/* Back Button */}
+            <div className="relative mx-auto flex max-w-7xl flex-col gap-8 px-6">
                 <button
                     onClick={() => router.back()}
-                    className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors mb-8 group"
+                    className="inline-flex w-fit items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 transition-colors hover:text-slate-950"
                 >
-                    <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Voltar para Marketplace
+                    <ArrowLeft className="h-4 w-4" />
+                    Voltar para marketplace
                 </button>
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-
-                    {/* Left Column: Image */}
-                    <div className="lg:col-span-4 relative">
-                        <div className="sticky top-32">
-                            <div className="w-full aspect-[3/4] p-4 bg-white border border-slate-200 rounded-[32px] shadow-sm flex items-center justify-center">
-                                <img
-                                    src={card.image_url || card.official_image_url}
-                                    alt={card.name}
-                                    className="max-h-full max-w-full drop-shadow-2xl"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column: Details & Chart */}
-                    <div className="lg:col-span-8 flex flex-col space-y-10">
-                        {/* Header Info */}
-                        <div className="space-y-4">
-                            <div className="flex gap-2">
-                                <span className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-lg">
-                                    {card.set || card.official_set_name}
+                <section className="grid gap-8 xl:grid-cols-[380px_minmax(0,1fr)]">
+                    <div className="overflow-hidden rounded-[38px] border border-slate-200 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.98),_rgba(255,244,214,0.9)_48%,_rgba(244,241,234,1)_100%)] p-5 shadow-[0_24px_80px_-45px_rgba(15,23,42,0.35)]">
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div className="flex flex-wrap gap-2">
+                                <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">
+                                    {displaySet}
                                 </span>
                                 {card.number && (
-                                    <span className="px-3 py-1 bg-white border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest rounded-lg">
+                                    <span className="rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">
                                         #{card.number}
                                     </span>
                                 )}
                                 {card.is_promo && (
-                                    <span className="px-3 py-1 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg">
-                                        PROMO
+                                    <span className="rounded-full border border-rose-600 bg-rose-600 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white">
+                                        Promo
                                     </span>
                                 )}
                             </div>
-
-                            <h1 className="text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 leading-none">
-                                {card.name || card.official_name}
-                            </h1>
-
-                            <div className="flex flex-wrap items-center gap-6 pt-2">
-                                {card.grade && (
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Grade</span>
-                                        <span className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black">
-                                            {card.grade}
-                                        </span>
-                                    </div>
-                                )}
-                                {card.finish && card.finish !== 'Normal' && (
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Finish</span>
-                                        <span className="text-sm font-bold text-slate-900">{card.finish}</span>
-                                    </div>
-                                )}
-                                {card.rarity && (
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rarity</span>
-                                        <span className="text-sm font-bold text-slate-900">{card.rarity}</span>
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vendedor</span>
-                                    <span className="text-sm font-bold text-blue-600">{card.seller_name || 'TCG Mega Store'}</span>
+                            {card.grade && (
+                                <div className="flex h-14 w-14 rotate-6 items-center justify-center rounded-full border-4 border-white bg-slate-950 text-lg font-black text-white shadow-xl">
+                                    {card.grade}
                                 </div>
-                            </div>
+                            )}
+                        </div>
 
-                            <div className="pt-4 pb-2 border-t border-slate-100">
-                                <PriceComparison
-                                    cardName={card.name || card.official_name}
-                                    cardSet={card.set}
-                                    cardNumber={card.number}
-                                    prices={marketPrices}
-                                    currentPrice={card.price}
-                                    size="sm"
-                                />
+                        <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden rounded-[30px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,255,255,0.28))] px-4 py-6">
+                            <div className="absolute inset-x-8 top-6 h-20 rounded-full bg-amber-300/20 blur-2xl" />
+                            <img
+                                src={card.image_url || card.official_image_url}
+                                alt={displayName}
+                                className="relative z-10 max-h-full max-w-full object-contain drop-shadow-[0_26px_45px_rgba(15,23,42,0.28)]"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="rounded-[38px] border border-slate-200 bg-white/85 p-8 shadow-[0_24px_80px_-45px_rgba(15,23,42,0.25)] backdrop-blur">
+                            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-slate-400">
+                                Perfil da carta
+                            </p>
+                            <h1 className="mt-3 text-4xl font-black tracking-[-0.05em] text-slate-950 sm:text-6xl">
+                                {displayName}
+                            </h1>
+                            <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600">
+                                Visualizacao focada no que importa: carta, preco atual e historico comparativo contra Liga Pokemon e MYP Cards.
+                            </p>
+
+                            <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                                <MetaPill label="Numero" value={card.number || 'Nao informado'} />
+                                <MetaPill label="Idioma" value={card.language || 'Nao informado'} />
+                                <MetaPill label="Acabamento" value={card.finish || 'Normal'} />
+                                <MetaPill label="Raridade" value={card.rarity || 'Nao informada'} />
+                                <MetaPill label="Vendedor" value={card.seller_name || 'TCG Mega Store'} />
                             </div>
                         </div>
 
-                        {/* Price Action Box */}
-                        <div className="bg-white border border-slate-200 p-8 rounded-[32px] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                            <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Preço Atual TCG Hub</p>
-                                <div className="text-4xl font-black tracking-tighter text-slate-900">
-                                    R$ {card.price?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </div>
-                                <p className={`text-xs mt-2 font-black uppercase tracking-widest ${isOutOfStock ? 'text-slate-400' : 'text-emerald-500'}`}>
-                                    {isOutOfStock ? 'Esgotado' : `${card.quantity} EM ESTOQUE`}
+                        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+                            <div className="rounded-[34px] border border-slate-200 bg-white/85 p-6 shadow-[0_24px_80px_-45px_rgba(15,23,42,0.2)] backdrop-blur">
+                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
+                                    Preco atual
                                 </p>
+                                <div className="mt-3 flex flex-wrap items-end gap-4">
+                                    <span className="text-5xl font-black tracking-[-0.06em] text-slate-950">
+                                        {formatPrice(card.price)}
+                                    </span>
+                                    <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] ${isOutOfStock ? 'bg-slate-200 text-slate-500' : 'bg-emerald-100 text-emerald-700'}`}>
+                                        {isOutOfStock ? 'Sem estoque' : `${card.quantity} em estoque`}
+                                    </span>
+                                </div>
+                                <div className="mt-5 flex items-start gap-3 rounded-[22px] border border-emerald-100 bg-emerald-50 px-4 py-4">
+                                    <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-600" />
+                                    <p className="text-sm leading-6 text-emerald-900">
+                                        O bloco abaixo concentra o historico de preco e a comparacao direta entre as 3 lojas, sem repetir informacao em outras secoes.
+                                    </p>
+                                </div>
                             </div>
 
                             <button
                                 onClick={() => addItem({
                                     id: card.id,
-                                    name: card.name || card.official_name || 'Unknown',
+                                    name: displayName || 'Unknown',
                                     price: card.price || 0,
                                     imageUrl: card.image_url || card.official_image_url || '',
-                                    maxStock: card.quantity
+                                    maxStock: card.quantity,
                                 })}
                                 disabled={isOutOfStock}
-                                className={`w-full sm:w-auto h-14 px-10 ${isOutOfStock ? 'bg-slate-100 text-slate-400' : 'bg-rose-600 text-white hover:bg-rose-700 shadow-xl shadow-rose-600/20'} text-[11px] font-black uppercase tracking-widest rounded-2xl transition-all`}
+                                className={`flex h-full min-h-[180px] flex-col items-center justify-center gap-4 rounded-[34px] px-8 text-center text-[11px] font-black uppercase tracking-[0.24em] transition-all ${isOutOfStock ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400' : 'border border-slate-950 bg-slate-950 text-white hover:bg-rose-600 hover:border-rose-600'}`}
                             >
-                                {isOutOfStock ? 'Sem Estoque' : 'Adicionar ao Carrinho'}
+                                <ShoppingCart className="h-6 w-6" />
+                                <span>{isOutOfStock ? 'Indisponivel' : 'Adicionar ao carrinho'}</span>
                             </button>
                         </div>
-
-                        {/* Market History Chart Component */}
-                        <div className="pt-4 border-t border-slate-200">
-                            <PriceChart
-                                cardId={card.local_id || card.id}
-                                cardName={card.name || card.official_name}
-                                cardCode={card.number || ''}
-                                currentPrice={card.price}
-                                setExpansion={card.set}
-                            />
-                            {/* Force a small gap or note if needed */}
-                        </div>
-
                     </div>
-                </div>
+                </section>
+
+                <PriceChart
+                    cardId={card.id}
+                    historyCardId={card.card_id}
+                    cardName={displayName}
+                    cardCode={card.number || ''}
+                    cardSet={card.set}
+                    condition={card.grade}
+                    finish={card.finish}
+                    language={card.language}
+                    currentPrice={card.price}
+                    latestPrices={marketPrices}
+                    storeLinks={marketPriceLinks}
+                />
             </div>
         </div>
     );

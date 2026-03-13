@@ -1,35 +1,36 @@
 {
   "bodyRecebidoFrontend": {
-    "userId": "242236f4-ce84-41fa-bcc2-1bf31909feb9",
+    "userId": "63e34058-20b6-4d84-8c57-7872b27fd5bf",
     "useCashback": false,
     "discountAmount": 0,
     "totalAmount": 0.01,
     "shippingCost": 0,
     "shippingAddress": {
-      "id": "b7beb62f-0fa7-4086-b3b5-851810cc6a07",
-      "user_id": "242236f4-ce84-41fa-bcc2-1bf31909feb9",
-      "label": "Casa",
-      "cep": "81320000",
-      "street": "Rua Carlos Klemtz",
-      "number": "1410",
-      "complement": "Bloco 12 ap 04",
-      "neighborhood": "Fazendinha",
+      "id": "fb78f84e-6acd-4c25-ae64-7f12f3b374d4",
+      "user_id": "63e34058-20b6-4d84-8c57-7872b27fd5bf",
+      "label": "Principal",
+      "cep": "80530000",
+      "street": "Avenida Cândido de Abreu",
+      "number": "70",
+      "complement": "Sala 811",
+      "neighborhood": "Centro Cívico",
       "city": "Curitiba",
       "state": "PR",
       "is_default": true,
-      "created_at": "2026-03-05T18:06:50.187795+00:00",
-      "updated_at": "2026-03-05T18:06:50.187795+00:00"
+      "created_at": "2026-03-06T22:45:04.492876+00:00",
+      "updated_at": "2026-03-06T22:45:04.492876+00:00"
     },
     "items": [
       {
         "id": "c821d6c8-468f-4d53-855e-e505e0fbd18b",
         "title": "Mega Camerupt ex",
         "unit_price": 0.01,
-        "quantity": 1
+        "quantity": 1,
+        "imageUrl": "https://assets.tcgdex.net/pt/me/me01/022/high.png"
       }
     ],
     "payer": {
-      "email": "gustavolanconi@outlook.com"
+      "email": "machadoduda015@gmail.com"
     }
   },
   "payloadGeradoMecadoPago": {
@@ -48,7 +49,7 @@
       }
     ],
     "payer": {
-      "email": "gustavolanconi@outlook.com",
+      "email": "machadoduda015@gmail.com",
       "name": "Cliente",
       "surname": "Site"
     },
@@ -59,13 +60,14 @@
     },
     "auto_return": "approved",
     "statement_descriptor": "TCG HUB",
-    "external_reference": "user_242236f4-ce84-41fa-bcc2-1bf31909feb9_1773084467462",
+    "notification_url": "https://tcg-hub.tonicoimbra.com/api/webhook/mercadopago",
+    "external_reference": "purchase_a8d25590-665c-4302-99f0-e5b50b041496",
     "metadata": {
-      "userId": "242236f4-ce84-41fa-bcc2-1bf31909feb9",
-      "purchaseId": null,
-      "useCashback": "false",
-      "discountAmount": "0",
-      "shippingAddress": "{\"id\":\"b7beb62f-0fa7-4086-b3b5-851810cc6a07\",\"user_id\":\"242236f4-ce84-41fa-bcc2-1bf31909feb9\",\"label\":\"Casa\",\"cep\":\"81320000\",\"street\":\"Rua Carlos Klemtz\",\"number\":\"1410\",\"complement\":\"Bloco 12 ap 04\",\"neighborhood\":\"Fazendinha\",\"city\":\"Curitiba\",\"state\":\"PR\",\"is_default\":true,\"created_at\":\"2026-03-05T18:06:50.187795+00:00\",\"updated_at\":\"2026-03-05T18:06:50.187795+00:00\"}"
+      "user_id": "63e34058-20b6-4d84-8c57-7872b27fd5bf",
+      "purchase_id": "a8d25590-665c-4302-99f0-e5b50b041496",
+      "use_cashback": "false",
+      "discount_amount": "0",
+      "shipping_address": "{\"id\":\"fb78f84e-6acd-4c25-ae64-7f12f3b374d4\",\"user_id\":\"63e34058-20b6-4d84-8c57-7872b27fd5bf\",\"label\":\"Principal\",\"cep\":\"80530000\",\"street\":\"Avenida Cândido de Abreu\",\"number\":\"70\",\"complement\":\"Sala 811\",\"neighborhood\":\"Centro Cívico\",\"city\":\"Curitiba\",\"state\":\"PR\",\"is_default\":true,\"created_at\":\"2026-03-06T22:45:04.492876+00:00\",\"updated_at\":\"2026-03-06T22:45:04.492876+00:00\"}"
     }
   }
 }

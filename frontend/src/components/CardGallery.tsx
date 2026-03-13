@@ -18,6 +18,8 @@ interface CardProps {
     quantity?: number;
     cardNumber?: string;
     marketPrices?: Record<string, number>;
+    marketPriceLinks?: Record<string, string>;
+    language?: string;
     addItem?: (item: { id: string; name: string; price: number; imageUrl: string; maxStock?: number }) => void;
     onDelete?: (id: string) => void;
     onEditCard?: (id: string, newPrice: number, originalPrice?: number, quantity?: number) => void;
@@ -33,7 +35,7 @@ const getGradeColor = (grade: string | undefined) => {
     return 'bg-slate-400';
 };
 
-const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, addItem, onDelete, onEditCard }: CardProps) => {
+const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, marketPriceLinks, language, addItem, onDelete, onEditCard }: CardProps) => {
     const [currentImageUrl, setCurrentImageUrl] = React.useState(imageUrl);
     const [imageError, setImageError] = React.useState(false);
     const [selectedQty, setSelectedQty] = React.useState(1);
@@ -161,7 +163,11 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                         cardName={name}
                         cardSet={set}
                         cardNumber={cardNumber}
+                        condition={grade}
+                        finish={finish}
+                        language={language}
                         prices={marketPrices}
+                        priceLinks={marketPriceLinks}
                         currentPrice={price}
                         size="sm"
                     />
@@ -240,4 +246,3 @@ export default function CardGallery({ cards, onDelete, onEditCard }: { cards: Ca
         </div>
     );
 }
-

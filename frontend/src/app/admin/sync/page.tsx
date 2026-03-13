@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import AdminGuard from '@/components/AdminGuard';
 
 interface TcgSet {
@@ -10,14 +10,35 @@ interface TcgSet {
     cards?: number;
 }
 
+interface MarketSyncStats {
+    activeInventory: number;
+    cachedItems: number;
+    uncachedItems: number;
+    cachedKeys: number;
+    refreshed24h: number;
+    historySnapshots: number;
+    lastFetchedAt: string | null;
+}
+
+interface MarketSyncResponse {
+    processed: number;
+    synced: number;
+    failed: number;
+    errors?: string[];
+}
+
 export default function SyncAdminPage() {
     const [loading, setLoading] = useState(false);
+    const [marketSyncing, setMarketSyncing] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
+    const [marketStatus, setMarketStatus] = useState<string | null>(null);
+    const [marketErrors, setMarketErrors] = useState<string[]>([]);
+    const [marketStats, setMarketStats] = useState<MarketSyncStats | null>(null);
     const [sets, setSets] = useState<TcgSet[]>([]);
     const [syncedSets, setSyncedSets] = useState<Set<string>>(new Set());
     const [selectedSets, setSelectedSets] = useState<Set<string>>(new Set());
     const [cardCount, setCardCount] = useState<number>(0);
-    const [syncProgress, setSyncProgress] = useState<{ current: string, total: number, done: number } | null>(null);
+    const [syncProgress, setSyncProgress] = useState<{ current: string; total: number; done: number } | null>(null);
 
     const fetchStats = async () => {
         try {
@@ -26,7 +47,18 @@ export default function SyncAdminPage() {
             const data = await res.json();
             if (data.count !== undefined) setCardCount(data.count);
         } catch (err) {
-            console.error("Erro ao buscar estatísticas:", err);
+            console.error('Erro ao buscar estatisticas:', err);
+        }
+    };
+
+    const fetchMarketStats = async () => {
+        try {
+            const res = await fetch('/api/admin/sync-market-prices/stats');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+            setMarketStats(data);
+        } catch (err) {
+            console.error('Erro ao buscar estatisticas do mercado:', err);
         }
     };
 
@@ -35,26 +67,29 @@ export default function SyncAdminPage() {
             try {
                 const res = await fetch('https://api.tcgdex.net/v2/pt/sets');
                 const data = await res.json();
-                setSets(data.reverse()); // Novas coleções primeiro
-            } catch (_err) {
-                setStatus("Erro ao carregar coleções da TCGdex.");
+                setSets(data.reverse());
+            } catch {
+                setStatus('Erro ao carregar colecoes da TCGdex.');
             }
         };
+
         const fetchSyncedSets = async () => {
             try {
                 const res = await fetch('/api/admin/sync-cards/synced-sets');
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.success) {
-                        setSyncedSets(new Set(data.synced_sets));
-                    }
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.success) {
+                    setSyncedSets(new Set(data.synced_sets));
                 }
-            } catch (err) { }
+            } catch {
+                // noop
+            }
         };
 
-        fetchSets();
-        fetchStats();
-        fetchSyncedSets();
+        void fetchSets();
+        void fetchStats();
+        void fetchMarketStats();
+        void fetchSyncedSets();
     }, []);
 
     const toggleSetSelection = (setId: string) => {
@@ -77,7 +112,7 @@ export default function SyncAdminPage() {
                 const res = await fetch('/api/admin/sync-cards', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ setId })
+                    body: JSON.stringify({ setId }),
                 });
 
                 if (!res.ok) {
@@ -93,22 +128,21 @@ export default function SyncAdminPage() {
                     throw new Error(data.error);
                 }
             } else {
-                // Sync selected or last 5
                 const targetSets = selectedSets.size > 0
-                    ? sets.filter(s => selectedSets.has(s.id))
+                    ? sets.filter((set) => selectedSets.has(set.id))
                     : sets.slice(0, 5);
 
                 setSyncProgress({ current: 'Iniciando...', total: targetSets.length, done: 0 });
 
                 let totalCount = 0;
-                for (let i = 0; i < targetSets.length; i++) {
+                for (let i = 0; i < targetSets.length; i += 1) {
                     const set = targetSets[i];
                     setSyncProgress({ current: `Sincronizando: ${set.name}`, total: targetSets.length, done: i });
 
                     const res = await fetch('/api/admin/sync-cards', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ setId: set.id })
+                        body: JSON.stringify({ setId: set.id }),
                     });
 
                     if (!res.ok) {
@@ -119,12 +153,13 @@ export default function SyncAdminPage() {
                     const data = await res.json();
                     if (data.success) {
                         totalCount += data.count;
-                        setSyncedSets(prev => new Set(prev).add(set.id));
+                        setSyncedSets((prev) => new Set(prev).add(set.id));
                     }
                 }
-                setStatus(`Concluído! Total de ${totalCount} cards sincronizados.`);
+
+                setStatus(`Concluido! Total de ${totalCount} cards sincronizados.`);
                 await fetchStats();
-                setSelectedSets(new Set()); // clear selection
+                setSelectedSets(new Set());
             }
         } catch (err) {
             setStatus(`Erro: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
@@ -134,35 +169,64 @@ export default function SyncAdminPage() {
         }
     };
 
+    const handleMarketSync = async () => {
+        setMarketSyncing(true);
+        setMarketStatus(null);
+        setMarketErrors([]);
+        try {
+            const res = await fetch('/api/admin/sync-market-prices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit: 24 }),
+            });
+
+            const data = await res.json() as MarketSyncResponse & { error?: string };
+            if (!res.ok) {
+                throw new Error(data.error || `HTTP ${res.status}`);
+            }
+
+            setMarketStatus(
+                `Mercado atualizado: ${data.synced}/${data.processed} itens processados.` +
+                (data.failed > 0 ? ` ${data.failed} falharam.` : '')
+            );
+            setMarketErrors(data.errors || []);
+            await fetchMarketStats();
+        } catch (err) {
+            setMarketStatus(`Erro: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
+        } finally {
+            setMarketSyncing(false);
+        }
+    };
+
     return (
         <AdminGuard>
             <div className="max-w-4xl mx-auto p-12 space-y-8 animate-fade-up">
                 <div className="flex justify-between items-end border-b border-slate-100 pb-8">
                     <div className="space-y-4">
                         <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none">
-                            Painel de <span className="text-rose-600">Sincronização</span>
+                            Painel de <span className="text-rose-600">Sincronizacao</span>
                         </h1>
                         <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none">
-                            Importação de Catálogo Mestre TCGdex (PT-BR)
+                            Importacao de catalogo mestre TCGdex (PT-BR)
                         </p>
                     </div>
                     <div className="bg-slate-900 px-6 py-4 rounded-2xl text-white flex flex-col items-end">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-1">Catálogo Local</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-1">Catalogo local</span>
                         <span className="text-2xl font-black tabular-nums">{cardCount.toLocaleString('pt-BR')} <span className="text-xs text-slate-500 uppercase">Cards</span></span>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-xl shadow-slate-200/50 h-fit">
-                        <h2 className="text-xl font-black text-slate-900 tracking-tighter">Sincronização em Lote</h2>
-                        <p className="text-slate-500 text-sm font-medium">Sincroniza as 5 coleções mais recentes lançadas.</p>
+                        <h2 className="text-xl font-black text-slate-900 tracking-tighter">Sincronizacao em lote</h2>
+                        <p className="text-slate-500 text-sm font-medium">Sincroniza as 5 colecoes mais recentes lancadas.</p>
 
                         <button
-                            onClick={() => handleSync()}
+                            onClick={() => void handleSync()}
                             disabled={loading}
                             className="w-full h-14 bg-rose-600 text-white font-black uppercase tracking-widest text-[11px] rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/30 disabled:opacity-50"
                         >
-                            {loading ? 'Processando...' : (selectedSets.size > 0 ? `Sincronizar Selecionadas (${selectedSets.size})` : 'Sincronizar Últimas 5')}
+                            {loading ? 'Processando...' : (selectedSets.size > 0 ? `Sincronizar selecionadas (${selectedSets.size})` : 'Sincronizar ultimas 5')}
                         </button>
 
                         {syncProgress && (
@@ -187,15 +251,90 @@ export default function SyncAdminPage() {
                         )}
                     </div>
 
-                    <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-xl shadow-slate-200/50 h-[500px] flex flex-col">
-                        <h2 className="text-xl font-black text-slate-900 tracking-tighter">Sincronizar por Coleção</h2>
+                    <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-xl shadow-slate-200/50 h-fit">
+                        <h2 className="text-xl font-black text-slate-900 tracking-tighter">Mercado em background</h2>
+                        <p className="text-slate-500 text-sm font-medium">
+                            Atualiza o cache de precos do marketplace para o cliente ja ver o comparativo ao abrir a vitrine.
+                        </p>
+
+                        {marketStats && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Com cache</p>
+                                    <p className="text-2xl font-black tracking-tighter text-slate-900">{marketStats.cachedItems}</p>
+                                    <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+                                        de {marketStats.activeInventory} ativos
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Sem cache</p>
+                                    <p className="text-2xl font-black tracking-tighter text-rose-600">{marketStats.uncachedItems}</p>
+                                    <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+                                        precisam sincronizar
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Atualizadas 24h</p>
+                                    <p className="text-2xl font-black tracking-tighter text-emerald-600">{marketStats.refreshed24h}</p>
+                                    <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+                                        snapshot recente
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Historico</p>
+                                    <p className="text-2xl font-black tracking-tighter text-slate-900">{marketStats.historySnapshots}</p>
+                                    <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+                                        registros salvos
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={() => void handleMarketSync()}
+                            disabled={marketSyncing}
+                            className="w-full h-14 bg-slate-900 text-white font-black uppercase tracking-widest text-[11px] rounded-2xl hover:bg-rose-600 transition-all shadow-lg shadow-slate-900/20 disabled:opacity-50"
+                        >
+                            {marketSyncing ? 'Atualizando...' : 'Sincronizar precos do mercado'}
+                        </button>
+
+                        {marketStatus && (
+                            <div className={`p-4 rounded-xl text-[11px] font-bold animate-fade-in ${marketStatus.startsWith('Erro') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                {marketStatus}
+                            </div>
+                        )}
+
+                        {marketErrors.length > 0 && (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">
+                                    Primeiros erros da sincronizacao
+                                </p>
+                                <div className="space-y-1">
+                                    {marketErrors.map((error) => (
+                                        <p key={error} className="text-[11px] font-medium text-amber-900 break-words">
+                                            {error}
+                                        </p>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {marketStats?.lastFetchedAt && (
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                                Ultima atualizacao: {new Date(marketStats.lastFetchedAt).toLocaleString('pt-BR')}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-xl shadow-slate-200/50 h-[500px] flex flex-col md:col-span-2">
+                        <h2 className="text-xl font-black text-slate-900 tracking-tighter">Sincronizar por colecao</h2>
                         <div className="flex-1 overflow-y-auto pr-2 space-y-2">
                             {sets.length === 0 ? (
                                 <div className="space-y-2">
-                                    {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-12 bg-slate-50 animate-pulse rounded-xl" />)}
+                                    {[1, 2, 3, 4, 5].map((item) => <div key={item} className="h-12 bg-slate-50 animate-pulse rounded-xl" />)}
                                 </div>
                             ) : (
-                                sets.map(set => {
+                                sets.map((set) => {
                                     const isSynced = syncedSets.has(set.id);
                                     const isSelected = selectedSets.has(set.id);
 
@@ -203,13 +342,12 @@ export default function SyncAdminPage() {
                                         <div
                                             key={set.id}
                                             onClick={() => toggleSetSelection(set.id)}
-                                            className={`flex items-center justify-between p-3 rounded-xl border transition-colors cursor-pointer
-                                                ${isSelected ? 'bg-rose-50 border-rose-300' :
-                                                    (isSynced ? 'bg-emerald-50 border-emerald-100 hover:border-emerald-300' : 'bg-slate-50 border-slate-100 hover:border-slate-300')}
-                                            `}
+                                            className={`flex items-center justify-between p-3 rounded-xl border transition-colors cursor-pointer ${isSelected
+                                                ? 'bg-rose-50 border-rose-300'
+                                                : (isSynced ? 'bg-emerald-50 border-emerald-100 hover:border-emerald-300' : 'bg-slate-50 border-slate-100 hover:border-slate-300')
+                                                }`}
                                         >
                                             <div className="flex items-center gap-4">
-                                                {/* Checkbox */}
                                                 <div className={`w-4 h-4 rounded ring-1 flex items-center justify-center transition-all ${isSelected ? 'bg-rose-600 ring-rose-600' : 'bg-white ring-slate-300'}`}>
                                                     {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
                                                 </div>
@@ -223,23 +361,24 @@ export default function SyncAdminPage() {
                                                             {set.name}
                                                         </span>
                                                         <span className={`text-[9px] font-black uppercase tracking-widest ${isSynced ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                                            {isSynced ? 'Sincronizado ✓' : `${set.cards} Cards`}
+                                                            {isSynced ? 'Sincronizado' : `${set.cards} cards`}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleSync(set.id);
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    void handleSync(set.id);
                                                 }}
                                                 disabled={loading}
-                                                className={`px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-lg transition-all disabled:opacity-50
-                                                    ${isSynced ? 'bg-white border-emerald-200 text-emerald-600 hover:bg-emerald-50' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white'}
-                                                `}
+                                                className={`px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-lg transition-all disabled:opacity-50 ${isSynced
+                                                    ? 'bg-white border-emerald-200 text-emerald-600 hover:bg-emerald-50'
+                                                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white'
+                                                    }`}
                                             >
-                                                {isSynced ? 'Re-Sync' : 'Sync'}
+                                                {isSynced ? 'Re-sync' : 'Sync'}
                                             </button>
                                         </div>
                                     );

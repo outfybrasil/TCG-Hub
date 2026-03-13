@@ -125,8 +125,8 @@ export default function AuctionDetailPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.error);
             setPreferenceId(data.id);
-        } catch (err: any) {
-            setDepositError(err.message || 'Erro ao preparar checkout.');
+        } catch (err: unknown) {
+            setDepositError(err instanceof Error ? err.message : 'Erro ao preparar checkout.');
         } finally {
             setDepositing(false);
         }
@@ -482,7 +482,13 @@ export default function AuctionDetailPage() {
                         </div>
                     </div>
 
-                    <PriceComparison cardName={auction.cardName} cardSet={auction.cardSet} cardNumber={auction.cardNumber} />
+                    <PriceComparison
+                        cardName={auction.cardName}
+                        cardSet={auction.cardSet}
+                        cardNumber={auction.cardNumber}
+                        condition={auction.condition}
+                        language={auction.language}
+                    />
 
                     {/* General Rules Section */}
                     <div className="bg-slate-50/50 border border-slate-100 p-8 rounded-[40px] space-y-8 animate-fade-up">
@@ -549,7 +555,7 @@ export default function AuctionDetailPage() {
                                 </div>
 
                                 <Wallet
-                                    initialization={{ preferenceId, redirectMode: 'modal' as any }}
+                                    initialization={{ preferenceId, redirectMode: 'modal' as const }}
                                 />
 
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest animate-pulse mt-4">Aguardando pagamento seguro...</p>

@@ -13,8 +13,10 @@ interface InventoryCard {
     is_promo?: boolean; isPromo?: boolean;
     quantity?: number; number?: string; local_id?: string;
     marketPrices?: Record<string, number>;
+    marketPriceLinks?: Record<string, string>;
     rarity?: string;
     types?: string[];
+    language?: string;
 }
 
 export default function MarketplacePage() {
@@ -28,6 +30,11 @@ export default function MarketplacePage() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<'price_desc' | 'price_asc' | 'newest'>('price_desc');
     const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+    const sortOptions: Array<{ id: 'price_desc' | 'price_asc' | 'newest'; label: string }> = [
+        { id: 'price_desc', label: 'Maior Valor' },
+        { id: 'price_asc', label: 'Menor Valor' },
+        { id: 'newest', label: 'Novos Ativos' }
+    ];
 
     useEffect(() => {
         const fetchCards = async () => {
@@ -37,26 +44,35 @@ export default function MarketplacePage() {
                 .order('price', { ascending: false });
 
             if (data) {
-                // Fetch latest market prices for these cards
-                const cardIds = data.map(c => c.id);
-                const { data: historyData } = await supabase
-                    .from('price_history')
-                    .select('card_id, store_name, price, recorded_at')
-                    .in('card_id', cardIds)
-                    .order('recorded_at', { ascending: false });
-
-                // Map results to cards (getting only latest per store)
-                const marketPricesMap: Record<string, Record<string, number>> = {};
-                historyData?.forEach(row => {
-                    if (!marketPricesMap[row.card_id]) marketPricesMap[row.card_id] = {};
-                    if (!marketPricesMap[row.card_id][row.store_name]) {
-                        marketPricesMap[row.card_id][row.store_name] = Number(row.price);
-                    }
+                const summaryRes = await fetch('/api/prices/summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cards: data.map(card => ({
+                            id: card.id,
+                            name: card.name,
+                            official_name: card.official_name,
+                            set: card.set,
+                            official_set_name: card.official_set_name,
+                            number: card.number,
+                            grade: card.grade,
+                            finish: card.finish,
+                            language: card.language,
+                        }))
+                    })
                 });
+                const summaryJson = summaryRes.ok ? await summaryRes.json() : { summaries: {} };
+                const marketPricesMap = Object.fromEntries(
+                    Object.entries(summaryJson.summaries || {}).map(([cardId, summary]) => [cardId, (summary as { storePrices?: Record<string, number> }).storePrices || {}])
+                ) as Record<string, Record<string, number>>;
+                const marketPriceLinksMap = Object.fromEntries(
+                    Object.entries(summaryJson.summaries || {}).map(([cardId, summary]) => [cardId, (summary as { storeUrls?: Record<string, string> }).storeUrls || {}])
+                ) as Record<string, Record<string, string>>;
 
                 const enrichedCards = data.map(card => ({
                     ...card,
-                    marketPrices: marketPricesMap[card.id] || {}
+                    marketPrices: marketPricesMap[card.id] || {},
+                    marketPriceLinks: marketPriceLinksMap[card.id] || {},
                 }));
 
                 setCards(enrichedCards);
@@ -228,15 +244,11 @@ export default function MarketplacePage() {
                             <div className="bg-white w-full max-w-sm rounded-[40px] p-10 shadow-2xl animate-fade-up">
                                 <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-8">Escolha a Ordem</h3>
                                 <div className="space-y-3">
-                                    {[
-                                        { id: 'price_desc', label: 'Maior Valor' },
-                                        { id: 'price_asc', label: 'Menor Valor' },
-                                        { id: 'newest', label: 'Novos Ativos' }
-                                    ].map((opt) => (
+                                    {sortOptions.map((opt) => (
                                         <button
                                             key={opt.id}
                                             onClick={() => {
-                                                setSortBy(opt.id as any);
+                                                setSortBy(opt.id);
                                                 setIsSortModalOpen(false);
                                             }}
                                             className={`w-full h-14 flex items-center justify-between px-6 rounded-2xl border transition-all ${sortBy === opt.id
@@ -278,7 +290,9 @@ export default function MarketplacePage() {
                             isPromo: c.is_promo ?? c.isPromo ?? false,
                             quantity: c.quantity || 0,
                             cardNumber: c.number,
-                            marketPrices: c.marketPrices
+                            marketPrices: c.marketPrices,
+                            marketPriceLinks: c.marketPriceLinks,
+                            language: c.language
                         }))} />
                     )}
 
@@ -290,4 +304,3 @@ export default function MarketplacePage() {
         </div>
     );
 }
-
