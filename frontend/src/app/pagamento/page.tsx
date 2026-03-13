@@ -10,7 +10,7 @@ import Link from 'next/link';
 // Module-level singleton to prevent double-init in React 18 Strict Mode
 let mpInitialized = false;
 
-export default function PagamentoPage() {
+function PagamentoContent() {
 
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -417,5 +417,17 @@ export default function PagamentoPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function PagamentoPage() {
+    return (
+        <React.Suspense fallback={
+            <div className="flex items-center justify-center py-44 w-full">
+                <div className="h-10 w-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+        }>
+            <PagamentoContent />
+        </React.Suspense>
     );
 }

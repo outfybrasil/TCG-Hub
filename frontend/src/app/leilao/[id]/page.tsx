@@ -555,7 +555,7 @@ export default function AuctionDetailPage() {
                                 </div>
 
                                 <Wallet
-                                    initialization={{ preferenceId, redirectMode: 'modal' as const }}
+                                    initialization={{ preferenceId }}
                                 />
 
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest animate-pulse mt-4">Aguardando pagamento seguro...</p>

@@ -397,11 +397,11 @@ function parseMypOffers(html: string): MypOffer[] {
         offers.push({
             seller,
             finishLabel: finishLabel || 'Normal',
-            finishKey: normalizeFinish(finishLabel),
+            finishKey: normalizeFinish(finishLabel) || 'normal',
             conditionLabel,
-            conditionKey: normalizeCondition(conditionLabel),
+            conditionKey: normalizeCondition(conditionLabel) || 'nm',
             languageLabel: languageLabel || 'Nao informado',
-            languageKey: normalizeLanguage(languageLabel),
+            languageKey: normalizeLanguage(languageLabel) || 'pt',
             quantity: Number.isFinite(quantity) ? quantity : null,
             price,
         });

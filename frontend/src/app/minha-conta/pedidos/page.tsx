@@ -75,7 +75,7 @@ function OrderStatusBar({ status }: { status: string }) {
     );
 }
 
-export default function MeusPedidosPage() {
+function MeusPedidosContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [purchases, setPurchases] = useState<Purchase[]>([]);
@@ -201,5 +201,17 @@ export default function MeusPedidosPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function MeusPedidosPage() {
+    return (
+        <React.Suspense fallback={
+            <div className="flex items-center justify-center py-44">
+                <div className="h-10 w-10 border-2 border-rose-600 border-t-transparent rounded-full animate-spin" />
+            </div>
+        }>
+            <MeusPedidosContent />
+        </React.Suspense>
     );
 }
