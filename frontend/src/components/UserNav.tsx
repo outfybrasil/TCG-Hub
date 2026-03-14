@@ -32,10 +32,23 @@ export default function UserNav() {
 
     useEffect(() => {
         const initAuth = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                setUser(session.user);
-                await fetchBalances(session.user.id);
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                // If there's an error about invalid refresh token, we should sign out to clear local state
+                if (error && error.message.includes('Refresh Token Not Found')) {
+                    console.warn('[UserNav] Stale session detected, clearing...');
+                    await supabase.auth.signOut();
+                    setUser(null);
+                    return;
+                }
+
+                if (session?.user) {
+                    setUser(session.user);
+                    await fetchBalances(session.user.id);
+                }
+            } catch (err) {
+                console.error('[UserNav] Error initializing auth:', err);
             }
         };
 
@@ -69,21 +82,34 @@ export default function UserNav() {
             )}
 
             {user && (
-                <div className="hidden h-11 items-center rounded-xl border border-rose-100 bg-rose-50 px-4 sm:flex" title="Seu saldo de Cashback">
-                    <span className="mr-2 text-[9px] font-black uppercase tracking-[0.2em] text-rose-600">Cashback</span>
-                    <span className="text-xs font-black text-slate-900">R$ {walletBalance.toFixed(2).replace('.', ',')}</span>
+                <div className="hidden h-9 items-center rounded-xl border border-rose-100 bg-rose-50 px-2 sm:flex transition-all hover:bg-rose-100 group" title="Cashback acumulado (Clique para ver detalhes)">
+                    <div className="mr-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-200">
+                        <span className="text-[12px] font-black relative">
+                            $
+                            <span className="absolute -inset-1 border border-white/30 rounded-full border-t-transparent animate-[spin_3s_linear_infinite]"></span>
+                        </span>
+                    </div>
+                    <span className="text-[11px] font-black text-slate-900">R$ {walletBalance.toFixed(2).replace('.', ',')}</span>
                 </div>
             )}
 
             {user && (
-                <Link href="/minha-conta/creditos" className="hidden h-11 items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 transition-all hover:bg-amber-100 sm:flex" title="Creditos para Leilao">
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-700">Creditos</span>
-                    <span className="text-xs font-black text-slate-900">R$ {availableCredits.toFixed(2).replace('.', ',')}</span>
+                <Link href="/minha-conta/creditos" className="hidden h-9 items-center gap-1.5 rounded-xl border border-amber-100 bg-amber-50 px-2 transition-all hover:bg-amber-100 sm:flex" title="Créditos para Leilão">
+                    <div className="flex h-5 w-7 items-center justify-center rounded-md bg-amber-500 font-black text-[9px] text-white shadow-sm">
+                        CR
+                    </div>
+                    <span className="text-[11px] font-black text-slate-900">R$ {availableCredits.toFixed(2).replace('.', ',')}</span>
                 </Link>
             )}
 
-            <Link href={user ? (user.email === 'admin@tcghub.com.br' ? '/admin/vendas' : '/minha-conta') : '/auth/login'} className="flex h-11 items-center rounded-xl border border-white/80 bg-white/80 px-5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.55)] transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600">
-                {user ? (user.email === 'admin@tcghub.com.br' ? 'Pedidos' : 'Minha Conta') : 'Entrar'}
+            {user && (
+                <Link href="/minha-conta/inventario" className="hidden h-9 items-center gap-2 rounded-xl border border-rose-100 bg-white px-3 transition-all hover:bg-rose-50 sm:flex" title="Seu Inventário Pessoal">
+                    <span className="text-[9px] font-black uppercase tracking-[0.15em] text-rose-600">Inventário</span>
+                </Link>
+            )}
+
+            <Link href={user ? (user.email === 'admin@tcghub.com.br' ? '/admin/vendas' : '/minha-conta') : '/auth/login'} className="flex h-9 items-center rounded-xl border border-white/80 bg-white/80 px-4 text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)] transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600">
+                {user ? (user.email === 'admin@tcghub.com.br' ? 'Pedidos' : 'Conta') : 'Entrar'}
             </Link>
 
             {user && (
@@ -92,7 +118,7 @@ export default function UserNav() {
                         await supabase.auth.signOut();
                         window.location.href = '/';
                     }}
-                    className="flex h-11 items-center rounded-xl border border-transparent px-3 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
+                    className="flex h-9 items-center rounded-xl border border-transparent px-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
                     title="Sair"
                 >
                     Sair
@@ -101,10 +127,10 @@ export default function UserNav() {
 
             <button
                 onClick={() => setIsOpen(true)}
-                className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-950 text-white shadow-[0_14px_30px_-22px_rgba(15,23,42,0.55)] transition-colors hover:bg-rose-600"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-950 text-white shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)] transition-colors hover:bg-rose-600"
                 title="Sacola de Compras"
             >
-                <span className="text-lg">🛒</span>
+                <span className="text-sm">🛒</span>
                 {cartItemCount > 0 && (
                     <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-amber-400 text-[10px] font-bold text-slate-950">
                         {cartItemCount}

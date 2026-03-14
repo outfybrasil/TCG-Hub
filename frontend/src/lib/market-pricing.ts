@@ -145,7 +145,7 @@ export async function lookupBrazilianMarketPrices(input: MarketLookupInput): Pro
         },
         manualLinks: {
             mypCards: buildMypSearchUrl(input.cardNumber || input.cardName),
-            ligaPokemon: buildLigaUrl(buildLigaSearchQuery(input)),
+            ligaPokemon: buildLigaUrl(buildLigaSearchQuery(input), input.condition, input.finish),
         },
         criteria: filters,
         fetchedAt: new Date().toISOString(),
@@ -227,7 +227,7 @@ async function lookupMypCards(
 async function lookupLigaPokemon(
     input: MarketLookupInput
 ): Promise<SitePriceResult & { minPrice: number | null; avgPrice: number | null; maxPrice: number | null }> {
-    const fallbackUrl = buildLigaUrl(buildLigaSearchQuery(input));
+    const fallbackUrl = buildLigaUrl(buildLigaSearchQuery(input), input.condition, input.finish);
 
     try {
         const candidate = await findBestLigaProduct(input);
@@ -251,7 +251,8 @@ async function lookupLigaPokemon(
         const minPrice = candidate.minPrice;
         const avgPrice = candidate.avgPrice;
         const maxPrice = candidate.maxPrice;
-        const selectedPrice = minPrice;
+        // Fallback to average price if minPrice is null (out of stock)
+        const selectedPrice = minPrice ?? avgPrice;
 
         return {
             site: 'Liga Pokemon',
@@ -329,7 +330,7 @@ async function findBestLigaProduct(input: MarketLookupInput): Promise<LigaSearch
     let bestScore = Number.NEGATIVE_INFINITY;
 
     for (const query of queries) {
-        const html = await fetchWithCurl(buildLigaUrl(query));
+        const html = await fetchWithCurl(buildLigaUrl(query, input.condition, input.finish));
         const candidates = parseLigaSearchCandidates(html);
 
         for (const candidate of candidates) {
@@ -598,21 +599,21 @@ function normalizeFilters(input: MarketLookupInput): NormalizedFilters {
 function normalizeCondition(value?: string | null): string | null {
     const normalized = normalizeText(value);
     if (!normalized) return null;
-    if (normalized === 'm' || normalized.includes('mint')) return 'mint';
+    if (normalized === 'm' || normalized.includes('mint')) return 'm';
     if (normalized.startsWith('nm') || normalized.includes('near mint') || normalized.includes('quase nova')) return 'nm';
-    if (normalized.startsWith('lp') || normalized.startsWith('sp') || normalized.includes('lightly') || normalized.includes('pouco jogada')) return 'lp';
+    if (normalized.startsWith('lp') || normalized.startsWith('sp') || normalized.includes('lightly') || normalized.includes('pouco jogada')) return 'sp';
     if (normalized.startsWith('mp') || normalized.includes('moderately') || normalized.includes('muito jogada')) return 'mp';
     if (normalized.startsWith('hp') || normalized.includes('heavily') || normalized.includes('jogada demais')) return 'hp';
-    if (normalized.startsWith('dmg') || normalized.includes('damaged')) return 'dmg';
+    if (normalized.startsWith('d') || normalized.includes('damaged') || normalized.includes('danificada')) return 'd';
     return normalized;
 }
 
 function normalizeFinish(value?: string | null): string | null {
     const normalized = normalizeText(value);
-    if (!normalized || normalized === 'normal') return normalized ? 'normal' : null;
+    if (!normalized || normalized === 'normal') return 'normal';
     if (normalized.includes('reverse')) return 'reverse_holo';
     if (normalized.includes('full art')) return 'full_art';
-    if (normalized.includes('alternative') || normalized.includes('alt art')) return 'alt_art';
+    if (normalized.includes('alternative') || normalized.includes('alt art') || normalized.includes('alt')) return 'alt_art';
     if (normalized.includes('foil') || normalized.includes('holo')) return 'foil';
     return normalized;
 }
@@ -631,8 +632,37 @@ function buildMypSearchUrl(query: string): string {
     return `${MYP_BASE_URL}/pokemon?ProdutoSearch%5Bquery%5D=${encodeURIComponent(query)}`;
 }
 
-function buildLigaUrl(query: string): string {
-    return `${LIGA_BASE_URL}/?view=cards/card&card=${encodeURIComponent(query)}`;
+function getLigaConditionParam(condition?: string | null): string {
+    const norm = normalizeCondition(condition);
+    switch (norm) {
+        case 'm':
+        case 'nm': return '1';
+        case 'sp': return '2';
+        case 'mp': return '3';
+        case 'hp': return '4';
+        case 'd': return '5';
+        default: return '';
+    }
+}
+
+function getLigaFinishParam(finish?: string | null): string {
+    const norm = normalizeFinish(finish);
+    if (norm === 'foil' || norm === 'reverse_holo') {
+        return '1';
+    }
+    return '';
+}
+
+function buildLigaUrl(query: string, condition?: string | null, finish?: string | null): string {
+    let url = `${LIGA_BASE_URL}/?view=cards/card&card=${encodeURIComponent(query)}`;
+    
+    const qualParam = getLigaConditionParam(condition);
+    if (qualParam) url += `&qual=${qualParam}`;
+    
+    const encParam = getLigaFinishParam(finish);
+    if (encParam) url += `&enc=${encParam}`;
+
+    return url;
 }
 
 function buildLigaSearchQuery(input: MarketLookupInput): string {

@@ -12,8 +12,20 @@ export default function MobileNav() {
 
     useEffect(() => {
         const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            setIsAdmin(session?.user?.email === 'admin@tcghub.com.br');
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error && error.message.includes('Refresh Token Not Found')) {
+                    console.warn('[MobileNav] Stale session detected, clearing...');
+                    await supabase.auth.signOut();
+                    setIsAdmin(false);
+                    return;
+                }
+
+                setIsAdmin(session?.user?.email === 'admin@tcghub.com.br');
+            } catch (err) {
+                console.error('[MobileNav] Auth check error:', err);
+            }
         };
 
         void checkUser();

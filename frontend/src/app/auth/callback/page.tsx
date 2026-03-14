@@ -20,17 +20,29 @@ export default function AuthCallbackPage() {
 
         // Fallback: check session immediately
         const checkSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                if (session.user?.email === 'admin@tcghub.com.br') {
-                    router.push('/admin/vendas');
-                } else {
-                    router.push('/membro');
+            try {
+                const { data: { session }, error } = await supabase.auth.getSession();
+                
+                if (error) {
+                    console.error('[AuthCallback] Session check error:', error);
+                    router.push('/auth/login?error=session_check_failed');
+                    return;
                 }
+
+                if (session) {
+                    if (session.user?.email === 'admin@tcghub.com.br') {
+                        router.push('/admin/vendas');
+                    } else {
+                        router.push('/membro');
+                    }
+                }
+            } catch (err) {
+                console.error('[AuthCallback] Unexpected error:', err);
+                router.push('/auth/login?error=unexpected');
             }
         };
 
-        checkSession();
+        void checkSession();
 
         return () => {
             authListener.subscription.unsubscribe();
