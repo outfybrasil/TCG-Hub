@@ -216,7 +216,8 @@ export default function AuctionCheckoutPage() {
                                     paymentMethods: { creditCard: 'all', ticket: 'all', bankTransfer: 'all', mercadoPago: 'all' },
                                     visual: { style: { theme: 'default', customVariables: { baseColor: '#e11d48' } } }
                                 }}
-                                onSubmit={async (formData: PaymentFormData) => {
+                                onSubmit={async (param: any) => {
+                                    const formData = param.formData || param;
                                     try {
                                         const mpReq = await fetch('/api/pagamento/cartao', {
                                             method: 'POST',
