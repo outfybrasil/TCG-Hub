@@ -10,8 +10,10 @@ export async function POST(request: Request) {
 
     try {
         const { setId } = await request.json();
+        console.log('API Delete: Chamado para setId:', setId);
 
         if (!setId) {
+            console.log('API Delete: Erro - setId ausente');
             return NextResponse.json({ success: false, error: 'Set ID is required' }, { status: 400 });
         }
 

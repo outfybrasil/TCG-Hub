@@ -33,30 +33,57 @@ export default function AdminSettingsPage() {
         loadSettings();
     }, []);
 
-    const loadSettings = async () => {
-        const { data: tokenData } = await supabase
-            .from('admin_settings').select('value').eq('key', 'melhor_envio_token').single();
-        const { data: originData } = await supabase
-            .from('admin_settings').select('value').eq('key', 'origin_address').single();
+    const getAuthHeaders = async (headers: HeadersInit = {}) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
-        if (tokenData?.value) setToken(String(tokenData.value).replace(/"/g, ''));
-        if (originData?.value && typeof originData.value === 'object') {
-            setOrigin(prev => ({ ...prev, ...(originData.value as OriginAddress) }));
+        return {
+            ...headers,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+    };
+
+    const loadSettings = async () => {
+        try {
+            const res = await fetch('/api/admin/settings', {
+                headers: await getAuthHeaders(),
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Erro ao carregar configuracoes.');
+            }
+
+            if (data.token) setToken(String(data.token));
+            if (data.origin && typeof data.origin === 'object') {
+                setOrigin(prev => ({ ...prev, ...(data.origin as OriginAddress) }));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao carregar configuraÃ§Ãµes.');
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleSave = async () => {
         setSaving(true);
         setSaved(false);
         try {
-            await Promise.all([
-                supabase.from('admin_settings').update({ value: JSON.stringify(token), updated_at: new Date().toISOString() }).eq('key', 'melhor_envio_token'),
-                supabase.from('admin_settings').update({ value: origin, updated_at: new Date().toISOString() }).eq('key', 'origin_address'),
-            ]);
+            const res = await fetch('/api/admin/settings', {
+                method: 'PATCH',
+                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ token, origin }),
+            });
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                throw new Error(data?.error || 'Erro ao salvar configuracoes.');
+            }
+
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
-        } catch (error) {
+        } catch {
             alert('Erro ao salvar configurações.');
         } finally {
             setSaving(false);

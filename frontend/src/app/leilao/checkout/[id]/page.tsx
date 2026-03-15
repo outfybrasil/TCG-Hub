@@ -12,19 +12,43 @@ const formatBRL = (v: number) =>
 
 let mpInitialized = false;
 
+interface UserAddress {
+    id: string;
+    label: string;
+    street: string;
+    number: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    is_default?: boolean;
+}
+
+interface MercadoPagoSubmitData {
+    id?: string;
+    payment_method_id?: string;
+}
+
+interface PaymentFormData {
+    token?: string;
+    installments?: number;
+    payment_method_id?: string;
+    issuer_id?: string;
+}
+
 export default function AuctionCheckoutPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { auction, loading: auctionLoading } = useAuction(id);
     const [user, setUser] = useState<{ id: string; email?: string; name?: string } | null>(null);
-    const [addresses, setAddresses] = useState<any[]>([]);
+    const [addresses, setAddresses] = useState<UserAddress[]>([]);
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
     const [shippingCost, setShippingCost] = useState<number>(0);
-    const [loading, setLoading] = useState(false);
     const [finishing, setFinishing] = useState(false);
 
     // Shipping Logic
-    const calculateShipping = (uf: string, subtotal: number) => {
+    const calculateShipping = (_uf: string, _subtotal: number) => {
+        void _uf;
+        void _subtotal;
         return 0; // Removido temporariamente para testes
     };
 
@@ -65,18 +89,27 @@ export default function AuctionCheckoutPage() {
         });
     }, [auction, router]);
 
-    const handleFinalize = async (mpData?: any) => {
+    const getAuthHeaders = async (headers: HeadersInit = {}) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        return {
+            ...headers,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+    };
+
+    const handleFinalize = async (mpData?: MercadoPagoSubmitData) => {
         if (!auction || !user || !selectedAddressId) return;
         setFinishing(true);
 
         try {
-            const selectedAddress = addresses.find(a => a.id === selectedAddressId);
+            const selectedAddress = addresses.find((address) => address.id === selectedAddressId);
             const res = await fetch('/api/leilao/finalizar', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     auctionId: id,
-                    userId: user.id,
                     amount: auction.currentBid,
                     shippingAddress: selectedAddress,
                     shippingCost: shippingCost,
@@ -90,8 +123,8 @@ export default function AuctionCheckoutPage() {
 
             alert('Leilão finalizado com sucesso! Sua carta será preparada para envio.');
             router.push(`/leilao/${id}`);
-        } catch (err: any) {
-            alert(err.message || 'Erro ao finalizar leilão.');
+        } catch (err: unknown) {
+            alert(err instanceof Error ? err.message : 'Erro ao finalizar leilão.');
         } finally {
             setFinishing(false);
         }
@@ -183,12 +216,11 @@ export default function AuctionCheckoutPage() {
                                     paymentMethods: { creditCard: 'all', ticket: 'all', bankTransfer: 'all', mercadoPago: 'all' },
                                     visual: { style: { theme: 'default', customVariables: { baseColor: '#e11d48' } } }
                                 }}
-                                onSubmit={async (formData: any) => {
-                                    setLoading(true);
+                                onSubmit={async (formData: PaymentFormData) => {
                                     try {
                                         const mpReq = await fetch('/api/pagamento/cartao', {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
+                                            headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                                             body: JSON.stringify({
                                                 transactionAmount: amountToPay,
                                                 token: formData.token,
@@ -197,7 +229,6 @@ export default function AuctionCheckoutPage() {
                                                 paymentMethodId: formData.payment_method_id,
                                                 issuerId: formData.issuer_id,
                                                 payerEmail: user?.email,
-                                                userId: user?.id,
                                             })
                                         });
                                         const mpRes = await mpReq.json();
@@ -205,10 +236,8 @@ export default function AuctionCheckoutPage() {
 
                                         // Once shipping is paid, finalize the auction credit consumption
                                         await handleFinalize(mpRes);
-                                    } catch (e: any) {
-                                        alert(e.message || 'Erro no pagamento do frete');
-                                    } finally {
-                                        setLoading(false);
+                                    } catch (error: unknown) {
+                                        alert(error instanceof Error ? error.message : 'Erro no pagamento do frete');
                                     }
                                 }}
                             />

@@ -9,10 +9,16 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
 )
 
-# Set all CORS enabled origins
+cors_origins = [
+    origin.strip()
+    for origin in settings.BACKEND_CORS_ORIGINS.split(',')
+    if origin.strip()
+]
+
+# Restrict CORS to configured origins instead of wildcard credentials.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, specify frontend URL
+    allow_origins=cors_origins or ["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

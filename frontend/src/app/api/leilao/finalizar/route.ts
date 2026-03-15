@@ -1,40 +1,49 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
+    const auth = await requireAuthenticatedUser(req);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const body = await req.json();
-        const { auctionId, userId, amount, shippingAddress, shippingCost, paymentMethod, mpPaymentId } = body;
+        const { auctionId, amount, shippingAddress, shippingCost, paymentMethod, mpPaymentId } = body;
+        const userId = auth.user.id;
 
-        if (!auctionId || !userId || !amount) {
-            return NextResponse.json({ error: 'Dados obrigatórios ausentes' }, { status: 400 });
+        if (!auctionId || !amount) {
+            return NextResponse.json({ error: 'Dados obrigatÃ³rios ausentes' }, { status: 400 });
         }
 
-        // 1. Atomically consume credits
-        const { data: creditRes, error: creditError } = await supabase.rpc('finalize_auction_purchase', {
-            p_user_id: userId,
-            p_auction_id: auctionId,
-            p_amount: amount
-        });
-
-        if (creditError || !creditRes) {
-            console.error('Credit finalize error:', creditError);
-            return NextResponse.json({ error: 'Erro ao processar créditos do leilão. Saldo bloqueado insuficiente.' }, { status: 400 });
-        }
-
-        // 2. Fetch auction details to record purchase accurately
-        const { data: auction, error: auctionFetchError } = await supabase
+        const { data: auction, error: auctionFetchError } = await supabaseAdmin
             .from('auctions')
             .select('*')
             .eq('id', auctionId)
             .single();
 
         if (auctionFetchError || !auction) {
-            return NextResponse.json({ error: 'Erro ao buscar detalhes do leilão.' }, { status: 400 });
+            return NextResponse.json({ error: 'Erro ao buscar detalhes do leilÃ£o.' }, { status: 400 });
         }
 
-        // 3. Create purchase record
-        const { error: purchaseError } = await supabase.from('purchases').insert({
+        if (auction.highest_bidder_id !== userId) {
+            return NextResponse.json({ error: 'Somente o vencedor pode finalizar este leilao.' }, { status: 403 });
+        }
+
+        const { data: creditRes, error: creditError } = await supabaseAdmin.rpc('finalize_auction_purchase', {
+            p_user_id: userId,
+            p_auction_id: auctionId,
+            p_amount: amount,
+        });
+
+        if (creditError || !creditRes) {
+            console.error('Credit finalize error:', creditError);
+            return NextResponse.json({ error: 'Erro ao processar crÃ©ditos do leilÃ£o. Saldo bloqueado insuficiente.' }, { status: 400 });
+        }
+
+        const { error: purchaseError } = await supabaseAdmin.from('purchases').insert({
             user_id: userId,
             items: [{
                 id: auction.card_id || auctionId,
@@ -43,7 +52,7 @@ export async function POST(req: Request) {
                 quantity: 1,
                 image_url: auction.image_url,
                 is_auction: true,
-                auction_id: auctionId
+                auction_id: auctionId,
             }],
             total_amount: amount + (shippingCost || 0),
             discount_amount: 0,
@@ -51,29 +60,27 @@ export async function POST(req: Request) {
             payment_method: paymentMethod || 'credits',
             mp_payment_id: mpPaymentId || `auction-${auctionId}-${Date.now()}`,
             shipping_address: shippingAddress,
-            status: 'approved'
+            status: 'approved',
         });
 
         if (purchaseError) {
-            console.error('Erro ao salvar histórico de compra do leilão:', purchaseError);
+            console.error('Erro ao salvar histÃ³rico de compra do leilÃ£o:', purchaseError);
         }
 
-        // 4. Update auction status
-        await supabase.from('auctions')
+        await supabaseAdmin
+            .from('auctions')
             .update({ status: 'finished' })
             .eq('id', auctionId);
 
-        // 5. Add cashback
-        await supabase.rpc('add_cashback', {
+        await supabaseAdmin.rpc('add_cashback', {
             p_user_id: userId,
-            p_amount: amount * 0.05
+            p_amount: amount * 0.05,
         });
 
         return NextResponse.json({ success: true, status: 'approved' });
-
     } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Erro ao finalizar leilão';
-        console.error('Finalizar Leilão Error:', error);
+        const msg = error instanceof Error ? error.message : 'Erro ao finalizar leilÃ£o';
+        console.error('Finalizar LeilÃ£o Error:', error);
         return NextResponse.json({ error: msg }, { status: 500 });
     }
 }

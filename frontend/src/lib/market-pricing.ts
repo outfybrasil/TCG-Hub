@@ -194,10 +194,13 @@ async function lookupMypCards(
 
         const lowestOffer = [...offers].sort((left, right) => left.price - right.price)[0];
         const exactOffer = selectExactOffer(offers, filters);
-        const partialOffer = exactOffer ? null : selectClosestOffer(offers, filters);
-        const chosenOffer = exactOffer ?? partialOffer ?? lowestOffer;
+        const sameVariantOffer = exactOffer ? null : selectFirstOfferWithSameConditionAndFinish(offers, filters);
+        const partialOffer = exactOffer || sameVariantOffer ? null : selectClosestOffer(offers, filters);
+        const chosenOffer = exactOffer ?? sameVariantOffer ?? partialOffer ?? lowestOffer;
         const chosenMatchType: MatchType = exactOffer
             ? 'exact'
+            : sameVariantOffer
+                ? 'partial'
             : partialOffer
                 ? 'partial'
                 : 'lowest_available';
@@ -205,12 +208,14 @@ async function lookupMypCards(
         return {
             site: 'MYP Cards',
             url: product.href,
-            matchedPrice: exactOffer?.price ?? null,
+            matchedPrice: exactOffer?.price ?? sameVariantOffer?.price ?? null,
             fallbackPrice: lowestOffer.price,
             selectedPrice: chosenOffer.price,
             selectedMatchType: chosenMatchType,
             selectedVariantLabel: describeOffer(chosenOffer),
-            note: null,
+            note: sameVariantOffer
+                ? 'Primeira oferta com a mesma qualidade e acabamento da carta.'
+                : null,
             offersCount: offers.length,
         };
     } catch (error) {
@@ -496,6 +501,24 @@ function selectExactOffer(offers: MypOffer[], filters: NormalizedFilters): MypOf
     }
 
     return [...exactMatches].sort((left, right) => left.price - right.price)[0];
+}
+
+function selectFirstOfferWithSameConditionAndFinish(
+    offers: MypOffer[],
+    filters: NormalizedFilters
+): MypOffer | null {
+    const matches = offers.filter((offer) => {
+        if (filters.condition && offer.conditionKey !== filters.condition) {
+            return false;
+        }
+        if (filters.finish && offer.finishKey !== filters.finish) {
+            return false;
+        }
+
+        return Boolean(filters.condition || filters.finish);
+    });
+
+    return matches[0] ?? null;
 }
 
 function selectClosestOffer(offers: MypOffer[], filters: NormalizedFilters): MypOffer | null {

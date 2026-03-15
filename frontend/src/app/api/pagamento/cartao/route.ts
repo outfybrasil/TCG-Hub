@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
-import { supabase } from '@/lib/supabase';
+
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 const payment = new Payment(client);
 
 export async function POST(req: Request) {
+    const auth = await requireAuthenticatedUser(req);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const body = await req.json();
         const {
@@ -15,12 +22,11 @@ export async function POST(req: Request) {
             transactionAmount,
             installments,
             payerEmail,
-            userId,
-            auction_id
+            auction_id,
         } = body;
 
         if (!token || !transactionAmount || !paymentMethodId) {
-            return NextResponse.json({ error: 'Faltam dados do cartão' }, { status: 400 });
+            return NextResponse.json({ error: 'Faltam dados do cartÃ£o' }, { status: 400 });
         }
 
         const paymentRequest = {
@@ -30,44 +36,41 @@ export async function POST(req: Request) {
                 payment_method_id: paymentMethodId,
                 transaction_amount: Number(transactionAmount),
                 installments: Number(installments),
-                description: auction_id ? `Arremate de Leilão #${auction_id}` : (body.description || 'Compra TCG Hub'),
+                description: auction_id ? `Arremate de LeilÃ£o #${auction_id}` : (body.description || 'Compra TCG Hub'),
                 payer: {
-                    email: payerEmail || body.payer?.email,
-                    identification: body.payer?.identification
-                }
-            }
+                    email: payerEmail || body.payer?.email || auth.user.email,
+                    identification: body.payer?.identification,
+                },
+            },
         };
 
         const result = await payment.create(paymentRequest);
 
-        // Se for leilão e o pagamento foi aprovado, podemos marcar como pago
         if (result.status === 'approved' && auction_id) {
-            // Logica específica de leilão pode ser executada aqui ou via webhook
-            console.log(`Pagamento aprovado para leilão ${auction_id}`);
+            console.log(`Pagamento aprovado para leilÃ£o ${auction_id}`);
         }
 
-        // Salvar compra se houver userId
-        if (userId && result.id) {
-            await supabase.from('purchases').insert({
-                user_id: userId,
+        if (!auction_id && result.id) {
+            await supabaseAdmin.from('purchases').insert({
+                user_id: auth.user.id,
                 items: body.items || [],
                 total_amount: transactionAmount,
                 payment_method: 'card',
                 mp_payment_id: String(result.id),
                 status: result.status,
-                metadata: { auction_id }
+                metadata: { auction_id },
             });
         }
 
         return NextResponse.json({
             id: result.id,
             status: result.status,
-            status_detail: result.status_detail
+            status_detail: result.status_detail,
         });
-
-    } catch (error: any) {
-        console.error('Erro Cartão:', error);
-        const msg = error.cause?.[0]?.description || error.message || 'Erro ao processar cartão';
+    } catch (error: unknown) {
+        console.error('Erro CartÃ£o:', error);
+        const paymentError = error as { cause?: Array<{ description?: string }>; message?: string };
+        const msg = paymentError.cause?.[0]?.description || paymentError.message || 'Erro ao processar cartÃ£o';
         return NextResponse.json({ error: msg }, { status: 500 });
     }
 }

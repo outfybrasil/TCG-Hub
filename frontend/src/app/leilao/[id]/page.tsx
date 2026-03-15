@@ -90,6 +90,16 @@ export default function AuctionDetailPage() {
         return () => clearInterval(interval);
     }, [user?.id, preferenceId]);
 
+    const getAuthHeaders = async (headers: HeadersInit = {}) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        return {
+            ...headers,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+    };
+
     useEffect(() => {
         if (auction?.imageUrl) {
             setCurrentImageUrl(auction.imageUrl);
@@ -112,11 +122,9 @@ export default function AuctionDetailPage() {
         try {
             const res = await fetch('/api/creditos/preference', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     amount,
-                    userId: user?.id,
-                    payerEmail: user?.name?.includes('@') ? user.name : undefined,
                     payerFirstName: user?.name?.split(' ')[0] || 'Cliente',
                     payerLastName: user?.name?.split(' ').slice(1).join(' ') || 'TCG'
                 })

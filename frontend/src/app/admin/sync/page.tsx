@@ -216,13 +216,21 @@ export default function SyncAdminPage() {
         }
     };
 
+    const [confirmingSetId, setConfirmingSetId] = useState<string | null>(null);
+
     const handleDeleteSet = async (setId: string, setName: string) => {
-        if (!confirm(`Deseja realmente deletar TODOS os cards da coleção "${setName}"? Esta ação não pode ser desfeita.`)) {
+        console.log('handleDeleteSet: Início', { setId, setName });
+        
+        if (confirmingSetId !== setId) {
+            setConfirmingSetId(setId);
+            console.log('handleDeleteSet: Aguardando confirmação inline');
             return;
         }
 
         setLoading(true);
         setStatus(null);
+        setConfirmingSetId(null);
+        console.log('handleDeleteSet: Enviando requisição para API');
         try {
             const res = await fetch('/api/admin/sync-cards/delete', {
                 method: 'POST',
@@ -240,9 +248,10 @@ export default function SyncAdminPage() {
                 });
                 await fetchStats();
             } else {
-                throw new Error(data.error);
+                throw new Error(data.error || 'Falha na API');
             }
         } catch (err) {
+            console.error('handleDeleteSet Error:', err);
             setStatus(`Erro ao deletar: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
         } finally {
             setLoading(false);
@@ -444,19 +453,47 @@ export default function SyncAdminPage() {
 
                                             <div className="flex items-center gap-2">
                                                 {isSynced && (
-                                                    <button
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            void handleDeleteSet(set.id, set.name);
-                                                        }}
-                                                        disabled={loading}
-                                                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                                                        title="Deletar cards desta coleção"
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
+                                                    <div className="flex items-center gap-1">
+                                                        {confirmingSetId === set.id ? (
+                                                            <div className="flex items-center gap-1 animate-fade-in">
+                                                                <button
+                                                                    onClick={(event) => {
+                                                                        event.stopPropagation();
+                                                                        void handleDeleteSet(set.id, set.name);
+                                                                    }}
+                                                                    disabled={loading}
+                                                                    className="px-2 py-1.5 bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-rose-700 shadow-lg shadow-rose-600/20"
+                                                                >
+                                                                    Deletar?
+                                                                </button>
+                                                                <button
+                                                                    onClick={(event) => {
+                                                                        event.stopPropagation();
+                                                                        setConfirmingSetId(null);
+                                                                    }}
+                                                                    className="p-1.5 text-slate-400 hover:text-slate-600"
+                                                                >
+                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={(event) => {
+                                                                    event.stopPropagation();
+                                                                    void handleDeleteSet(set.id, set.name);
+                                                                }}
+                                                                disabled={loading}
+                                                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                                                title="Deletar cards desta coleção"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 )}
                                                 <button
                                                     onClick={(event) => {

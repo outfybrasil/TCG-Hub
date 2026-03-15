@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+
 import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 const MELHOR_ENVIO_API = 'https://melhorenvio.com.br/api/v2/me';
 const MELHOR_ENVIO_SANDBOX = 'https://sandbox.melhorenvio.com.br/api/v2/me';
@@ -23,13 +25,16 @@ async function getOriginAddress() {
 }
 
 function getBaseUrl(token: string | null) {
-    // Use sandbox if token looks like sandbox or not set
     if (!token || token.includes('sandbox')) return MELHOR_ENVIO_SANDBOX;
     return MELHOR_ENVIO_API;
 }
 
-// POST /api/shipping/quote - Get shipping quotes
 export async function POST(request: Request) {
+    const auth = await requireAuthenticatedUser(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const body = await request.json();
         const { action } = body;
@@ -39,15 +44,15 @@ export async function POST(request: Request) {
 
         if (!token) {
             return NextResponse.json({
-                error: 'Token do Melhor Envio não configurado. Configure nas Configurações do Admin.',
-                needsSetup: true
+                error: 'Token do Melhor Envio nÃ£o configurado. Configure nas ConfiguraÃ§Ãµes do Admin.',
+                needsSetup: true,
             }, { status: 400 });
         }
 
         if (!origin || !origin.postal_code) {
             return NextResponse.json({
-                error: 'Endereço de origem não configurado. Configure nas Configurações do Admin.',
-                needsSetup: true
+                error: 'EndereÃ§o de origem nÃ£o configurado. Configure nas ConfiguraÃ§Ãµes do Admin.',
+                needsSetup: true,
             }, { status: 400 });
         }
 
@@ -58,15 +63,15 @@ export async function POST(request: Request) {
                 const { destination_postal_code, weight = 0.1, height = 2, width = 12, length = 17 } = body;
 
                 if (!destination_postal_code) {
-                    return NextResponse.json({ error: 'CEP de destino é obrigatório' }, { status: 400 });
+                    return NextResponse.json({ error: 'CEP de destino Ã© obrigatÃ³rio' }, { status: 400 });
                 }
 
                 const res = await fetch(`${baseUrl}/shipment/calculate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
                         'User-Agent': 'TCGMegaStore (contato@tcgmegastore.com.br)',
                     },
                     body: JSON.stringify({
@@ -74,7 +79,9 @@ export async function POST(request: Request) {
                         to: { postal_code: destination_postal_code },
                         products: [{
                             id: 'card',
-                            width, height, length,
+                            width,
+                            height,
+                            length,
                             weight,
                             insurance_value: body.insurance_value || 50,
                             quantity: 1,
@@ -89,26 +96,28 @@ export async function POST(request: Request) {
                 }
 
                 const quotes = await res.json();
-                // Filter only available services
-                const available = quotes.filter((q: any) => !q.error);
+                const available = quotes.filter((quote: { error?: unknown }) => !quote.error);
 
                 return NextResponse.json({ success: true, quotes: available });
             }
 
             case 'generate_label': {
+                if (!auth.isAdmin) {
+                    return NextResponse.json({ error: 'Apenas administradores podem gerar etiquetas.' }, { status: 403 });
+                }
+
                 const { auction_id, buyer_address, shipping_service_id, card_value } = body;
 
                 if (!auction_id || !buyer_address || !shipping_service_id) {
                     return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 });
                 }
 
-                // 1. Create cart on Melhor Envio
                 const cartRes = await fetch(`${baseUrl}/cart`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
                         'User-Agent': 'TCGMegaStore (contato@tcgmegastore.com.br)',
                     },
                     body: JSON.stringify({
@@ -141,7 +150,7 @@ export async function POST(request: Request) {
                             country_id: 'BR',
                         },
                         products: [{
-                            name: 'Carta Pokémon TCG',
+                            name: 'Carta PokÃ©mon TCG',
                             quantity: 1,
                             unitary_value: card_value || 50,
                         }],
@@ -168,7 +177,6 @@ export async function POST(request: Request) {
                 const cartData = await cartRes.json();
                 const orderId = cartData.id;
 
-                // 2. Save to our database
                 await supabaseAdmin.from('auction_shipping').upsert({
                     auction_id,
                     buyer_id: body.buyer_id,
@@ -186,14 +194,13 @@ export async function POST(request: Request) {
                     success: true,
                     orderId,
                     message: 'Pedido de envio criado. Acesse o Melhor Envio para pagar e imprimir a etiqueta.',
-                    melhorEnvioUrl: `https://melhorenvio.com.br/painel/carrinho`,
+                    melhorEnvioUrl: 'https://melhorenvio.com.br/painel/carrinho',
                 });
             }
 
             default:
-                return NextResponse.json({ error: 'Ação inválida' }, { status: 400 });
+                return NextResponse.json({ error: 'AÃ§Ã£o invÃ¡lida' }, { status: 400 });
         }
-
     } catch (error) {
         console.error('Shipping API error:', error);
         return NextResponse.json(

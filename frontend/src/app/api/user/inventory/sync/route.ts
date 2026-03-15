@@ -3,6 +3,24 @@ import { supabase, supabaseAdmin } from '@/lib/supabase';
 import { buildMarketInputFromCard, buildMarketSearchKeyFromCard, summarizeMarketResult } from '@/lib/market-cache';
 import { lookupBrazilianMarketPrices } from '@/lib/market-pricing';
 
+interface UserCollectionRow {
+    id: string;
+    name: string;
+    set_name: string;
+    number: string | null;
+    language: string | null;
+    condition: string | null;
+    finish: string | null;
+    market_price: number | null;
+    card_id: string | null;
+}
+
+interface PokemonCardMetaRow {
+    id: string;
+    name_en: string | null;
+    set_name_en: string | null;
+}
+
 export async function POST(request: Request) {
     try {
         const authHeader = request.headers.get('Authorization');
@@ -15,21 +33,7 @@ export async function POST(request: Request) {
 
         const { data: collection, error } = await supabaseAdmin
             .from('user_collections')
-            .select(`
-                id, 
-                name, 
-                set_name, 
-                number, 
-                language, 
-                condition, 
-                finish, 
-                market_price,
-                card_id,
-                pokemon_cards (
-                    name_en,
-                    set_name_en
-                )
-            `)
+            .select('id, name, set_name, number, language, condition, finish, market_price, card_id')
             .eq('user_id', user.id);
 
         if (error) throw error;
@@ -37,26 +41,58 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: true, message: 'Empty collection' });
         }
 
+        const collectionRows = (collection || []) as UserCollectionRow[];
+        const cardIds = Array.from(
+            new Set(
+                collectionRows
+                    .map((card) => card.card_id)
+                    .filter((cardId): cardId is string => Boolean(cardId))
+            )
+        );
+
+        const pokemonCardMetaById = new Map<string, PokemonCardMetaRow>();
+        if (cardIds.length > 0) {
+            const { data: pokemonCards, error: pokemonCardsError } = await supabaseAdmin
+                .from('pokemon_cards')
+                .select('id, name_en, set_name_en')
+                .in('id', cardIds);
+
+            if (pokemonCardsError) {
+                throw pokemonCardsError;
+            }
+
+            for (const pokemonCard of (pokemonCards || []) as PokemonCardMetaRow[]) {
+                pokemonCardMetaById.set(pokemonCard.id, pokemonCard);
+            }
+        }
+
         // Fetch valuation for all cards using the internal API logic
         const summaryRes = await fetch(`${new URL(request.url).origin}/api/prices/summary`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                cards: collection.map(card => ({
+                cards: collectionRows.map((card) => {
+                    const pokemonCard = card.card_id ? pokemonCardMetaById.get(card.card_id) : undefined;
+
+                    return ({
                     id: card.id,
                     name: card.name,
-                    name_en: (card as any).pokemon_cards?.name_en,
+                    name_en: pokemonCard?.name_en ?? null,
                     set: card.set_name,
-                    set_name_en: (card as any).pokemon_cards?.set_name_en,
+                    set_name_en: pokemonCard?.set_name_en ?? null,
                     number: card.number,
                     language: card.language,
                     grade: card.condition, // Use grade instead of condition for MarketCardLike
                     finish: card.finish
-                }))
+                    });
+                })
             })
         });
 
-        if (!summaryRes.ok) throw new Error('Failed to fetch price summaries');
+        if (!summaryRes.ok) {
+            const errorText = await summaryRes.text();
+            throw new Error(`Failed to fetch price summaries: ${errorText}`);
+        }
         
         const pricingData = await summaryRes.json();
         const summaries = pricingData.summaries || {};
@@ -65,7 +101,7 @@ export async function POST(request: Request) {
         const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
         // Update each card in the database with the new valuation
-        for (const card of collection) {
+        for (const card of collectionRows) {
             let pricing = summaries[card.id];
             
             // If pricing wasn't in cache, perform a live lookup
@@ -74,11 +110,12 @@ export async function POST(request: Request) {
                      // Add a small delay between live lookups to avoid rate limiting
                      await delay(500);
 
-                     const cardForMarket = { 
-                        ...card, 
+                     const pokemonCard = card.card_id ? pokemonCardMetaById.get(card.card_id) : undefined;
+                     const cardForMarket = {
+                        ...card,
                         grade: card.condition,
-                        name_en: (card as any).pokemon_cards?.name_en,
-                        set_name_en: (card as any).pokemon_cards?.set_name_en
+                        name_en: pokemonCard?.name_en ?? null,
+                        set_name_en: pokemonCard?.set_name_en ?? null
                      };
                      const lookupInput = buildMarketInputFromCard(cardForMarket);
                      const liveResult = await lookupBrazilianMarketPrices(lookupInput);
@@ -95,7 +132,11 @@ export async function POST(request: Request) {
             }
             
             if (pricing) {
-                const updateData: any = {
+                const updateData: {
+                    last_valuation_at: string;
+                    market_price?: number | null;
+                    market_price_site?: string | null;
+                } = {
                     last_valuation_at: new Date().toISOString()
                 };
 
@@ -112,8 +153,9 @@ export async function POST(request: Request) {
         }
 
         return NextResponse.json({ success: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[Inventory Sync API] Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        return NextResponse.json({ error: message }, { status: 500 });
     }
 }

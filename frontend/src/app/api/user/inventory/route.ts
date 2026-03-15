@@ -1,16 +1,21 @@
 import { NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuthenticatedUser } from '@/lib/server-auth';
+
+interface InventoryDeleteBody {
+    id?: string;
+    ids?: string[];
+    set_name?: string;
+}
 
 export async function GET(request: Request) {
-    try {
-        const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.split(' ')[1];
-        
-        const { data: { user } } = await supabase.auth.getUser(token);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    const auth = await requireAuthenticatedUser(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
 
+    try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
@@ -19,55 +24,54 @@ export async function GET(request: Request) {
                 .from('user_collections')
                 .select('*')
                 .eq('id', id)
-                .eq('user_id', user.id)
+                .eq('user_id', auth.user.id)
                 .single();
 
             if (error) throw error;
             if (!card) return NextResponse.json({ error: 'Card not found' }, { status: 404 });
 
-            return NextResponse.json({ 
+            return NextResponse.json({
                 card: {
                     ...card,
                     currentValue: card.market_price || 0,
                     lastSync: card.last_valuation_at,
-                    marketSite: card.market_price_site
-                }
+                    marketSite: card.market_price_site,
+                },
             });
         }
 
         const { data: collection, error } = await supabaseAdmin
             .from('user_collections')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', auth.user.id)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // Map collection to include cached prices
-        const enrichedCollection = collection.map(card => ({
+        const enrichedCollection = (collection || []).map((card) => ({
             ...card,
             currentValue: card.market_price || 0,
             lastSync: card.last_valuation_at,
-            marketSite: card.market_price_site
+            marketSite: card.market_price_site,
         }));
 
         return NextResponse.json({ collection: enrichedCollection });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[User Inventory API] Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : 'Internal server error' },
+            { status: 500 }
+        );
     }
 }
 
 export async function POST(request: Request) {
-    try {
-        const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.split(' ')[1];
-        
-        const { data: { user } } = await supabase.auth.getUser(token);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    const auth = await requireAuthenticatedUser(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
 
+    try {
         const body = await request.json();
         const items = Array.isArray(body) ? body : [body];
 
@@ -75,15 +79,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Nenhum item fornecido' }, { status: 400 });
         }
 
-        // Validate all items
         for (const item of items) {
             if (!item.name || !item.set_name) {
-                return NextResponse.json({ error: 'Nome e coleção são obrigatórios para todos os itens' }, { status: 400 });
+                return NextResponse.json({ error: 'Nome e coleÃ§Ã£o sÃ£o obrigatÃ³rios para todos os itens' }, { status: 400 });
             }
         }
 
-        const itemsToInsert = items.map(item => ({
-            user_id: user.id,
+        const itemsToInsert = items.map((item) => ({
+            user_id: auth.user.id,
             card_id: item.card_id,
             name: item.name,
             set_name: item.set_name,
@@ -93,69 +96,83 @@ export async function POST(request: Request) {
             image_url: item.image_url,
             condition: item.condition || 'NM',
             finish: item.finish || 'Normal',
-            language: item.language || 'Português',
-            last_valuation_at: null
+            language: item.language || 'PortuguÃªs',
+            last_valuation_at: null,
         }));
 
-        const { data, error } = await supabaseAdmin // Changed to supabaseAdmin for consistency with other handlers
+        const { data, error } = await supabaseAdmin
             .from('user_collections')
             .insert(itemsToInsert)
             .select();
 
-        if (error) {
-            console.error('Erro ao inserir no inventário:', error);
-            throw error;
-        }
+        if (error) throw error;
 
         return NextResponse.json(data);
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[User Inventory API POST] Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : 'Internal server error' },
+            { status: 500 }
+        );
     }
 }
 
 export async function DELETE(request: Request) {
+    const auth = await requireAuthenticatedUser(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
-        const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.split(' ')[1];
-        
-        const { data: { user } } = await supabase.auth.getUser(token);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
+        const body = request.headers.get('content-type')?.includes('application/json')
+            ? await request.json().catch(() => ({}))
+            : {} as InventoryDeleteBody;
 
-        if (!id) {
-            return NextResponse.json({ error: 'Card ID is required' }, { status: 400 });
-        }
+        const singleId = body.id || searchParams.get('id');
+        const ids = Array.isArray(body.ids) ? body.ids.filter(Boolean) : [];
+        const setName = typeof body.set_name === 'string' ? body.set_name.trim() : '';
 
-        const { error } = await supabaseAdmin
+        let query = supabaseAdmin
             .from('user_collections')
             .delete()
-            .eq('id', id)
-            .eq('user_id', user.id); // Ensure user can only delete their own cards
+            .eq('user_id', auth.user.id)
+            .select('id');
 
+        if (singleId) {
+            query = query.eq('id', singleId);
+        } else if (ids.length > 0) {
+            query = query.in('id', ids);
+        } else if (setName) {
+            query = query.eq('set_name', setName);
+        } else {
+            return NextResponse.json({ error: 'Card ID, IDs ou nome da coleÃ§Ã£o Ã© obrigatÃ³rio' }, { status: 400 });
+        }
+
+        const { data: deletedRows, error } = await query;
         if (error) throw error;
 
-        return NextResponse.json({ success: true });
-    } catch (error: any) {
+        if (!deletedRows || deletedRows.length === 0) {
+            return NextResponse.json({ error: 'Nenhum item encontrado para remover.' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, deletedCount: deletedRows.length });
+    } catch (error: unknown) {
         console.error('[User Inventory API DELETE] Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : 'Internal server error' },
+            { status: 500 }
+        );
     }
 }
 
 export async function PATCH(request: Request) {
-    try {
-        const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.split(' ')[1];
-        
-        const { data: { user } } = await supabase.auth.getUser(token);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+    const auth = await requireAuthenticatedUser(request);
+    if ('response' in auth) {
+        return auth.response;
+    }
 
+    try {
         const body = await request.json();
         const { id, updates } = body;
 
@@ -163,9 +180,8 @@ export async function PATCH(request: Request) {
             return NextResponse.json({ error: 'Card ID and updates are required' }, { status: 400 });
         }
 
-        // We specifically want to allow updating the purchase_price safely
         const allowedUpdates = {
-            ...(updates.purchase_price !== undefined && { purchase_price: updates.purchase_price })
+            ...(updates.purchase_price !== undefined && { purchase_price: updates.purchase_price }),
         };
 
         if (Object.keys(allowedUpdates).length === 0) {
@@ -176,13 +192,16 @@ export async function PATCH(request: Request) {
             .from('user_collections')
             .update(allowedUpdates)
             .eq('id', id)
-            .eq('user_id', user.id); // Ensure user can only update their own cards
+            .eq('user_id', auth.user.id);
 
         if (error) throw error;
 
         return NextResponse.json({ success: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[User Inventory API PATCH] Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+            { error: error instanceof Error ? error.message : 'Internal server error' },
+            { status: 500 }
+        );
     }
 }

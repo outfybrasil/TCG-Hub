@@ -2,10 +2,10 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+    Area,
+    AreaChart,
     CartesianGrid,
     Legend,
-    Line,
-    LineChart,
     ResponsiveContainer,
     Tooltip,
     XAxis,
@@ -250,66 +250,90 @@ export default function PriceChart({
                     </p>
                 </div>
             ) : (
-                <div className="h-[420px] px-3 pb-4 pt-2 sm:px-6 sm:pb-6">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData} margin={{ top: 24, right: 16, left: -8, bottom: 12 }}>
-                            <defs>
-                                <linearGradient id="chartGlow" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.16} />
-                                    <stop offset="100%" stopColor="#0f172a" stopOpacity={0} />
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.18)" />
-                            <XAxis
-                                dataKey="date"
-                                tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 700 }}
-                                tickLine={false}
-                                axisLine={false}
-                                dy={10}
-                            />
-                            <YAxis
-                                tick={{ fontSize: 11, fill: '#94a3b8', fontWeight: 700 }}
-                                tickLine={false}
-                                axisLine={false}
-                                tickFormatter={(value) => `R$${value}`}
-                                width={58}
-                            />
-                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1 }} />
-                            <Legend iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 800, paddingTop: '18px', color: '#e2e8f0' }} />
+                    <div className="h-[420px] px-3 pb-4 pt-2 sm:px-6 sm:pb-6 bg-[#1b2838]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={chartData} margin={{ top: 24, right: 16, left: -8, bottom: 12 }}>
+                                <defs>
+                                    <linearGradient id="colorTCG" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#60a5fa" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorLiga" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                                    </linearGradient>
+                                    <linearGradient id="colorMYP" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                                <XAxis
+                                    dataKey="date"
+                                    tick={{ fontSize: 10, fill: '#8f98a0', fontWeight: 500 }}
+                                    tickLine={{ stroke: '#8f98a0' }}
+                                    axisLine={{ stroke: '#8f98a0', strokeOpacity: 0.2 }}
+                                    dy={10}
+                                />
+                                <YAxis
+                                    tick={{ fontSize: 10, fill: '#8f98a0', fontWeight: 500 }}
+                                    tickLine={{ stroke: '#8f98a0' }}
+                                    axisLine={{ stroke: '#8f98a0', strokeOpacity: 0.2 }}
+                                    tickFormatter={(value) => `R$${value}`}
+                                    width={58}
+                                />
+                                <Tooltip
+                                    content={<CustomTooltip />}
+                                    cursor={{ stroke: '#ffffff', strokeOpacity: 0.2, strokeWidth: 1 }}
+                                />
+                                <Legend
+                                    iconType="rect"
+                                    wrapperStyle={{
+                                        fontSize: '10px',
+                                        fontWeight: 700,
+                                        paddingTop: '20px',
+                                        color: '#8f98a0',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.1em'
+                                    }}
+                                />
 
-                            <Line
-                                type="monotone"
-                                dataKey="TCG Hub"
-                                name="TCG Hub"
-                                stroke="#f8fafc"
-                                strokeWidth={3}
-                                dot={false}
-                                activeDot={{ r: 5, fill: '#f8fafc', strokeWidth: 0 }}
-                                connectNulls
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="Liga Pokemon"
-                                name="Liga"
-                                stroke="#f59e0b"
-                                strokeWidth={3}
-                                dot={false}
-                                activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 0 }}
-                                connectNulls
-                            />
-                            <Line
-                                type="monotone"
-                                dataKey="MYP Cards"
-                                name="MYP"
-                                stroke="#38bdf8"
-                                strokeWidth={3}
-                                dot={false}
-                                activeDot={{ r: 5, fill: '#38bdf8', strokeWidth: 0 }}
-                                connectNulls
-                            />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </div>
+                                <Area
+                                    type="monotone"
+                                    dataKey="TCG Hub"
+                                    name="TCG Hub"
+                                    stroke="#60a5fa"
+                                    strokeWidth={2}
+                                    fillOpacity={1}
+                                    fill="url(#colorTCG)"
+                                    activeDot={{ r: 4, strokeWidth: 0 }}
+                                    connectNulls
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="Liga Pokemon"
+                                    name="Liga"
+                                    stroke="#f59e0b"
+                                    strokeWidth={2}
+                                    fillOpacity={1}
+                                    fill="url(#colorLiga)"
+                                    activeDot={{ r: 4, strokeWidth: 0 }}
+                                    connectNulls
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="MYP Cards"
+                                    name="MYP"
+                                    stroke="#10b981"
+                                    strokeWidth={2}
+                                    fillOpacity={1}
+                                    fill="url(#colorMYP)"
+                                    activeDot={{ r: 4, strokeWidth: 0 }}
+                                    connectNulls
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
             )}
         </div>
     );
@@ -329,13 +353,15 @@ function CustomTooltip({
     }
 
     return (
-        <div className="rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-2xl backdrop-blur">
-            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">{label}</p>
+        <div className="rounded border border-[#3d4450] bg-[#171a21] p-3 shadow-xl">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-[#8f98a0]">{label}</p>
             {payload.map((entry) => (
-                <div key={`${entry.name}-${entry.value}`} className="mb-1 flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                    <span className="text-sm font-medium text-slate-300">{entry.name}:</span>
-                    <span className="text-sm font-black text-white">
+                <div key={`${entry.name}-${entry.value}`} className="flex items-center justify-between gap-6 py-0.5">
+                    <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: entry.color }} />
+                        <span className="text-xs font-medium text-[#c6d4df]">{entry.name}:</span>
+                    </div>
+                    <span className="text-xs font-bold text-white">
                         R$ {entry.value?.toLocaleString('pt-BR', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,

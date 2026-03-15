@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     SECRET_KEY: str = "YOUR_SECRET_KEY_HERE" # In production, use env var
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8 # 8 days
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000"
 
     class Config:
         case_sensitive = True

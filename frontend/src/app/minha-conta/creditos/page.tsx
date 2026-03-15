@@ -79,6 +79,16 @@ export default function CreditosPage() {
         init();
     }, [router]);
 
+    const getAuthHeaders = async (headers: HeadersInit = {}) => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        return {
+            ...headers,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        };
+    };
+
     const handleGeneratePreference = async () => {
         if (!user) {
             setDepositError('Usuario nao autenticado.');
@@ -96,11 +106,9 @@ export default function CreditosPage() {
         try {
             const res = await fetch('/api/creditos/preference', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     amount: parseFloat(depositAmount),
-                    userId: user.id,
-                    payerEmail: user.email,
                     payerFirstName: profile?.full_name?.split(' ')[0] || user.user_metadata?.name?.split(' ')[0] || 'Cliente',
                     payerLastName: profile?.full_name?.split(' ').slice(1).join(' ') || user.user_metadata?.name?.split(' ').slice(1).join(' ') || 'TCG',
                 })

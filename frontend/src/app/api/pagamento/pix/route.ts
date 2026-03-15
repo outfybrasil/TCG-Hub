@@ -1,40 +1,58 @@
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
-import { supabase } from '@/lib/supabase';
 
-// Initialize MP using the generic credentials
+import { supabaseAdmin } from '@/lib/supabase';
+import { requireAuthenticatedUser } from '@/lib/server-auth';
+
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 const payment = new Payment(client);
 
 export async function POST(req: Request) {
+    const auth = await requireAuthenticatedUser(req);
+    if ('response' in auth) {
+        return auth.response;
+    }
+
     try {
         const body = await req.json();
-        const { transactionAmount, shippingCost, description, payerEmail, payerFirstName, payerLastName, docType, docNumber, userId, useCashback, discountAmount } = body;
+        const {
+            transactionAmount,
+            shippingCost,
+            description,
+            payerEmail,
+            payerFirstName,
+            payerLastName,
+            docType,
+            docNumber,
+            useCashback,
+            discountAmount,
+        } = body;
 
-        if (transactionAmount === undefined || !payerEmail) {
-            return NextResponse.json({ error: 'Faltam dados obrigatórios' }, { status: 400 });
+        const userId = auth.user.id;
+
+        if (transactionAmount === undefined) {
+            return NextResponse.json({ error: 'Faltam dados obrigatÃ³rios' }, { status: 400 });
         }
 
         const finalTransactionAmount = Number(transactionAmount) + (Number(shippingCost) || 0);
 
-        if (useCashback && discountAmount > 0 && userId) {
-            const { data: success, error: deductError } = await supabase.rpc('deduct_cashback', {
+        if (useCashback && discountAmount > 0) {
+            const { data: success, error: deductError } = await supabaseAdmin.rpc('deduct_cashback', {
                 p_user_id: userId,
-                p_amount: discountAmount
+                p_amount: discountAmount,
             });
             if (deductError || !success) {
                 return NextResponse.json({ error: 'Erro ao descontar cashback. Saldo insuficiente?' }, { status: 400 });
             }
         }
 
-        // Se o valor final for 0 (100% pago com cashback), ignorar MP
         if (transactionAmount === 0 && useCashback && discountAmount > 0) {
             return NextResponse.json({
-                id: 'cashback-' + Date.now(),
+                id: `cashback-${Date.now()}`,
                 status: 'approved',
                 status_detail: 'accredited',
                 qr_code_base64: null,
-                ticket_url: null
+                ticket_url: null,
             });
         }
 
@@ -44,22 +62,21 @@ export async function POST(req: Request) {
                 description: description || 'Pgto PIX - TCG Mega Store',
                 payment_method_id: 'pix',
                 payer: {
-                    email: payerEmail,
+                    email: payerEmail || auth.user.email,
                     first_name: payerFirstName,
                     last_name: payerLastName,
                     identification: {
                         type: docType || 'CPF',
-                        number: docNumber || '12345678909' // Default/Mock if missing for test
-                    }
-                }
-            }
+                        number: docNumber || '12345678909',
+                    },
+                },
+            },
         };
 
         const result = await payment.create(paymentRequest);
 
-        // ✅ Salvar compra com mp_payment_id real — necessário para reembolso e créditos de leilão
-        if (result.id && userId) {
-            const { error: purchaseError } = await supabase.from('purchases').insert({
+        if (result.id) {
+            const { error: purchaseError } = await supabaseAdmin.from('purchases').insert({
                 user_id: userId,
                 items: body.items || [],
                 total_amount: body.totalAmount || transactionAmount,
@@ -68,27 +85,11 @@ export async function POST(req: Request) {
                 payment_method: 'pix',
                 mp_payment_id: String(result.id),
                 shipping_address: body.shippingAddress || null,
-                status: result.status || 'pending'
+                status: result.status || 'pending',
             });
 
             if (purchaseError) {
                 console.error('Erro ao salvar compra PIX:', purchaseError);
-            }
-        }
-
-        // Se o PIX foi gerado e temos um userId, conceder o cashback para demonstração
-        // Em um ambiente de produção real, faríamos isso no Webhook quando o PIX fosse pago de verdade.
-        if (result.id && userId) {
-            const cashbackAmount = Number(transactionAmount) * 0.05;
-            const { error: rpcError } = await supabase.rpc('add_cashback', {
-                p_user_id: userId,
-                p_amount: cashbackAmount
-            });
-
-            if (rpcError) {
-                console.error('Erro ao adicionar cashback (PIX):', rpcError);
-            } else {
-                console.log(`Cashback de R$ ${cashbackAmount} adicionado para usuário ${userId}`);
             }
         }
 
@@ -97,7 +98,7 @@ export async function POST(req: Request) {
             status: result.status,
             qr_code: result.point_of_interaction?.transaction_data?.qr_code,
             qr_code_base64: result.point_of_interaction?.transaction_data?.qr_code_base64,
-            ticket_url: result.point_of_interaction?.transaction_data?.ticket_url
+            ticket_url: result.point_of_interaction?.transaction_data?.ticket_url,
         });
     } catch (error) {
         const msg = error instanceof Error ? error.message : 'Houve um erro no pagamento';
