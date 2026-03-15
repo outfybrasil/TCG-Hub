@@ -10,6 +10,7 @@ interface PokemonCard { id: string; name: string; set_name: string; local_id: st
 
 interface SelectedItem {
     id: string;
+    card_id: string;
     name: string;
     set_name: string;
     number: string;
@@ -67,6 +68,7 @@ export default function NewInventoryItemPage() {
     const addToBasket = (card: PokemonCard) => {
         const newItem: SelectedItem = {
             id: card.id + Date.now(), // unique for the list
+            card_id: card.id,
             name: card.name,
             set_name: card.set_name,
             number: card.local_id,

@@ -84,6 +84,7 @@ export async function POST(request: Request) {
 
         const itemsToInsert = items.map(item => ({
             user_id: user.id,
+            card_id: item.card_id,
             name: item.name,
             set_name: item.set_name,
             number: item.number,

@@ -61,19 +61,30 @@ export async function POST(request: Request) {
         const pricingData = await summaryRes.json();
         const summaries = pricingData.summaries || {};
 
+        // Helper to wait
+        const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
         // Update each card in the database with the new valuation
-        const updatePromises = collection.map(async (card) => {
+        for (const card of collection) {
             let pricing = summaries[card.id];
             
             // If pricing wasn't in cache, perform a live lookup
             if (!pricing || (pricing.bestAvailablePrice === null && card.market_price === null)) {
                  try {
-                     const cardForMarket = { ...card, grade: card.condition };
+                     // Add a small delay between live lookups to avoid rate limiting
+                     await delay(500);
+
+                     const cardForMarket = { 
+                        ...card, 
+                        grade: card.condition,
+                        name_en: (card as any).pokemon_cards?.name_en,
+                        set_name_en: (card as any).pokemon_cards?.set_name_en
+                     };
                      const lookupInput = buildMarketInputFromCard(cardForMarket);
                      const liveResult = await lookupBrazilianMarketPrices(lookupInput);
                      pricing = summarizeMarketResult(liveResult);
                      
-                     // Save 'liveResult' back to 'card_prices' cache here
+                     // Save 'liveResult' back to 'card_prices' cache
                      await supabaseAdmin.from('card_prices').upsert({
                         search_key: buildMarketSearchKeyFromCard(cardForMarket),
                         result: liveResult,
@@ -93,14 +104,12 @@ export async function POST(request: Request) {
                     updateData.market_price_site = pricing.bestAvailableStore;
                 }
 
-                return supabaseAdmin
+                await supabaseAdmin
                     .from('user_collections')
                     .update(updateData)
                     .eq('id', card.id);
             }
-        });
-
-        await Promise.all(updatePromises);
+        }
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
