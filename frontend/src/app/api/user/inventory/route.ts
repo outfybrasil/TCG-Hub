@@ -69,18 +69,44 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        
-        // Initial insert doesn't strictly need a price, it will be updated by sync
-        const { error } = await supabaseAdmin
+        const items = Array.isArray(body) ? body : [body];
+
+        if (items.length === 0) {
+            return NextResponse.json({ error: 'Nenhum item fornecido' }, { status: 400 });
+        }
+
+        // Validate all items
+        for (const item of items) {
+            if (!item.name || !item.set_name) {
+                return NextResponse.json({ error: 'Nome e coleção são obrigatórios para todos os itens' }, { status: 400 });
+            }
+        }
+
+        const itemsToInsert = items.map(item => ({
+            user_id: user.id,
+            name: item.name,
+            set_name: item.set_name,
+            number: item.number,
+            purchase_price: item.purchase_price || 0,
+            quantity: item.quantity || 1,
+            image_url: item.image_url,
+            condition: item.condition || 'NM',
+            finish: item.finish || 'Normal',
+            language: item.language || 'Português',
+            last_valuation_at: null
+        }));
+
+        const { data, error } = await supabaseAdmin // Changed to supabaseAdmin for consistency with other handlers
             .from('user_collections')
-            .insert({
-                ...body,
-                user_id: user.id
-            });
+            .insert(itemsToInsert)
+            .select();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Erro ao inserir no inventário:', error);
+            throw error;
+        }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json(data);
     } catch (error: any) {
         console.error('[User Inventory API POST] Error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

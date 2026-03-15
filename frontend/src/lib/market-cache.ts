@@ -5,8 +5,10 @@ export interface MarketCardLike {
     id: string;
     name?: string | null;
     official_name?: string | null;
+    name_en?: string | null;
     set?: string | null;
     official_set_name?: string | null;
+    set_name_en?: string | null;
     number?: string | null;
     grade?: string | null;
     finish?: string | null;
@@ -27,7 +29,9 @@ export interface MarketPriceSummary {
 export function buildMarketInputFromCard(card: MarketCardLike): MarketLookupInput {
     return {
         cardName: card.official_name || card.name || '',
+        cardNameEn: card.name_en || null,
         cardSet: card.official_set_name || card.set || null,
+        cardSetEn: card.set_name_en || null,
         cardNumber: card.number || null,
         condition: card.grade || null,
         finish: card.finish || null,
@@ -48,10 +52,12 @@ export function buildMarketSearchKeysFromCard(card: MarketCardLike): string[] {
     };
 
     const candidates = [
+        // Portuguese variations
         { cardName: card.official_name || card.name || '', cardSet: card.official_set_name || card.set || null, ...base },
         { cardName: card.name || card.official_name || '', cardSet: card.set || card.official_set_name || null, ...base },
-        { cardName: card.official_name || card.name || '', cardSet: card.set || card.official_set_name || null, ...base },
-        { cardName: card.name || card.official_name || '', cardSet: card.official_set_name || card.set || null, ...base },
+        // English variations
+        { cardName: card.name_en || '', cardSet: card.set_name_en || null, ...base },
+        { cardName: card.name_en || '', cardSet: card.official_set_name || card.set || null, ...base },
     ]
         .filter((candidate) => candidate.cardName)
         .map((candidate) => buildMarketSearchKey(candidate));

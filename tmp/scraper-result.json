@@ -1,0 +1,48 @@
+{
+  "bestMatched": {
+    "store": null,
+    "price": null
+  },
+  "bestAvailable": {
+    "store": "MYP Cards",
+    "price": 0.15,
+    "matchType": "partial"
+  },
+  "sites": {
+    "mypCards": {
+      "site": "MYP Cards",
+      "url": "https://mypcards.com/pokemon/produto/253487/quaquaval",
+      "matchedPrice": null,
+      "fallbackPrice": 0.15,
+      "selectedPrice": 0.15,
+      "selectedMatchType": "partial",
+      "selectedVariantLabel": "NM - Quase nova | Normal | Português",
+      "note": null,
+      "offersCount": 40
+    },
+    "ligaPokemon": {
+      "site": "Liga Pokemon",
+      "url": "https://www.ligapokemon.com.br/?view=cards/card&card=Quaquaval%20(052/191)&ed=SSP&num=052",
+      "matchedPrice": null,
+      "fallbackPrice": 0.16,
+      "selectedPrice": 0.16,
+      "selectedMatchType": "general",
+      "selectedVariantLabel": "(052/191) | Fagulhas Impetuosas",
+      "note": "A Liga Pokemon nao expõe filtro por estado/acabamento nesta coleta.",
+      "offersCount": 1,
+      "minPrice": 0.16,
+      "avgPrice": 0.8,
+      "maxPrice": 3.9
+    }
+  },
+  "manualLinks": {
+    "mypCards": "https://mypcards.com/pokemon?ProdutoSearch%5Bquery%5D=052%2F191",
+    "ligaPokemon": "https://www.ligapokemon.com.br/?view=cards/card&card=Pikachu%20ex&qual=1"
+  },
+  "criteria": {
+    "condition": "m",
+    "finish": "normal",
+    "language": "pt"
+  },
+  "fetchedAt": "2026-03-15T03:19:24.175Z"
+}

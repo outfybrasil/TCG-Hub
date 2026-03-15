@@ -15,7 +15,21 @@ export async function POST(request: Request) {
 
         const { data: collection, error } = await supabaseAdmin
             .from('user_collections')
-            .select('id, name, set_name, number, language, condition, finish, market_price')
+            .select(`
+                id, 
+                name, 
+                set_name, 
+                number, 
+                language, 
+                condition, 
+                finish, 
+                market_price,
+                card_id,
+                pokemon_cards (
+                    name_en,
+                    set_name_en
+                )
+            `)
             .eq('user_id', user.id);
 
         if (error) throw error;
@@ -31,10 +45,12 @@ export async function POST(request: Request) {
                 cards: collection.map(card => ({
                     id: card.id,
                     name: card.name,
+                    name_en: (card as any).pokemon_cards?.name_en,
                     set: card.set_name,
+                    set_name_en: (card as any).pokemon_cards?.set_name_en,
                     number: card.number,
                     language: card.language,
-                    condition: card.condition,
+                    grade: card.condition, // Use grade instead of condition for MarketCardLike
                     finish: card.finish
                 }))
             })
@@ -52,13 +68,14 @@ export async function POST(request: Request) {
             // If pricing wasn't in cache, perform a live lookup
             if (!pricing || (pricing.bestAvailablePrice === null && card.market_price === null)) {
                  try {
-                     const lookupInput = buildMarketInputFromCard(card);
+                     const cardForMarket = { ...card, grade: card.condition };
+                     const lookupInput = buildMarketInputFromCard(cardForMarket);
                      const liveResult = await lookupBrazilianMarketPrices(lookupInput);
                      pricing = summarizeMarketResult(liveResult);
                      
-                     // Optionally, we could also save 'liveResult' back to 'card_prices' cache here
+                     // Save 'liveResult' back to 'card_prices' cache here
                      await supabaseAdmin.from('card_prices').upsert({
-                        search_key: buildMarketSearchKeyFromCard(card),
+                        search_key: buildMarketSearchKeyFromCard(cardForMarket),
                         result: liveResult,
                      });
                  } catch (err) {

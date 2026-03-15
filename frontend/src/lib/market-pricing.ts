@@ -13,7 +13,9 @@ const LIGA_BASE_URL = 'https://www.ligapokemon.com.br';
 
 export interface MarketLookupInput {
     cardName: string;
+    cardNameEn?: string | null;
     cardSet?: string | null;
+    cardSetEn?: string | null;
     cardNumber?: string | null;
     condition?: string | null;
     finish?: string | null;
@@ -23,7 +25,9 @@ export interface MarketLookupInput {
 export function buildMarketSearchKey(input: MarketLookupInput): string {
     return [
         input.cardName,
+        input.cardNameEn,
         input.cardSet,
+        input.cardSetEn,
         input.cardNumber,
         input.condition,
         input.finish,
@@ -248,26 +252,38 @@ async function lookupLigaPokemon(
             };
         }
 
+        // Fetch the card page to get specific NM offers
+        const cardHtml = await fetchWithCurl(candidate.href);
+        const nmPrices = parseLigaOffers(cardHtml);
+        
+        let matchedPrice: number | null = null;
+        if (nmPrices.length > 0) {
+            matchedPrice = Math.min(...nmPrices);
+        }
+
         const minPrice = candidate.minPrice;
         const avgPrice = candidate.avgPrice;
         const maxPrice = candidate.maxPrice;
-        // Fallback to average price if minPrice is null (out of stock)
-        const selectedPrice = minPrice ?? avgPrice;
+        
+        // Final selection: matched NM price > summary min > summary avg
+        const selectedPrice = matchedPrice ?? minPrice ?? avgPrice;
 
         return {
             site: 'Liga Pokemon',
             url: candidate.href,
-            matchedPrice: null,
-            fallbackPrice: selectedPrice,
+            matchedPrice: matchedPrice,
+            fallbackPrice: minPrice ?? avgPrice,
             selectedPrice,
-            selectedMatchType: selectedPrice !== null ? 'general' : 'unavailable',
+            selectedMatchType: matchedPrice ? 'exact' : (selectedPrice !== null ? 'general' : 'unavailable'),
             selectedVariantLabel: selectedPrice !== null
                 ? [candidate.numericCode, candidate.setName || candidate.editionName].filter(Boolean).join(' | ')
                 : null,
-            note: selectedPrice !== null
-                ? 'A Liga Pokemon nao expõe filtro por estado/acabamento nesta coleta.'
-                : 'Carta encontrada na Liga Pokemon, mas sem precos ativos.',
-            offersCount: selectedPrice !== null ? 1 : 0,
+            note: matchedPrice 
+                ? 'Preço Near Mint (NM) extraído diretamente das ofertas.'
+                : (selectedPrice !== null 
+                    ? 'Extração de NM falhou, usando resumo de preços da busca (Geral).'
+                    : 'Carta encontrada na Liga Pokemon, mas sem precos ativos.'),
+            offersCount: nmPrices.length || (selectedPrice !== null ? 1 : 0),
             minPrice,
             avgPrice,
             maxPrice,
@@ -322,7 +338,8 @@ async function findBestMypProduct(input: MarketLookupInput): Promise<MypSearchCa
 async function findBestLigaProduct(input: MarketLookupInput): Promise<LigaSearchCandidate | null> {
     const queries = Array.from(new Set([
         input.cardName.trim(),
-        [input.cardName, input.cardNumber].filter(Boolean).join(' ').trim(),
+        input.cardNameEn?.trim(),
+        [input.cardNameEn || input.cardName, input.cardNumber].filter(Boolean).join(' ').trim(),
         input.cardNumber?.trim(),
     ].filter(Boolean) as string[]));
 
@@ -330,7 +347,8 @@ async function findBestLigaProduct(input: MarketLookupInput): Promise<LigaSearch
     let bestScore = Number.NEGATIVE_INFINITY;
 
     for (const query of queries) {
-        const html = await fetchWithCurl(buildLigaUrl(query, input.condition, input.finish));
+        const url = buildLigaUrl(query, input.condition, input.finish);
+        const html = await fetchWithCurl(url);
         const candidates = parseLigaSearchCandidates(html);
 
         for (const candidate of candidates) {
@@ -449,6 +467,28 @@ function parseLigaSearchCandidates(html: string): LigaSearchCandidate[] {
     return candidates;
 }
 
+function parseLigaOffers(html: string): number[] {
+    const $ = load(html);
+    const nmPrices: number[] = [];
+    
+    // Liga Marketplace rows
+    $('.item-marketplace, .estoque-lista-item').each((_, el) => {
+        const row = $(el);
+        const qualityText = row.find('.quality, .estoque-lista-qualidadenome').text().toLowerCase();
+        
+        // Quality check for Near Mint
+        if (qualityText.includes('nm') || qualityText.includes('near mint') || qualityText.includes('quase nova') || qualityText === 'm') {
+            const priceText = row.find('.price, .estoque-lista-precoestoque, a[href*="checkout"]').text();
+            const price = parseFirstPrice(priceText);
+            if (price !== null) {
+                nmPrices.push(price);
+            }
+        }
+    });
+    
+    return nmPrices;
+}
+
 function selectExactOffer(offers: MypOffer[], filters: NormalizedFilters): MypOffer | null {
     const exactMatches = offers.filter((offer) => matchesOffer(offer, filters));
     if (exactMatches.length === 0) {
@@ -531,32 +571,41 @@ function scoreLigaCandidate(candidate: LigaSearchCandidate, input: MarketLookupI
     const title = normalizeText(candidate.title);
     const setName = normalizeText(candidate.setName);
     const editionName = normalizeText(candidate.editionName);
+    
     const cardName = normalizeText(input.cardName);
+    const cardNameEn = normalizeText(input.cardNameEn || '');
     const cardSet = normalizeText(input.cardSet || '');
+    const cardSetEn = normalizeText(input.cardSetEn || '');
+    
     const candidateNumber = normalizeCardNumber(candidate.numericCode);
     const cardNumber = normalizeCardNumber(input.cardNumber || '');
 
     let score = 0;
 
+    // Number matching is highest weight
     if (cardNumber && candidateNumber === cardNumber) {
-        score += 12;
+        score += 15;
     } else if (cardNumber && candidateNumber && candidateNumber.startsWith(cardNumber.split('/')[0])) {
-        score += 4;
+        score += 5;
     }
 
+    // Name matching
     if (cardName && title.includes(cardName)) {
         score += 8;
-    } else if (cardName && cardName.split(' ').some((token) => token.length >= 4 && title.includes(token))) {
-        score += 2;
+    } else if (cardNameEn && title.includes(cardNameEn)) {
+        score += 8;
     }
 
+    // Set matching
     if (cardSet && (setName === cardSet || editionName === cardSet)) {
+        score += 10;
+    } else if (cardSetEn && (setName === cardSetEn || editionName === cardSetEn)) {
         score += 10;
     } else if (cardSet && (
         (setName && (setName.includes(cardSet) || cardSet.includes(setName))) ||
         (editionName && (editionName.includes(cardSet) || cardSet.includes(editionName)))
     )) {
-        score += 5;
+        score += 4;
     }
 
     if (candidate.minPrice !== null) {

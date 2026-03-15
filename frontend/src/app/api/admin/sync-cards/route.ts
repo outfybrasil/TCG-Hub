@@ -47,21 +47,37 @@ export async function POST(request: Request) {
 
 async function syncSet(setId: string) {
     try {
-        const response = await fetch(`${TCGDEX_API}/sets/${setId}`);
-        if (!response.ok) throw new Error(`Set ${setId} não encontrado na TCGdex`);
+        // Fetch from both Portuguese and English endpoints
+        const [resPt, resEn] = await Promise.all([
+            fetch(`https://api.tcgdex.net/v2/pt/sets/${setId}`),
+            fetch(`https://api.tcgdex.net/v2/en/sets/${setId}`)
+        ]);
 
-        const setData = await response.json();
-        const cards = setData.cards || [];
+        if (!resPt.ok) throw new Error(`Set ${setId} não encontrado na TCGdex (PT)`);
+        
+        const dataPt = await resPt.json();
+        const dataEn = resEn.ok ? await resEn.json() : null;
 
-        const totalOfficial = setData.cardCount?.official || 0;
+        const cardsPt = dataPt.cards || [];
+        const cardsEn = dataEn?.cards || [];
 
-        const cardsToInsert = cards.map((card: { id: string; localId: string; name: string; image?: string; rarity?: string; types?: string[] }) => ({
+        // Build mapping for English names
+        const enMap = new Map<string, string>();
+        if (cardsEn) {
+            cardsEn.forEach((c: any) => enMap.set(c.id, c.name));
+        }
+
+        const totalOfficial = dataPt.cardCount?.official || 0;
+
+        const cardsToInsert = cardsPt.map((card: any) => ({
             id: card.id,
             local_id: totalOfficial > 0 ? `${card.localId}/${totalOfficial}` : card.localId,
             name: card.name,
+            name_en: enMap.get(card.id) || card.name, // Fallback to PT if EN not found
             image_url: `${card.image}/high.png`,
-            set_id: setData.id,
-            set_name: setData.name,
+            set_id: dataPt.id,
+            set_name: dataPt.name,
+            set_name_en: dataEn?.name || dataPt.name, // Fallback to PT if EN not found
             rarity: card.rarity || 'Common',
             types: card.types || [],
             updated_at: new Date().toISOString()
