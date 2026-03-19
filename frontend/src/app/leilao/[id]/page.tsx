@@ -207,11 +207,25 @@ export default function AuctionDetailPage() {
             });
             if (bidEr) throw bidEr;
 
+            // --- ANTI-SNIPER LOGIC (+3 MIN) ---
+            const now = new Date();
+            const endsAtDate = new Date(auction.endsAt);
+            const timeDiff = endsAtDate.getTime() - now.getTime();
+            let newEndsAt = auction.endsAt;
+            let extended = false;
+
+            // Se faltar 3 minutos (180000ms) ou menos, prorroga para daqui a 3 minutos
+            if (timeDiff > 0 && timeDiff <= 3 * 60 * 1000) {
+                newEndsAt = new Date(now.getTime() + 3 * 60 * 1000).toISOString();
+                extended = true;
+            }
+
             const { error: auctionError } = await supabase.from('auctions').update({
                 current_bid: amount,
                 bid_count: auction.bidCount + 1,
                 highest_bidder_id: user.id,
                 highest_bidder_name: user.name,
+                ...(extended ? { ends_at: newEndsAt } : {})
             }).eq('id', id);
             if (auctionError) throw auctionError;
 
@@ -382,6 +396,40 @@ export default function AuctionDetailPage() {
                         </div>
                     </div>
 
+                    {/* Quick Bid Buttons — standalone block */}
+                    {!isExpired && user && (
+                        <div className="bg-slate-900 p-6 rounded-3xl space-y-3">
+                            <div className="flex items-center gap-4">
+                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Lances Rápidos_</p>
+                                <div className="h-[1px] flex-1 bg-slate-800" />
+                                <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest whitespace-nowrap">Soma ao atual</p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                                {[5, 10, 20, 50, 100, 200].map(val => (
+                                    <button
+                                        key={val}
+                                        type="button"
+                                        disabled={bidding}
+                                        onClick={() => handleBid(val)}
+                                        className="w-full h-12 bg-slate-800 border border-slate-700 rounded-xl hover:bg-rose-600 hover:border-rose-600 hover:text-white transition-all font-black text-sm text-slate-200 disabled:opacity-50"
+                                    >
+                                        + {val}
+                                    </button>
+                                ))}
+                            </div>
+                            {bidError && (
+                                <div className="p-3 bg-rose-950/50 border border-rose-900/50 rounded-xl">
+                                    <p className="text-[9px] font-black text-rose-400 uppercase tracking-widest text-center">{bidError}</p>
+                                </div>
+                            )}
+                            {bidSuccess && (
+                                <div className="p-3 bg-emerald-950/50 border border-emerald-900/50 rounded-xl">
+                                    <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest text-center">✓ Lance registrado com sucesso!</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Bid Area */}
                     {isExpired ? (
                         <div className="bg-slate-900 p-8 rounded-3xl space-y-4 relative overflow-hidden text-center">
@@ -442,34 +490,6 @@ export default function AuctionDetailPage() {
                                         </button>
                                     </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Lances Rápidos (Soma ao Atual)</label>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            {[5, 10, 20, 50, 100, 200].map(val => (
-                                                <button
-                                                    key={val}
-                                                    type="button"
-                                                    disabled={bidding}
-                                                    onClick={() => handleBid(val)}
-                                                    className="w-full h-12 bg-slate-50 border border-slate-100 rounded-xl hover:bg-rose-50 hover:border-rose-100 hover:text-rose-600 transition-all font-black text-sm text-slate-900 disabled:opacity-50"
-                                                >
-                                                    + {val}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {bidError && (
-                                        <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl">
-                                            <p className="text-[9px] font-black text-rose-600 uppercase tracking-widest text-center">{bidError}</p>
-                                        </div>
-                                    )}
-                                    {bidSuccess && (
-                                        <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-                                            <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest text-center">✓ Lance registrado com sucesso!</p>
-                                        </div>
-                                    )}
-
                                     <p className="text-center text-[8px] font-black text-slate-400 uppercase tracking-widest opacity-50">
                                         Participando como: {user.name}
                                     </p>
@@ -508,7 +528,7 @@ export default function AuctionDetailPage() {
                             <RuleItem
                                 icon="⏱️"
                                 title="Anti-sniper Ativo"
-                                desc="Lances nos últimos 15 segundos adicionam +15s ao cronômetro."
+                                desc="Lances nos últimos 3 minutos adicionam +3 minutos ao cronômetro."
                             />
                             <RuleItem
                                 icon="🛡️"
