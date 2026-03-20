@@ -97,6 +97,8 @@ export async function POST(request: Request) {
             condition: item.condition || 'NM',
             finish: item.finish || 'Normal',
             language: item.language || 'PortuguÃªs',
+            grading_company: item.is_graded ? (item.grading_company || null) : null,
+            grading_score: item.is_graded ? (parseFloat(item.grading_score) || null) : null,
             last_valuation_at: null,
         }));
 

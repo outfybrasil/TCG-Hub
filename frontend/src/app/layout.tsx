@@ -5,6 +5,7 @@ import CartDrawer from "@/components/CartDrawer";
 import MobileNav from "@/components/MobileNav";
 import UserNav from "@/components/UserNav";
 import { CartProvider } from "@/context/CartContext";
+import AchievementToast from "@/components/AchievementToast";
 
 import "./globals.css";
 
@@ -17,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`light scroll-smooth ${inter.variable}`}>
-      <body className="font-sans bg-[#F8F9FA] text-[#0F172A] antialiased selection:bg-[#3B82F6] selection:text-white pb-20 lg:pb-0">
+      <body suppressHydrationWarning className="font-sans bg-[#F8F9FA] text-[#0F172A] antialiased selection:bg-[#3B82F6] selection:text-white pb-20 lg:pb-0">
         <CartProvider>
           <main className="min-h-screen">
             <div className="bg-rose-600 px-6 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em] text-white">
@@ -36,13 +37,18 @@ export default function RootLayout({
                     </span>
                   </Link>
 
-                  <div className="hidden items-center space-x-10 lg:flex">
+                  <div className="hidden items-center space-x-8 lg:flex">
                     <Link href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-rose-600">
                       Loja
                     </Link>
                     <Link href="/leilao" className="text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-rose-600">
-                      Leiloes
+                      Leilões
                     </Link>
+                    <Link href="/lives" className="text-[11px] font-black uppercase tracking-widest text-rose-500 transition-all hover:text-rose-600 flex items-center gap-1.5 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+                      Ao Vivo
+                    </Link>
+
                     <Link href="/suporte" className="text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-rose-600">
                       Suporte
                     </Link>
@@ -84,6 +90,7 @@ export default function RootLayout({
             </footer>
           </main>
           <CartDrawer />
+          <AchievementToast />
         </CartProvider>
       </body>
     </html>

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { initMercadoPago, Wallet } from '@mercadopago/sdk-react';
+import { motion } from 'framer-motion';
 
 interface CreditData {
     balance: number;
@@ -42,6 +43,7 @@ export default function CreditosPage() {
     const [user, setUser] = useState<User | null>(null);
     const [profile, setProfile] = useState<Profile | null>(null);
     const [credits, setCredits] = useState<CreditData>({ balance: 0, locked: 0 });
+    const [cashbackBalance, setCashbackBalance] = useState(0);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -51,6 +53,7 @@ export default function CreditosPage() {
     const [depositing, setDepositing] = useState(false);
     const [depositError, setDepositError] = useState('');
     const [preferenceId, setPreferenceId] = useState<string | null>(null);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     useEffect(() => {
         if (!mpInitialized) {
@@ -63,10 +66,11 @@ export default function CreditosPage() {
             if (!user) { router.replace('/auth/login'); return; }
             setUser(user);
 
-            const [creditsRes, txRes, profileRes] = await Promise.all([
+            const [creditsRes, txRes, profileRes, walletRes] = await Promise.all([
                 supabase.from('auction_credits').select('balance, locked').eq('user_id', user.id).single(),
                 supabase.from('credit_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-                supabase.from('profiles').select('*').eq('id', user.id).single()
+                supabase.from('profiles').select('*').eq('id', user.id).single(),
+                supabase.from('wallets').select('balance').eq('user_id', user.id).single()
             ]);
 
             if (creditsRes.data) setCredits(creditsRes.data);
@@ -74,6 +78,7 @@ export default function CreditosPage() {
             if (profileRes.data) {
                 setProfile(profileRes.data);
             }
+            if (walletRes.data) setCashbackBalance(walletRes.data.balance || 0);
             setLoading(false);
         };
         init();
@@ -122,6 +127,39 @@ export default function CreditosPage() {
         } catch (err: unknown) {
             console.error(err);
             setDepositError(err instanceof Error ? err.message : 'Erro ao gerar Checkout.');
+        } finally {
+            setDepositing(false);
+        }
+    };
+
+    const handleConvertCashback = async () => {
+        if (!user || cashbackBalance <= 0) return;
+        
+        setDepositing(true);
+        try {
+            console.log('Iniciando RPC de conversão...');
+            const { data, error } = await supabase.rpc('convert_cashback_to_credits', {
+                p_user_id: user.id,
+                p_amount: cashbackBalance
+            });
+
+            if (error) throw error;
+
+            setCashbackBalance(0);
+            setShowConfirmModal(false);
+            
+            // Refresh credits
+            const { data: newCredits } = await supabase.from('auction_credits').select('balance, locked').eq('user_id', user.id).single();
+            if (newCredits) setCredits(newCredits);
+
+            // Refresh transactions
+            const { data: newTx } = await supabase.from('credit_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
+            if (newTx) setTransactions(newTx);
+
+            alert('Sucesso! Seu cashback foi convertido em créditos.');
+        } catch (err) {
+            console.error(err);
+            alert('Falha na conversão de cashback. Verifique se a migração SQL foi executada no banco de dados.');
         } finally {
             setDepositing(false);
         }
@@ -250,7 +288,81 @@ export default function CreditosPage() {
                             ⚠ {depositError}
                         </p>
                     )}
+
+
+                    {/* Converter Cashback Section */}
+                    {cashbackBalance > 0 && (
+                        <div className="mt-12 pt-8 border-t border-slate-50">
+                            <motion.div 
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/[0.02] border border-emerald-100 rounded-[32px] p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6 shadow-sm overflow-hidden relative"
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+                                
+                                <div className="shrink-0 w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-3xl shadow-lg shadow-emerald-500/20">
+                                    🎁
+                                </div>
+                                <div className="flex-1 text-center sm:text-left">
+                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Dica de Fidelidade</p>
+                                    <h3 className="text-xl font-black text-slate-900 tracking-tight leading-tight">
+                                        R$ {cashbackBalance.toFixed(2).replace('.', ',')} esperando você!
+                                    </h3>
+                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                        Converta seu cashback em créditos agora.
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => setShowConfirmModal(true)}
+                                    className="w-full sm:w-auto px-8 h-12 bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/10 active:scale-95"
+                                >
+                                    Converter Agora
+                                </button>
+                            </motion.div>
+                        </div>
+                    )}
                 </div>
+
+                {/* Confirmation Modal */}
+                {showConfirmModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-300">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="bg-white rounded-[40px] p-8 sm:p-12 max-w-lg w-full shadow-2xl relative overflow-hidden text-center"
+                        >
+                            <div className="absolute top-0 inset-x-0 h-2 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                            
+                            <div className="w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-8 animate-bounce">
+                                💰
+                            </div>
+
+                            <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase mb-4">
+                                Confirmar Conversão?
+                            </h2>
+                            
+                            <p className="text-sm text-slate-500 font-bold mb-10 leading-relaxed px-4">
+                                Você está transformando <span className="text-emerald-600 font-black">R$ {cashbackBalance.toFixed(2).replace('.', ',')}</span> de saldo Cashback em Créditos de Site. Esta ação é instantânea e não pode ser desfeita.
+                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <button 
+                                    onClick={() => setShowConfirmModal(false)}
+                                    className="h-14 bg-slate-50 text-slate-400 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-100 transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    onClick={handleConvertCashback}
+                                    disabled={depositing}
+                                    className="h-14 bg-emerald-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-900/20 disabled:opacity-50"
+                                >
+                                    {depositing ? 'Processando...' : 'Confirmar e Converter'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
 
                 {/* Info & History */}
                 <div className="lg:col-span-2 space-y-6">

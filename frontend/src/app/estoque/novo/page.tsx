@@ -25,6 +25,9 @@ interface SelectedItem {
     isPromo: boolean;
     notes: string;
     types: string[];
+    is_graded: boolean;
+    grading_company: string;
+    grading_score: string;
 }
 
 export default function NewAssetPage() {
@@ -83,6 +86,11 @@ export default function NewAssetPage() {
     };
 
     const addToBasket = (card: PokemonCard) => {
+        const existing = selectedItems.find(item => item.cardId === card.id);
+        if (existing) {
+            updateItem(existing.tempId, { quantity: existing.quantity + 1 });
+            return;
+        }
         const newItem: SelectedItem = {
             tempId: `${card.id}-${Date.now()}`,
             cardId: card.id,
@@ -98,7 +106,10 @@ export default function NewAssetPage() {
             language: 'Português',
             isPromo: false,
             notes: '',
-            types: card.types || []
+            types: card.types || [],
+            is_graded: false,
+            grading_company: '',
+            grading_score: ''
         };
         setSelectedItems([...selectedItems, newItem]);
     };
@@ -139,7 +150,9 @@ export default function NewAssetPage() {
                 language: item.language,
                 is_promo: item.isPromo,
                 notes: item.notes,
-                types: item.types
+                types: item.types,
+                grading_company: item.is_graded ? item.grading_company : null,
+                grading_score: item.is_graded ? parseFloat(item.grading_score) : null,
             }));
 
             const { error } = await supabase.from('inventory').insert(itemsToInsert);
@@ -216,24 +229,39 @@ export default function NewAssetPage() {
 
                         {searchResults.length > 0 && (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 max-h-[500px] overflow-y-auto p-2 animate-fade-in">
-                                {searchResults.map((card) => (
+                                {searchResults.map((card) => {
+                                    const isSelected = selectedItems.some(item => item.cardId === card.id);
+                                    return (
                                     <div
                                         key={card.id}
                                         onClick={() => addToBasket(card)}
-                                        className="bg-white border border-slate-100 p-3 rounded-3xl hover:border-rose-500 cursor-pointer transition-all hover:shadow-2xl group relative"
+                                        className={`bg-white border p-3 rounded-3xl cursor-pointer transition-all group relative ${
+                                            isSelected 
+                                                ? 'border-emerald-400 bg-emerald-50/30 ring-2 ring-emerald-200' 
+                                                : 'border-slate-100 hover:border-rose-500 hover:shadow-2xl'
+                                        }`}
                                     >
+                                        {isSelected && (
+                                            <div className="absolute top-2 left-2 z-10 bg-emerald-500 text-white p-1 rounded-full shadow">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                            </div>
+                                        )}
                                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                            <div className="bg-rose-600 text-white p-1.5 rounded-full shadow-lg">
+                                            <div className={`${isSelected ? 'bg-emerald-500' : 'bg-rose-600'} text-white p-1.5 rounded-full shadow-lg`}>
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
                                             </div>
                                         </div>
                                         <div className="aspect-[3/4] relative mb-3">
-                                            <img src={card.image_url} alt={card.name} className="w-full h-full object-contain rounded-xl shadow-md group-hover:scale-105 transition-transform duration-500" />
+                                            <img src={card.image_url} alt={card.name} className={`w-full h-full object-contain rounded-xl shadow-md transition-transform duration-500 ${isSelected ? 'opacity-70' : 'group-hover:scale-105'}`} />
                                         </div>
                                         <p className="text-[10px] font-black text-slate-900 truncate px-1">{card.name}</p>
                                         <p className="text-[8px] font-bold text-slate-400 truncate uppercase mt-0.5 px-1">{card.set_name}</p>
+                                        {isSelected && (
+                                            <p className="text-[8px] font-black text-emerald-600 uppercase mt-1 px-1">✓ Selecionada (clique para +1)</p>
+                                        )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -257,6 +285,7 @@ export default function NewAssetPage() {
                                             <th className="text-left py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Preço Sugerido (R$)</th>
                                             <th className="text-left py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Condição</th>
                                             <th className="text-left py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Idioma / Finish</th>
+                                            <th className="text-left py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Grading</th>
                                             <th className="text-right py-4 text-[9px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                         </tr>
                                     </thead>
@@ -339,6 +368,69 @@ export default function NewAssetPage() {
                                                             <option>Full Art</option>
                                                             <option>Alternative Art</option>
                                                         </select>
+                                                    </div>
+                                                </td>
+                                                <td className="py-6">
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => updateItem(item.tempId, {
+                                                                is_graded: !item.is_graded,
+                                                                grading_company: !item.is_graded ? 'PSA' : '',
+                                                                grading_score: !item.is_graded ? '10' : ''
+                                                            })}
+                                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider transition-all ${
+                                                                item.is_graded
+                                                                    ? 'bg-amber-100 text-amber-800 border border-amber-300 shadow-sm'
+                                                                    : 'bg-slate-100 text-slate-400 border border-slate-200 hover:bg-slate-200'
+                                                            }`}
+                                                        >
+                                                            <div className={`w-7 h-4 rounded-full relative transition-colors ${
+                                                                item.is_graded ? 'bg-amber-400' : 'bg-slate-300'
+                                                            }`}>
+                                                                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-all ${
+                                                                    item.is_graded ? 'left-3.5' : 'left-0.5'
+                                                                }`} />
+                                                            </div>
+                                                            {item.is_graded ? 'Gradada' : 'Sem Grade'}
+                                                        </button>
+                                                        {item.is_graded && (
+                                                            <div className="flex gap-1.5">
+                                                                <select
+                                                                    value={item.grading_company}
+                                                                    onChange={(e) => updateItem(item.tempId, { grading_company: e.target.value })}
+                                                                    className="h-8 px-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[9px] font-black text-amber-800 outline-none cursor-pointer"
+                                                                >
+                                                                    <option value="PSA">PSA</option>
+                                                                    <option value="CGC">CGC</option>
+                                                                    <option value="BGS">BGS</option>
+                                                                    <option value="TAG">TAG</option>
+                                                                    <option value="ACE">ACE</option>
+                                                                </select>
+                                                                <select
+                                                                    value={item.grading_score}
+                                                                    onChange={(e) => updateItem(item.tempId, { grading_score: e.target.value })}
+                                                                    className="h-8 px-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[9px] font-black text-amber-800 outline-none cursor-pointer"
+                                                                >
+                                                                    <option value="10">10 — Gem Mint</option>
+                                                                    <option value="9.5">9.5 — Gem Mint</option>
+                                                                    <option value="9">9 — Mint</option>
+                                                                    <option value="8.5">8.5 — NM-MT+</option>
+                                                                    <option value="8">8 — NM-MT</option>
+                                                                    <option value="7.5">7.5 — Near Mint+</option>
+                                                                    <option value="7">7 — Near Mint</option>
+                                                                    <option value="6.5">6.5 — EX-MT+</option>
+                                                                    <option value="6">6 — EX-MT</option>
+                                                                    <option value="5.5">5.5 — Excellent+</option>
+                                                                    <option value="5">5 — Excellent</option>
+                                                                    <option value="4">4 — VG-EX</option>
+                                                                    <option value="3">3 — VG</option>
+                                                                    <option value="2">2 — Good</option>
+                                                                    <option value="1.5">1.5 — Fair</option>
+                                                                    <option value="1">1 — Poor</option>
+                                                                </select>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="py-6 text-right">

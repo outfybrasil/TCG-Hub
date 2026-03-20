@@ -1,0 +1,42 @@
+﻿Ôû▓ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+Ô£ô Compiled successfully in 11.5s
+  Running TypeScript ...
+node.exe : Failed to compile.
+No linha:1 caractere:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : NotSpecified: (Failed to 
+compile.:Strin    g) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+./src/app/api/cron/sync-prices/route.ts:98:54
+Type error: Property 'condition' does not exist on type 
+'InventorySyncCard'.
+
+[0m [90m  96 |[39m                             
+ [90m  97 |[39m                             [90m// Also update 
+last_valuation_at in user_collections[39m
+[31m[1m>[22m[39m[90m  98 |[39m                             
+[36mif[39m (card[33m.[39mcard_id [33m&&[39m 
+card[33m.[39mcondition [33m&&[39m card[33m.[39mfinish 
+[33m&&[39m card[33m.[39mlanguage) {
+ [90m     |[39m                                                 
+     [31m[1m^[22m[39m
+ [90m  99 |[39m                                 [36mlet[39m 
+marketUrl [33m=[39m [32m''[39m[33m;[39m
+ [90m 100 |[39m                                 [36mif[39m (pr
+ices[33m.[39msites[33m.[39mligaPokemon[33m.[39mselectedPrice
+ [33m!==[39m [36mnull[39m) marketUrl [33m=[39m prices[33m.
+[39msites[33m.[39mligaPokemon[33m.[39murl[33m;[39m
+ [90m 101 |[39m                                 [36melse[39m 
+[36mif[39m (prices[33m.[39msites[33m.[39mmypCards[33m.[39m
+selectedPrice [33m!==[39m [36mnull[39m) marketUrl [33m=[39m 
+prices[33m.[39msites[33m.[39mmypCards[33m.[39murl[33m;[39m
+[0m
+Next.js build worker exited with code: 1 and signal: null

@@ -1,0 +1,20 @@
+name: Daily Market Prices Sync
+
+on:
+  schedule:
+    # Runs at 00:00 UTC (which is 21:00 BRT, or adjust to 03:00 UTC for Midnight BRT)
+    # 03:00 UTC = 00:00 Horário de Brasília
+    - cron: '0 3 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Daily Sync API
+        # Replace the URL below with your actual production URL when deploying
+        # We also pass a secret token to ensure only this cron can trigger it
+        run: |
+          curl -s -f -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://tcghub.tonicoimbra.com/api/cron/sync-prices"

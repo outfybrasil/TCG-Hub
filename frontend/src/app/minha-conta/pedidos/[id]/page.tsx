@@ -154,8 +154,8 @@ export default function OrderDetailPage() {
                             <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-900">Itens Comprados</h2>
                         </div>
                         <div className="divide-y divide-slate-50">
-                            {order.items?.map((item: any) => (
-                                <div key={item.id} className="p-8 flex items-center gap-6">
+                            {order.items?.map((item: any, index: number) => (
+                                <div key={item.sku || item.id || `${item.name}-${index}`} className="p-8 flex items-center gap-6">
                                     <div className="h-20 w-16 shrink-0 bg-slate-100 rounded-lg overflow-hidden relative">
                                         <img src={item.imageUrl || item.image_url || 'https://placehold.co/400x600/eeeeee/999999?text=Sem+Foto'} alt={item.name} className="absolute inset-0 w-full h-full object-cover" />
                                     </div>

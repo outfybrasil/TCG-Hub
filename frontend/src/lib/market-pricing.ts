@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { load } from 'cheerio';
+import { fetchWithBrowser } from '@/lib/browser-pool';
 
 const execFileAsync = promisify(execFile);
 
@@ -257,13 +258,31 @@ async function lookupLigaPokemon(
             };
         }
 
-        // Fetch the card page to get specific NM offers
-        const cardHtml = await fetchWithCurl(candidate.href);
-        const nmPrices = parseLigaOffers(cardHtml);
+        // Fetch the card page to get specific offers matching our condition
+        const qualParam = getLigaConditionParam(input.condition);
+        const fetchUrl = qualParam ? `${candidate.href}&qual=${qualParam}` : candidate.href;
+        
+        const cardHtml = await fetchWithBrowser(fetchUrl, { waitForSelector: '.container-price-mkp, .estoque-lista-precoestoque' });
+        const summaries = parseLigaSummaries(cardHtml);
         
         let matchedPrice: number | null = null;
-        if (nmPrices.length > 0) {
-            matchedPrice = Math.min(...nmPrices);
+        let selectedExtraLabel: string | null = null;
+        
+        if (summaries.length > 0) {
+            const inputFinishKey = input.finish ? normalizeFinish(input.finish) || 'normal' : 'normal';
+            
+            let match = summaries.find(s => (normalizeFinish(s.extra) || 'normal') === inputFinishKey);
+            
+            // Fallback to normal if requested foil/finish isn't available
+            if (!match && inputFinishKey !== 'normal') {
+                match = summaries.find(s => (normalizeFinish(s.extra) || 'normal') === 'normal');
+            }
+            if (!match) {
+                match = summaries[0];
+            }
+            
+            matchedPrice = match.minPrice ?? match.avgPrice;
+            selectedExtraLabel = match.extra;
         }
 
         const minPrice = candidate.minPrice;
@@ -281,14 +300,14 @@ async function lookupLigaPokemon(
             selectedPrice,
             selectedMatchType: matchedPrice ? 'exact' : (selectedPrice !== null ? 'general' : 'unavailable'),
             selectedVariantLabel: selectedPrice !== null
-                ? [candidate.numericCode, candidate.setName || candidate.editionName].filter(Boolean).join(' | ')
+                ? [candidate.numericCode, candidate.setName || candidate.editionName, selectedExtraLabel || 'Normal'].filter(Boolean).join(' | ')
                 : null,
             note: matchedPrice 
                 ? 'Preço Near Mint (NM) extraído diretamente das ofertas.'
                 : (selectedPrice !== null 
                     ? 'Extração de NM falhou, usando resumo de preços da busca (Geral).'
                     : 'Carta encontrada na Liga Pokemon, mas sem precos ativos.'),
-            offersCount: nmPrices.length || (selectedPrice !== null ? 1 : 0),
+            offersCount: summaries.length || (selectedPrice !== null ? 1 : 0),
             minPrice,
             avgPrice,
             maxPrice,
@@ -353,8 +372,12 @@ async function findBestLigaProduct(input: MarketLookupInput): Promise<LigaSearch
 
     for (const query of queries) {
         const url = buildLigaUrl(query, input.condition, input.finish);
-        const html = await fetchWithCurl(url);
+        const html = await fetchWithBrowser(url, { waitForSelector: '.main-link-card, .mtg-single' });
         const candidates = parseLigaSearchCandidates(html);
+        
+        if (candidates.length === 0) {
+            console.warn(`[liga] No candidates found for query "${query}", DOM may have changed.`);
+        }
 
         for (const candidate of candidates) {
             const score = scoreLigaCandidate(candidate, input);
@@ -436,8 +459,9 @@ function parseMypOffers(html: string): MypOffer[] {
 
 function parseLigaSearchCandidates(html: string): LigaSearchCandidate[] {
     const $ = load(html);
-    const candidates: LigaSearchCandidate[] = [];
+    let candidates: LigaSearchCandidate[] = [];
 
+    // Strategy 1: Old list-view layout (.mtg-single)
     $('.mtg-single').each((_, element) => {
         const item = $(element);
         const href = item.find('a.main-link-card').attr('href') || item.find('.mtg-name a').attr('href');
@@ -469,29 +493,126 @@ function parseLigaSearchCandidates(html: string): LigaSearchCandidate[] {
         });
     });
 
+    // Strategy 2: New grid-view layout (.main-link-card tiles)
+    if (candidates.length === 0) {
+        $('a.main-link-card').each((_, element) => {
+            const link = $(element);
+            const href = link.attr('href');
+            // In grid view, the card name is in a text node or nested div
+            const titleEl = link.find('.mtg-name').first();
+            const title = cleanText(
+                titleEl.text() ||
+                link.find('div').filter((__, el) => {
+                    const text = $(el).text().trim();
+                    return text.length > 2 && text.length < 100 && !text.includes('R$');
+                }).first().text()
+            );
+            const numericCode = cleanText(link.find('.mtg-numeric-code').first().text());
+            
+            // Try to find prices from sibling or parent elements
+            const container = link.closest('.grid-item, .card-tile, [class*="card"]').length > 0
+                ? link.closest('.grid-item, .card-tile, [class*="card"]')
+                : link.parent();
+            const priceTexts = container.find('[class*="price"], [class*="valor"]');
+            const allPriceValues: number[] = [];
+            priceTexts.each((__, priceEl) => {
+                const val = parseFirstPrice($(priceEl).text());
+                if (val !== null) allPriceValues.push(val);
+            });
+            
+            // Also check for price text directly in/near the link
+            if (allPriceValues.length === 0) {
+                const parentText = container.text();
+                const priceMatches = parentText.match(/R\$\s*[\d\.,]+/g);
+                if (priceMatches) {
+                    for (const m of priceMatches) {
+                        const val = parseFirstPrice(m);
+                        if (val !== null) allPriceValues.push(val);
+                    }
+                }
+            }
+
+            if (!href || !title) {
+                return;
+            }
+
+            candidates.push({
+                title,
+                numericCode,
+                setName: '',
+                editionName: '',
+                href: new URL(href, LIGA_BASE_URL).toString(),
+                minPrice: allPriceValues.length >= 1 ? Math.min(...allPriceValues) : null,
+                avgPrice: allPriceValues.length >= 2 ? allPriceValues[Math.floor(allPriceValues.length / 2)] : (allPriceValues[0] ?? null),
+                maxPrice: allPriceValues.length >= 1 ? Math.max(...allPriceValues) : null,
+            });
+        });
+    }
+
+    // Strategy 3: Last resort — find any card link with href containing "view=cards/card"
+    if (candidates.length === 0) {
+        $('a[href*="view=cards/card"]').each((_, element) => {
+            const link = $(element);
+            const href = link.attr('href');
+            if (!href) return;
+            
+            const container = link.parent();
+            const title = cleanText(link.attr('title') || link.text());
+            if (!title || title.length < 2 || title.length > 150) return;
+
+            const containerText = container.text();
+            const priceMatches = containerText.match(/R\$\s*[\d\.,]+/g);
+            const allPrices: number[] = [];
+            if (priceMatches) {
+                for (const m of priceMatches) {
+                    const val = parseFirstPrice(m);
+                    if (val !== null) allPrices.push(val);
+                }
+            }
+
+            candidates.push({
+                title,
+                numericCode: '',
+                setName: '',
+                editionName: '',
+                href: new URL(href, LIGA_BASE_URL).toString(),
+                minPrice: allPrices.length >= 1 ? Math.min(...allPrices) : null,
+                avgPrice: allPrices[0] ?? null,
+                maxPrice: allPrices.length >= 1 ? Math.max(...allPrices) : null,
+            });
+        });
+
+        // Deduplicate by href
+        const seen = new Set<string>();
+        candidates = candidates.filter(c => {
+            if (seen.has(c.href)) return false;
+            seen.add(c.href);
+            return true;
+        });
+    }
+
+    console.log(`[liga] parseLigaSearchCandidates found ${candidates.length} candidates`);
     return candidates;
 }
 
-function parseLigaOffers(html: string): number[] {
+function parseLigaSummaries(html: string) {
     const $ = load(html);
-    const nmPrices: number[] = [];
+    const summaries: Array<{ extra: string; minPrice: number | null; avgPrice: number | null }> = [];
     
-    // Liga Marketplace rows
-    $('.item-marketplace, .estoque-lista-item').each((_, el) => {
-        const row = $(el);
-        const qualityText = row.find('.quality, .estoque-lista-qualidadenome').text().toLowerCase();
+    $('.container-price-mkp').each((_, el) => {
+        const block = $(el);
+        const extraText = block.find('.container-extras span').text().trim();
+        const minText = block.find('.min .price').text().trim();
+        const avgText = block.find('.medium .price').text().trim();
         
-        // Quality check for Near Mint
-        if (qualityText.includes('nm') || qualityText.includes('near mint') || qualityText.includes('quase nova') || qualityText === 'm') {
-            const priceText = row.find('.price, .estoque-lista-precoestoque, a[href*="checkout"]').text();
-            const price = parseFirstPrice(priceText);
-            if (price !== null) {
-                nmPrices.push(price);
-            }
-        }
+        summaries.push({
+            extra: extraText || 'Normal',
+            minPrice: parseFirstPrice(minText),
+            avgPrice: parseFirstPrice(avgText)
+        });
     });
     
-    return nmPrices;
+    return summaries;
 }
 
 function selectExactOffer(offers: MypOffer[], filters: NormalizedFilters): MypOffer | null {
@@ -738,7 +859,32 @@ function buildLigaUrl(query: string, condition?: string | null, finish?: string 
 }
 
 function buildLigaSearchQuery(input: MarketLookupInput): string {
-    return cleanText(input.cardName || input.cardNumber || '');
+    const name = input.cardName || '';
+    const num = formatCardNumberForSearch(input.cardNumber);
+    if (!name) return num;
+    if (!num) return name;
+    return `${name} ${num}`;
+}
+
+function formatCardNumberForSearch(value?: string | null): string {
+    if (!value) return '';
+    // Remove # and parentheses
+    let cleaned = value.replace(/[()#]/g, '').trim();
+    
+    // Handle split numbers like 056/94 -> 056/094
+    const parts = cleaned.split('/');
+    if (parts.length === 2) {
+        return parts.map(p => {
+            const trimmed = p.trim();
+            // Pad to 3 digits only if it's purely numeric
+            if (/^\d+$/.test(trimmed)) {
+                return trimmed.padStart(3, '0');
+            }
+            return trimmed;
+        }).join('/');
+    }
+    
+    return cleaned;
 }
 
 function parseFirstPrice(value?: string | null): number | null {
@@ -761,7 +907,7 @@ function describeOffer(offer: MypOffer): string {
 }
 
 function normalizeCardNumber(value?: string | null): string {
-    const normalized = normalizeText(value).replace(/[()#]/g, '');
+    const normalized = normalizeText(value).replace(/[()#]/g, '').trim();
     if (!normalized) {
         return '';
     }
@@ -771,7 +917,8 @@ function normalizeCardNumber(value?: string | null): string {
         return normalized;
     }
 
-    const parts = matches.slice(0, 2).map((part) => part.replace(/^0+(?=\d)/, ''));
+    // For comparison, we always remove leading zeros to match 056/094 with 56/94
+    const parts = matches.slice(0, 2).map((part) => part.replace(/^0+(?=\d)/, '') || '0');
     return parts.join('/');
 }
 

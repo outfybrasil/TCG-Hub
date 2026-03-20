@@ -45,7 +45,9 @@ export default function UserNav() {
 
                 if (session?.user) {
                     setUser(session.user);
-                    await fetchBalances(session.user.id);
+                    if (session.user.email !== 'admin@tcghub.com.br') {
+                        await fetchBalances(session.user.id);
+                    }
                 }
             } catch (err) {
                 console.error('[UserNav] Error initializing auth:', err);
@@ -57,7 +59,9 @@ export default function UserNav() {
         const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
             if (session?.user) {
                 setUser(session.user);
-                void fetchBalances(session.user.id);
+                if (session.user.email !== 'admin@tcghub.com.br') {
+                    void fetchBalances(session.user.id);
+                }
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
                 setWalletBalance(0);
@@ -72,16 +76,17 @@ export default function UserNav() {
     }, []);
 
     const availableCredits = creditBalance - creditLocked;
+    const isAdmin = user?.email === 'admin@tcghub.com.br';
 
     return (
         <div className="flex items-center gap-2 sm:gap-3">
-            {user?.email === 'admin@tcghub.com.br' && (
+            {isAdmin && (
                 <Link href="/estoque" className="hidden rounded-full border border-white/80 bg-white/80 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 transition-all hover:border-rose-100 hover:text-rose-600 lg:block">
                     Admin
                 </Link>
             )}
 
-            {user && (
+            {user && !isAdmin && (
                 <div className="hidden h-9 items-center rounded-xl border border-rose-100 bg-rose-50 px-2 sm:flex transition-all hover:bg-rose-100 group" title="Cashback acumulado (Clique para ver detalhes)">
                     <div className="mr-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-200">
                         <span className="text-[12px] font-black relative">
@@ -93,7 +98,7 @@ export default function UserNav() {
                 </div>
             )}
 
-            {user && (
+            {user && !isAdmin && (
                 <Link href="/minha-conta/creditos" className="hidden h-9 items-center gap-1.5 rounded-xl border border-amber-100 bg-amber-50 px-2 transition-all hover:bg-amber-100 sm:flex" title="Créditos para Leilão">
                     <div className="flex h-5 w-7 items-center justify-center rounded-md bg-amber-500 font-black text-[9px] text-white shadow-sm">
                         CR
@@ -102,11 +107,13 @@ export default function UserNav() {
                 </Link>
             )}
 
-            {user && (
+            {user && !isAdmin && (
                 <Link href="/minha-conta/inventario" className="hidden h-9 items-center gap-2 rounded-xl border border-rose-100 bg-white px-3 transition-all hover:bg-rose-50 sm:flex" title="Seu Inventário Pessoal">
                     <span className="text-[9px] font-black uppercase tracking-[0.15em] text-rose-600">Inventário</span>
                 </Link>
             )}
+
+            {/* O botão "Criar Live" foi removido daqui para ficar dentro da área logada, reduzindo a poluição visual */}
 
             <Link href={user ? (user.email === 'admin@tcghub.com.br' ? '/admin/vendas' : '/minha-conta') : '/auth/login'} className="flex h-9 items-center rounded-xl border border-white/80 bg-white/80 px-4 text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)] transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600">
                 {user ? (user.email === 'admin@tcghub.com.br' ? 'Pedidos' : 'Conta') : 'Entrar'}

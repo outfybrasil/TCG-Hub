@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl =
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -16,10 +16,20 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
     );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+const globalForSupabase = globalThis as unknown as {
+    supabaseClient?: SupabaseClient;
+    supabaseAdminClient?: SupabaseClient;
+};
+
+export const supabase =
+    globalForSupabase.supabaseClient ??
+    (globalForSupabase.supabaseClient = createClient(supabaseUrl, supabaseKey));
 
 // Admin client that bypasses RLS (Server-side only)
-export const supabaseAdmin = createClient(
-    supabaseUrl,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey
-);
+export const supabaseAdmin =
+    globalForSupabase.supabaseAdminClient ??
+    (globalForSupabase.supabaseAdminClient = createClient(
+        supabaseUrl,
+        process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey
+    ));
+
