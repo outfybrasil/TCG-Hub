@@ -39,6 +39,17 @@ export default function CardOfertasPage({ params }: { params: Promise<{ id: stri
             setLoading(true);
             const decoded = decodeURIComponent(id);
 
+            // 1. O `id` da URL é o UUID da tabela `enriched_inventory`. 
+            // Precisamos descobrir qual é o `card_id` (ex: base1-1) e o `nome` real dessa carta
+            const { data: enrichedData } = await supabase
+                .from('enriched_inventory')
+                .select('card_id, name, official_name')
+                .eq('id', decoded)
+                .single();
+
+            const actualCardId = enrichedData?.card_id || decoded;
+            const actualCardName = enrichedData?.official_name || enrichedData?.name || decoded;
+
             let query = supabase
                 .from('seller_listings')
                 .select(`
@@ -55,18 +66,19 @@ export default function CardOfertasPage({ params }: { params: Promise<{ id: stri
                 .eq('status', 'active')
                 .gt('quantity', 0);
 
-            // Try by card_id first
+            // Tenta buscar pelo pokemon_card ID real primeiro
             const { data: byId } = await supabase
                 .from('seller_listings')
                 .select('id')
-                .eq('card_id', decoded)
+                .eq('card_id', actualCardId)
                 .eq('status', 'active')
                 .limit(1);
 
             if (byId && byId.length > 0) {
-                query = query.eq('card_id', decoded);
+                query = query.eq('card_id', actualCardId);
             } else {
-                query = query.ilike('card_name', `%${decoded}%`);
+                // Se não achar por ID, usa o nome da carta
+                query = query.ilike('card_name', `%${actualCardName}%`);
             }
 
             const { data, error } = await query.order('price', { ascending: true });

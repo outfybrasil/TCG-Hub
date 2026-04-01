@@ -60,6 +60,9 @@ export async function POST(req: Request) {
     if ('response' in auth) return auth.response;
 
     const userId = auth.user.id;
+    const userEmail = auth.user.email || '';
+    const userMetaName = auth.user.user_metadata?.full_name || auth.user.user_metadata?.name || '';
+    const defaultDisplayName = userMetaName || (userEmail ? userEmail.split('@')[0] : `Vendedor_${userId.substring(0, 5)}`);
 
     // Rate limiting: max 10 listagens por hora
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -117,7 +120,10 @@ export async function POST(req: Request) {
     // Criar perfil de vendedor se não existe ANTES da listagem (Foreign Key match)
     await supabaseAdmin
         .from('seller_profiles')
-        .upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true });
+        .upsert({ 
+            user_id: userId, 
+            display_name: defaultDisplayName 
+        }, { onConflict: 'user_id', ignoreDuplicates: true });
 
     const { data, error } = await supabaseAdmin
         .from('seller_listings')

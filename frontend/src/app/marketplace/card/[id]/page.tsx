@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { ArrowLeft, ShoppingCart, ShieldCheck } from 'lucide-react';
 import PriceChart from '@/components/PriceChart';
 import { useCart } from '@/context/CartContext';
@@ -225,20 +226,29 @@ export default function CardDetailsPage({ params }: { params: Promise<{ id: stri
                                 </div>
                             </div>
 
-                            <button
-                                onClick={() => addItem({
-                                    id: card.id,
-                                    name: displayName || 'Unknown',
-                                    price: card.price || 0,
-                                    imageUrl: card.image_url || card.official_image_url || '',
-                                    maxStock: card.quantity,
-                                })}
-                                disabled={isOutOfStock}
-                                className={`flex h-full min-h-[180px] flex-col items-center justify-center gap-4 rounded-[34px] px-8 text-center text-[11px] font-black uppercase tracking-[0.24em] transition-all ${isOutOfStock ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400' : 'border border-slate-950 bg-slate-950 text-white hover:bg-rose-600 hover:border-rose-600'}`}
-                            >
-                                <ShoppingCart className="h-6 w-6" />
-                                <span>{isOutOfStock ? 'Indisponivel' : 'Adicionar ao carrinho'}</span>
-                            </button>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={() => addItem({
+                                        id: card.id,
+                                        name: displayName || 'Unknown',
+                                        price: card.price || 0,
+                                        imageUrl: card.image_url || card.official_image_url || '',
+                                        maxStock: card.quantity,
+                                    })}
+                                    disabled={isOutOfStock}
+                                    className={`flex w-full flex-[2] flex-col items-center justify-center gap-3 rounded-[34px] px-8 text-center text-[10px] font-black uppercase tracking-[0.2em] transition-all ${isOutOfStock ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400' : 'border border-slate-950 bg-slate-950 text-white hover:bg-rose-600 hover:border-rose-600'}`}
+                                >
+                                    <ShoppingCart className="h-6 w-6" />
+                                    <span>{isOutOfStock ? 'Indisponivel' : 'Comprar da TCG Hub'}</span>
+                                </button>
+                                
+                                <Link 
+                                    href={`/marketplace/card/${id}/ofertas`}
+                                    className="flex w-full flex-1 min-h-[60px] items-center justify-center gap-2 rounded-[20px] border-2 border-emerald-100 bg-emerald-50 text-[10px] font-black uppercase tracking-[0.15em] text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 transition-colors"
+                                >
+                                    🤝 Ver ofertas de outros jogadores
+                                </Link>
+                            </div>
                         </div>
                     </div>
                 </section>
