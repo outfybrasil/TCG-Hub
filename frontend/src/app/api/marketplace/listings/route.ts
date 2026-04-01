@@ -9,8 +9,8 @@ const MAX_LISTINGS_PER_HOUR = 10;
 const MIN_PRICE = 0.5;
 
 const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
 );
 
 export async function GET(req: Request) {

@@ -27,17 +27,17 @@ export default function RootLayout({
 
             <nav className="sticky top-0 z-[100] border-b border-slate-100 bg-white/90 backdrop-blur-md">
               <div className="max-w-7xl mx-auto flex h-20 items-center justify-between px-6">
-                <div className="flex items-center space-x-10">
+                <div className="flex items-center space-x-4 xl:space-x-8">
                   <Link href="/" className="group flex items-center transition-opacity hover:opacity-80">
-                    <div className="mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-600 text-xl text-white shadow-lg shadow-rose-500/20">
+                    <div className="mr-2 sm:mr-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-600 text-xl text-white shadow-lg shadow-rose-500/20">
                       <span>⚡</span>
                     </div>
-                    <span className="text-2xl font-black uppercase tracking-tighter text-slate-900">
+                    <span className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-slate-900 hidden sm:block">
                       TCG<span className="text-rose-600"> Mega Store</span>
                     </span>
                   </Link>
 
-                  <div className="hidden items-center space-x-8 lg:flex">
+                  <div className="hidden items-center space-x-3 lg:flex">
                     <Link href="/marketplace" className="text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-rose-600">
                       Loja
                     </Link>
