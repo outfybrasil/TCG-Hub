@@ -114,6 +114,11 @@ export async function POST(req: Request) {
     // Anti-fraude: preço suspeitosamente baixo vs. mercado → criamos a listing mas marcamos para revisão
     // (implementação futura: integrar com API de preços)
 
+    // Criar perfil de vendedor se não existe ANTES da listagem (Foreign Key match)
+    await supabaseAdmin
+        .from('seller_profiles')
+        .upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true });
+
     const { data, error } = await supabaseAdmin
         .from('seller_listings')
         .insert({
@@ -141,11 +146,6 @@ export async function POST(req: Request) {
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    // Criar perfil de vendedor se não existe
-    await supabaseAdmin
-        .from('seller_profiles')
-        .upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true });
 
     return NextResponse.json({ listing: data }, { status: 201 });
 }
