@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 interface TcgSet {
     id: string;
     name: string;
-    logo?: string;
+    logo?: string | null;
     cards?: number;
 }
 
@@ -26,6 +26,30 @@ interface MarketSyncResponse {
     synced: number;
     failed: number;
     errors?: string[];
+}
+
+function normalizeSetName(set: Pick<TcgSet, 'id' | 'name'>) {
+    if (set.id === 'me01') {
+        return 'Megaevolucao - Equilibrio Perfeito';
+    }
+
+    return set.name;
+}
+
+function getSetImageSrc(asset?: string | null) {
+    if (!asset) {
+        return null;
+    }
+
+    if (asset.endsWith('/logo')) {
+        return `${asset}/logo.png`;
+    }
+
+    if (asset.endsWith('/symbol')) {
+        return `${asset}/symbol.png`;
+    }
+
+    return asset;
 }
 
 async function getAuthHeaders(headers: HeadersInit = {}) {
@@ -81,9 +105,24 @@ export default function SyncAdminPage() {
     useEffect(() => {
         const fetchSets = async () => {
             try {
-                const res = await fetch('https://api.tcgdex.net/v2/pt/sets');
-                const data = await res.json();
-                setSets(data.reverse());
+                const allRes = await fetch('https://api.tcgdex.net/v2/pt/sets');
+                const allData = await allRes.json();
+
+                if (!allRes.ok) {
+                    throw new Error('Falha ao carregar TCGdex.');
+                }
+
+                if (Array.isArray(allData)) {
+                    const normalizedAllSets = [...allData]
+                        .reverse()
+                        .map((set: { id: string; name: string; logo?: string | null; symbol?: string | null; cardCount?: { official?: number; total?: number } }) => ({
+                            id: set.id,
+                            name: normalizeSetName({ id: set.id, name: set.name }),
+                            logo: set.logo || set.symbol || null,
+                            cards: set.cardCount?.official || set.cardCount?.total || 0,
+                        }));
+                    setSets(normalizedAllSets);
+                }
             } catch {
                 setStatus('Erro ao carregar colecoes da TCGdex.');
             }
@@ -284,7 +323,7 @@ export default function SyncAdminPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-xl shadow-slate-200/50 h-fit">
                         <h2 className="text-xl font-black text-slate-900 tracking-tighter">Sincronizacao em lote</h2>
-                        <p className="text-slate-500 text-sm font-medium">Sincroniza as 5 colecoes mais recentes lancadas.</p>
+                        <p className="text-slate-500 text-sm font-medium">Sincroniza as 5 colecoes mais recentes da lista exibida abaixo.</p>
 
                         <button
                             onClick={() => void handleSync()}
@@ -421,6 +460,7 @@ export default function SyncAdminPage() {
                                 filteredSets.map((set) => {
                                     const isSynced = syncedSets.has(set.id);
                                     const isSelected = selectedSets.has(set.id);
+                                    const imageSrc = getSetImageSrc(set.logo);
 
                                     return (
                                         <div
@@ -438,7 +478,12 @@ export default function SyncAdminPage() {
 
                                                 <div className="flex items-center gap-3">
                                                     <div className="h-8 w-8 bg-white rounded-lg p-1 flex items-center justify-center border border-slate-100 shadow-sm">
-                                                        <img src={`${set.logo}/logo.png`} alt={set.name} className="max-h-full w-auto grayscale opacity-80" />
+                                                        {imageSrc ? (
+                                                            // eslint-disable-next-line @next/next/no-img-element
+                                                            <img src={imageSrc} alt={set.name} className="max-h-full w-auto grayscale opacity-80" />
+                                                        ) : (
+                                                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">Set</span>
+                                                        )}
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className={`text-[11px] font-bold leading-tight ${isSynced ? 'text-emerald-700' : 'text-slate-700'}`}>

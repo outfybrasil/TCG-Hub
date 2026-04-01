@@ -1,123 +1,131 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 
-export default function PrivacidadePage() {
+import { getBusinessRules } from '@/lib/business-rules-server';
+
+export default async function PrivacidadePage() {
+    const businessRules = await getBusinessRules();
+
     return (
-        <div className="max-w-4xl mx-auto px-6 py-32 min-h-screen text-slate-800 animate-fade-up">
-            <div className="mb-16 text-center space-y-4">
-                <span className="inline-block px-4 py-1.5 rounded-full bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest border border-slate-200">
-                    Documentação Legal
+        <div className="min-h-screen max-w-4xl animate-fade-up px-6 py-32 text-slate-800 mx-auto">
+            <div className="mb-16 space-y-4 text-center">
+                <span className="inline-block rounded-full border border-slate-200 bg-slate-100 px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-600">
+                    Documentacao Legal
                 </span>
                 <h1 className="text-5xl font-black tracking-tighter text-slate-900">
-                    Política de <span className="text-rose-600">Privacidade.</span>
+                    Politica de <span className="text-rose-600">Privacidade.</span>
                 </h1>
-                <p className="text-slate-500 font-medium text-sm">Atualizado em 05 de Março de 2026 • Em conformidade com a LGPD (Lei 13.709/18)</p>
+                <p className="text-sm font-medium text-slate-500">Atualizado em 01 de Abril de 2026 - Em conformidade com a LGPD (Lei 13.709/18)</p>
             </div>
 
-            <div className="bg-white border border-slate-200 p-8 sm:p-16 rounded-[50px] shadow-sm space-y-12 prose prose-slate max-w-none">
-
+            <div className="prose prose-slate max-w-none space-y-12 rounded-[50px] border border-slate-200 bg-white p-8 shadow-sm sm:p-16">
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">1. Introdução</h2>
-                    <p className="text-slate-600 leading-relaxed font-medium">
-                        A TCG Mega Store valoriza a sua privacidade. Esta Política de Privacidade explica como coletamos, usamos, armazenamos e protegemos seus dados pessoais ao utilizar nossa plataforma, em total conformidade com a Lei Geral de Proteção de Dados (LGPD).
+                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">1. Introducao</h2>
+                    <p className="font-medium leading-relaxed text-slate-600">
+                        A TCG Mega Store valoriza a sua privacidade. Esta Politica de Privacidade explica como coletamos, usamos, armazenamos e protegemos seus dados pessoais ao utilizar nossa plataforma, em conformidade com a Lei Geral de Protecao de Dados (LGPD).
                     </p>
                 </section>
 
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">2. Dados Coletados</h2>
-                    <p className="text-slate-600 leading-relaxed font-medium">Coletamos apenas os dados necessários para o funcionamento da loja e entrega de produtos:</p>
-                    <ul className="list-disc pl-6 space-y-2 text-slate-600 font-medium">
-                        <li><strong>Identificação:</strong> Nome completo, CPF (para emissão de nota fiscal se aplicável).</li>
+                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">2. Dados Coletados</h2>
+                    <p className="font-medium leading-relaxed text-slate-600">Coletamos apenas os dados necessarios para o funcionamento da loja e entrega de produtos:</p>
+                    <ul className="list-disc space-y-2 pl-6 font-medium text-slate-600">
+                        <li><strong>Identificacao:</strong> Nome completo, CPF e dados de cadastro necessarios para autenticacao e faturamento quando aplicavel.</li>
                         <li><strong>Contato:</strong> E-mail e telefone celular.</li>
-                        <li><strong>Entrega:</strong> Endereços residenciais ou comerciais fornecidos por você.</li>
-                        <li><strong>Financeiro:</strong> Dados de pagamento são processados de forma segura pelo Mercado Pago. Não armazenamos números de cartão em nossos servidores.</li>
+                        <li><strong>Entrega:</strong> Enderecos residenciais ou comerciais fornecidos por voce.</li>
+                        <li><strong>Financeiro:</strong> Dados de pagamento sao processados de forma segura pelo Mercado Pago. Nao armazenamos numeros de cartao em nossos servidores.</li>
                     </ul>
                 </section>
 
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">3. Finalidade do Tratamento</h2>
-                    <p className="text-slate-600 leading-relaxed font-medium">Usamos seus dados para:</p>
-                    <ul className="list-disc pl-6 space-y-2 text-slate-600 font-medium">
-                        <li>Processar e enviar seus pedidos de cartas Pokémon TCG.</li>
-                        <li>Gerenciar o seu saldo de Cashback em nossa carteira virtual.</li>
-                        <li>Enviar comunicações sobre o status do seu pedido.</li>
-                        <li>Garantir a segurança e prevenir fraudes em nossa plataforma.</li>
+                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">3. Finalidade do Tratamento</h2>
+                    <p className="font-medium leading-relaxed text-slate-600">Usamos seus dados para:</p>
+                    <ul className="list-disc space-y-2 pl-6 font-medium text-slate-600">
+                        <li>Processar e enviar seus pedidos de cartas Pokemon TCG.</li>
+                        <li>Gerenciar o seu saldo de cashback e creditos internos.</li>
+                        <li>Enviar comunicacoes sobre o status do seu pedido.</li>
+                        <li>Garantir a seguranca e prevenir fraudes em nossa plataforma.</li>
                     </ul>
                 </section>
 
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">4. Seus Direitos (LGPD)</h2>
-                    <p className="text-slate-600 leading-relaxed font-medium">Como titular dos dados, você tem direito a:</p>
-                    <ul className="list-disc pl-6 space-y-2 text-slate-600 font-medium">
-                        <li><strong>Confirmação e Acesso:</strong> Saber se tratamos seus dados e acessá-los.</li>
-                        <li><strong>Correção:</strong> Corrigir dados incompletos ou inexatos através da sua área "Minha Conta".</li>
-                        <li><strong>Portabilidade:</strong> Solicitar a exportação dos seus dados pessoais.</li>
-                        <li><strong>Eliminação:</strong> Solicitar a exclusão definitiva dos seus dados de nosso sistema.</li>
-                        <li><strong>Revogação do Consentimento:</strong> Descontinuar o uso de dados baseados em consentimento.</li>
+                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">4. Seus Direitos (LGPD)</h2>
+                    <p className="font-medium leading-relaxed text-slate-600">Como titular dos dados, voce tem direito a:</p>
+                    <ul className="list-disc space-y-2 pl-6 font-medium text-slate-600">
+                        <li><strong>Confirmacao e Acesso:</strong> Saber se tratamos seus dados e acessa-los.</li>
+                        <li><strong>Correcao:</strong> Corrigir dados incompletos ou inexatos pela area Minha Conta.</li>
+                        <li><strong>Portabilidade:</strong> Solicitar a exportacao dos seus dados pessoais.</li>
+                        <li><strong>Eliminacao:</strong> Solicitar a exclusao definitiva dos seus dados de nosso sistema, respeitadas as obrigacoes legais.</li>
+                        <li><strong>Revogacao do Consentimento:</strong> Descontinuar o uso de dados baseados em consentimento.</li>
                     </ul>
                 </section>
 
                 <section className="space-y-4">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">5. Segurança</h2>
-                    <p className="text-slate-600 leading-relaxed font-medium">
-                        Implementamos criptografia SSL de 256 bits, autenticação segura via Supabase Auth e monitoramento constante contra acessos não autorizados para garantir que seus ativos e dados estejam sempre blindados.
+                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">5. Seguranca</h2>
+                    <p className="font-medium leading-relaxed text-slate-600">
+                        Implementamos criptografia SSL, autenticacao segura via Supabase Auth e monitoramento constante contra acessos nao autorizados para proteger seus dados e transacoes.
                     </p>
                 </section>
 
-                <section className="space-y-4 pt-8 border-t border-slate-100">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-900 uppercase">6. Contato do Encarregado (DPO)</h2>
-                    <p className="text-slate-600 leading-relaxed font-medium">
-                        Para quaisquer dúvidas ou para exercer seus direitos, entre em contato com nosso Encarregado de Proteção de Dados através do canal de suporte oficial ou pelo e-mail: <span className="text-rose-600 font-black">privacidade@tcgmegastore.com.br</span>
+                <section className="space-y-4 border-t border-slate-100 pt-8">
+                    <h2 className="text-2xl font-black uppercase tracking-tight text-slate-900">6. Contato do Encarregado (DPO)</h2>
+                    <p className="font-medium leading-relaxed text-slate-600">
+                        Para duvidas ou para exercer seus direitos, entre em contato com o canal de suporte oficial ou pelo e-mail <span className="font-black text-rose-600">privacidade@tcgmegastore.com.br</span>.
                     </p>
                 </section>
 
-                <section id="termos" className="space-y-4 pt-12 border-t border-slate-100">
-                    <h2 className="text-3xl font-black tracking-tighter text-slate-900 uppercase underline decoration-rose-600 decoration-4 underline-offset-8 mb-8">Termos de Uso</h2>
+                <section id="termos" className="space-y-4 border-t border-slate-100 pt-12">
+                    <h2 className="mb-8 text-3xl font-black uppercase tracking-tighter text-slate-900 underline decoration-4 decoration-rose-600 underline-offset-8">Termos de Uso</h2>
 
                     <div className="space-y-8">
                         <div className="space-y-4">
-                            <h3 className="text-xl font-black tracking-tight text-slate-900 uppercase">1. Aceitação dos Termos</h3>
-                            <p className="text-slate-600 leading-relaxed font-medium">
-                                Ao acessar a TCG Mega Store, você concorda em cumprir estes termos de serviço, todas as leis e regulamentos aplicáveis. Se você não concordar com algum destes termos, está proibido de usar ou acessar este site.
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">1. Aceitacao dos Termos</h3>
+                            <p className="font-medium leading-relaxed text-slate-600">
+                                Ao acessar a TCG Mega Store, voce concorda em cumprir estes termos de servico, todas as leis e regulamentos aplicaveis. Se nao concordar com algum destes termos, nao utilize a plataforma.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-black tracking-tight text-slate-900 uppercase">2. Uso de Licença</h3>
-                            <p className="text-slate-600 leading-relaxed font-medium">
-                                É concedida permissão para baixar temporariamente uma cópia dos materiais (informações ou software) no site da TCG Mega Store, apenas para visualização transitória pessoal e não comercial.
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">2. Uso da Plataforma</h3>
+                            <p className="font-medium leading-relaxed text-slate-600">
+                                O acesso aos materiais, catalogo, leiloes, creditos e servicos do site deve ocorrer de forma licita, pessoal e compativel com as regras publicadas em cada fluxo da plataforma.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-black tracking-tight text-slate-900 uppercase">3. Isenção de Responsabilidade</h3>
-                            <p className="text-slate-600 leading-relaxed font-medium">
-                                Os materiais no site da TCG Mega Store são fornecidos "como estão". Não oferecemos garantias, expressas ou implícitas, e por este meio isentamos e negamos todas as outras garantias, incluindo, sem limitação, garantias implícitas ou condições de comercialização.
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">3. Isencao de Responsabilidade</h3>
+                            <p className="font-medium leading-relaxed text-slate-600">
+                                Os materiais no site sao fornecidos no estado em que se encontram. Nao oferecemos garantias alem das previstas em lei e das politicas comerciais expressamente divulgadas na plataforma.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-black tracking-tight text-slate-900 uppercase">4. Limitações</h3>
-                            <p className="text-slate-600 leading-relaxed font-medium">
-                                Em nenhum caso a TCG Mega Store ou seus fornecedores serão responsáveis por quaisquer danos (incluindo, sem limitação, danos por perda de dados ou lucro ou devido a interrupção dos negócios) decorrentes do uso ou da incapacidade de usar os materiais.
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">4. Limitacoes</h3>
+                            <p className="font-medium leading-relaxed text-slate-600">
+                                Em nenhum caso a TCG Mega Store ou seus fornecedores serao responsaveis por danos decorrentes do uso indevido da plataforma, indisponibilidades de terceiros ou informacoes incorretas fornecidas pelo proprio usuario.
                             </p>
                         </div>
 
                         <div className="space-y-4">
-                            <h3 className="text-xl font-black tracking-tight text-slate-900 uppercase">5. Propriedade Intelectual</h3>
-                            <p className="text-slate-600 leading-relaxed font-medium">
-                                Pokémon TCG e suas respectivas marcas, logos e artes são propriedades da The Pokémon Company. A TCG Mega Store é uma plataforma de revenda e gestão de ativos colecionáveis de terceiros.
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">5. Propriedade Intelectual</h3>
+                            <p className="font-medium leading-relaxed text-slate-600">
+                                Pokemon TCG e suas respectivas marcas, logos e artes sao propriedades da The Pokemon Company. A TCG Mega Store atua como plataforma de revenda e gestao de itens colecionaveis de terceiros.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-xl font-black uppercase tracking-tight text-slate-900">6. Estornos de Creditos</h3>
+                            <p className="font-medium leading-relaxed text-slate-600">
+                                Solicitacoes de devolucao de creditos para o mesmo meio de pagamento original estao sujeitas a taxa administrativa de {businessRules.creditRefundFeePercentage}% sobre o valor solicitado. O processamento do estorno pode levar ate {businessRules.creditRefundProcessingHours} horas apos a confirmacao da solicitacao.
                             </p>
                         </div>
                     </div>
                 </section>
 
-                <div className="pt-10 flex justify-center">
+                <div className="flex justify-center pt-10">
                     <Link href="/">
-                        <button className="h-14 px-10 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all">
-                            Voltar para a Início
+                        <button className="h-14 rounded-2xl bg-slate-900 px-10 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-rose-600">
+                            Voltar para a Inicio
                         </button>
                     </Link>
                 </div>

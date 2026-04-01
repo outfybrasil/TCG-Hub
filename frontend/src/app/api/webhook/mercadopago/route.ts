@@ -83,11 +83,41 @@ async function handleWebhook(req: Request) {
         const description: string = mpPayment.description || '';
         const externalReference = mpPayment.external_reference || '';
         const metadata = mpPayment.metadata || {};
+        const paymentIdValue = String(mpPayment.id || paymentId);
+
+        // --- P2P Seller Order ---
+        const isSellerOrder = externalReference.startsWith('seller_order_') ||
+            metadata.order_type === 'seller_p2p';
+
+        if (isSellerOrder) {
+            const orderId = externalReference.startsWith('seller_order_')
+                ? externalReference.replace('seller_order_', '')
+                : metadata.order_id;
+
+            if (orderId && mpPayment.status === 'approved') {
+                const { error: rpcErr } = await supabaseAdmin.rpc('approve_seller_order', {
+                    p_order_id: orderId,
+                    p_mp_payment_id: paymentIdValue,
+                });
+                if (rpcErr) {
+                    console.error('Error approving seller order:', rpcErr);
+                }
+            } else if (orderId && ['refunded', 'cancelled'].includes(mpPayment.status)) {
+                await supabaseAdmin
+                    .from('seller_orders')
+                    .update({ status: mpPayment.status === 'refunded' ? 'refunded' : 'cancelled' })
+                    .eq('id', orderId)
+                    .eq('status', 'pending');
+            }
+
+            return NextResponse.json({ received: true });
+        }
+
+        // --- Credit deposit or standard purchase ---
         const purchaseId = externalReference.startsWith('purchase_')
             ? externalReference.replace('purchase_', '')
             : (metadata.purchase_id || metadata.purchaseId);
         const userIdMetadata = metadata.user_id || metadata.userId;
-        const paymentIdValue = String(mpPayment.id || paymentId);
 
         const isCredit = !purchaseId && (
             externalReference.startsWith('user_') ||

@@ -44,6 +44,9 @@ export default function RootLayout({
                     <Link href="/leilao" className="text-[11px] font-black uppercase tracking-widest text-slate-400 transition-all hover:text-rose-600">
                       Leilões
                     </Link>
+                    <Link href="/vender" className="text-[11px] font-black uppercase tracking-widest text-emerald-600 transition-all hover:text-emerald-700 flex items-center gap-1.5 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                      💰 Vender
+                    </Link>
                     <Link href="/lives" className="text-[11px] font-black uppercase tracking-widest text-rose-500 transition-all hover:text-rose-600 flex items-center gap-1.5 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100">
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                       Ao Vivo

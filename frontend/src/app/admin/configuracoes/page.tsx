@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import React, { useCallback, useEffect, useState } from 'react';
+
 import AdminGuard from '@/components/AdminGuard';
+import { DEFAULT_BUSINESS_RULES, type BusinessRules } from '@/lib/business-rules';
+import { supabase } from '@/lib/supabase';
 
 interface OriginAddress {
     name: string;
@@ -20,30 +22,35 @@ interface OriginAddress {
 
 export default function AdminSettingsPage() {
     const [token, setToken] = useState('');
+    const [businessRules, setBusinessRules] = useState<BusinessRules>(DEFAULT_BUSINESS_RULES);
     const [origin, setOrigin] = useState<OriginAddress>({
-        name: '', phone: '', email: '', company: 'TCG Mega Store',
-        address: '', complement: '', number: '', district: '',
-        city: '', state_abbr: '', postal_code: '',
+        name: '',
+        phone: '',
+        email: '',
+        company: 'TCG Mega Store',
+        address: '',
+        complement: '',
+        number: '',
+        district: '',
+        city: '',
+        state_abbr: '',
+        postal_code: '',
     });
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
 
-    useEffect(() => {
-        loadSettings();
-    }, []);
-
     const getAuthHeaders = async (headers: HeadersInit = {}) => {
         const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+        const authToken = session?.access_token;
 
         return {
             ...headers,
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         };
     };
 
-    const loadSettings = async () => {
+    const loadSettings = useCallback(async () => {
         try {
             const res = await fetch('/api/admin/settings', {
                 headers: await getAuthHeaders(),
@@ -54,26 +61,38 @@ export default function AdminSettingsPage() {
                 throw new Error(data.error || 'Erro ao carregar configuracoes.');
             }
 
-            if (data.token) setToken(String(data.token));
+            if (data.token) {
+                setToken(String(data.token));
+            }
+
             if (data.origin && typeof data.origin === 'object') {
-                setOrigin(prev => ({ ...prev, ...(data.origin as OriginAddress) }));
+                setOrigin((prev) => ({ ...prev, ...(data.origin as OriginAddress) }));
+            }
+
+            if (data.businessRules && typeof data.businessRules === 'object') {
+                setBusinessRules((prev) => ({ ...prev, ...(data.businessRules as BusinessRules) }));
             }
         } catch (error) {
             console.error(error);
-            alert('Erro ao carregar configuraÃ§Ãµes.');
+            alert('Erro ao carregar configuracoes.');
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        void loadSettings();
+    }, [loadSettings]);
 
     const handleSave = async () => {
         setSaving(true);
         setSaved(false);
+
         try {
             const res = await fetch('/api/admin/settings', {
                 method: 'PATCH',
                 headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ token, origin }),
+                body: JSON.stringify({ token, origin, businessRules }),
             });
             const data = await res.json().catch(() => null);
 
@@ -84,48 +103,56 @@ export default function AdminSettingsPage() {
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
         } catch {
-            alert('Erro ao salvar configurações.');
+            alert('Erro ao salvar configuracoes.');
         } finally {
             setSaving(false);
         }
     };
 
     const updateOrigin = (key: keyof OriginAddress, value: string) => {
-        setOrigin(prev => ({ ...prev, [key]: value }));
+        setOrigin((prev) => ({ ...prev, [key]: value }));
     };
 
-    const inputClass = "w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 outline-none transition-all placeholder:text-slate-300";
-    const labelClass = "text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block";
+    const updateBusinessRules = (key: keyof BusinessRules, value: string) => {
+        setBusinessRules((prev) => ({
+            ...prev,
+            [key]: value === '' ? DEFAULT_BUSINESS_RULES[key] : Number(value),
+        }));
+    };
 
-    if (loading) return (
-        <AdminGuard>
-            <div className="max-w-4xl mx-auto px-6 py-12 animate-pulse text-center text-slate-400">
-                Carregando configurações...
-            </div>
-        </AdminGuard>
-    );
+    const inputClass = 'w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 outline-none transition-all placeholder:text-slate-300';
+    const labelClass = 'text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block';
+
+    if (loading) {
+        return (
+            <AdminGuard>
+                <div className="max-w-4xl mx-auto px-6 py-12 animate-pulse text-center text-slate-400">
+                    Carregando configuracoes...
+                </div>
+            </AdminGuard>
+        );
+    }
 
     return (
         <AdminGuard>
             <div className="max-w-4xl mx-auto px-6 py-12 animate-fade-up">
                 <div className="mb-12 space-y-4">
-                    <div className="inline-flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-rose-100 bg-rose-50 px-3 py-1">
                         <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
-                        <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Painel Administrativo</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-rose-600">Painel Administrativo</span>
                     </div>
-                    <h1 className="text-5xl font-black tracking-tighter text-slate-900 uppercase">
-                        Configura<span className="text-rose-600">ções.</span>
+                    <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-900">
+                        Configura<span className="text-rose-600">coes.</span>
                     </h1>
                 </div>
 
                 <div className="space-y-8">
-                    {/* Melhor Envio Token */}
-                    <div className="bg-white border border-slate-100 rounded-[32px] p-8 space-y-6 shadow-sm">
+                    <div className="space-y-6 rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
                         <div className="flex items-center gap-3">
-                            <span className="text-xl">📦</span>
+                            <span className="text-xl">API</span>
                             <div>
-                                <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Melhor Envio</h2>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Token de integração para geração de etiquetas</p>
+                                <h2 className="text-sm font-black uppercase tracking-tight text-slate-900">Melhor Envio</h2>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Token de integracao para geracao de etiquetas</p>
                             </div>
                         </div>
                         <div>
@@ -133,96 +160,137 @@ export default function AdminSettingsPage() {
                             <input
                                 type="password"
                                 value={token}
-                                onChange={e => setToken(e.target.value)}
+                                onChange={(e) => setToken(e.target.value)}
                                 placeholder="Cole seu token do Melhor Envio aqui"
                                 className={inputClass}
                             />
-                            <p className="text-[8px] font-bold text-slate-300 mt-2">
-                                Obtenha em: melhorenvio.com.br → Configurações → Tokens de acesso
+                            <p className="mt-2 text-[8px] font-bold text-slate-300">
+                                Obtenha em: melhorenvio.com.br - Configuracoes - Tokens de acesso
                             </p>
                         </div>
                     </div>
 
-                    {/* Origin Address */}
-                    <div className="bg-white border border-slate-100 rounded-[32px] p-8 space-y-6 shadow-sm">
+                    <div className="space-y-6 rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
                         <div className="flex items-center gap-3">
-                            <span className="text-xl">🏠</span>
+                            <span className="text-xl">R$</span>
                             <div>
-                                <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight">Endereço de Origem</h2>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Remetente padrão para todas as etiquetas</p>
+                                <h2 className="text-sm font-black uppercase tracking-tight text-slate-900">Regras Comerciais</h2>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Taxa e prazo para estorno de creditos</p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                <label className={labelClass}>Nome do Responsável</label>
-                                <input value={origin.name} onChange={e => updateOrigin('name', e.target.value)} placeholder="Nome completo" className={inputClass} />
+                                <label className={labelClass}>Taxa de Estorno (%)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={businessRules.creditRefundFeePercentage}
+                                    onChange={(e) => updateBusinessRules('creditRefundFeePercentage', e.target.value)}
+                                    placeholder="5"
+                                    className={inputClass}
+                                />
+                                <p className="mt-2 text-[8px] font-bold text-slate-300">
+                                    Percentual descontado do valor solicitado antes da devolucao.
+                                </p>
                             </div>
                             <div>
-                                <label className={labelClass}>Empresa</label>
-                                <input value={origin.company} onChange={e => updateOrigin('company', e.target.value)} placeholder="TCG Mega Store" className={inputClass} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>E-mail</label>
-                                <input type="email" value={origin.email} onChange={e => updateOrigin('email', e.target.value)} placeholder="contato@email.com" className={inputClass} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Telefone</label>
-                                <input value={origin.phone} onChange={e => updateOrigin('phone', e.target.value)} placeholder="(11) 99999-9999" className={inputClass} />
-                            </div>
-                        </div>
-
-                        <div className="h-[1px] bg-slate-100" />
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="md:col-span-2">
-                                <label className={labelClass}>Endereço</label>
-                                <input value={origin.address} onChange={e => updateOrigin('address', e.target.value)} placeholder="Rua / Avenida" className={inputClass} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Número</label>
-                                <input value={origin.number} onChange={e => updateOrigin('number', e.target.value)} placeholder="123" className={inputClass} />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className={labelClass}>Complemento</label>
-                                <input value={origin.complement} onChange={e => updateOrigin('complement', e.target.value)} placeholder="Sala, Bloco" className={inputClass} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Bairro</label>
-                                <input value={origin.district} onChange={e => updateOrigin('district', e.target.value)} placeholder="Bairro" className={inputClass} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>CEP</label>
-                                <input value={origin.postal_code} onChange={e => updateOrigin('postal_code', e.target.value)} placeholder="00000-000" className={inputClass} />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className={labelClass}>Cidade</label>
-                                <input value={origin.city} onChange={e => updateOrigin('city', e.target.value)} placeholder="São Paulo" className={inputClass} />
-                            </div>
-                            <div>
-                                <label className={labelClass}>Estado (UF)</label>
-                                <input value={origin.state_abbr} onChange={e => updateOrigin('state_abbr', e.target.value)} placeholder="SP" maxLength={2} className={inputClass} />
+                                <label className={labelClass}>Prazo Maximo de Estorno (horas)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={businessRules.creditRefundProcessingHours}
+                                    onChange={(e) => updateBusinessRules('creditRefundProcessingHours', e.target.value)}
+                                    placeholder="48"
+                                    className={inputClass}
+                                />
+                                <p className="mt-2 text-[8px] font-bold text-slate-300">
+                                    Prazo exibido ao cliente para conclusao do estorno.
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Save Button */}
+                    <div className="space-y-6 rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <span className="text-xl">Origem</span>
+                            <div>
+                                <h2 className="text-sm font-black uppercase tracking-tight text-slate-900">Endereco de Origem</h2>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Remetente padrao para todas as etiquetas</p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <label className={labelClass}>Nome do Responsavel</label>
+                                <input value={origin.name} onChange={(e) => updateOrigin('name', e.target.value)} placeholder="Nome completo" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Empresa</label>
+                                <input value={origin.company} onChange={(e) => updateOrigin('company', e.target.value)} placeholder="TCG Mega Store" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>E-mail</label>
+                                <input type="email" value={origin.email} onChange={(e) => updateOrigin('email', e.target.value)} placeholder="contato@email.com" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Telefone</label>
+                                <input value={origin.phone} onChange={(e) => updateOrigin('phone', e.target.value)} placeholder="(11) 99999-9999" className={inputClass} />
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-slate-100" />
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div className="md:col-span-2">
+                                <label className={labelClass}>Endereco</label>
+                                <input value={origin.address} onChange={(e) => updateOrigin('address', e.target.value)} placeholder="Rua / Avenida" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Numero</label>
+                                <input value={origin.number} onChange={(e) => updateOrigin('number', e.target.value)} placeholder="123" className={inputClass} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <div>
+                                <label className={labelClass}>Complemento</label>
+                                <input value={origin.complement} onChange={(e) => updateOrigin('complement', e.target.value)} placeholder="Sala, Bloco" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Bairro</label>
+                                <input value={origin.district} onChange={(e) => updateOrigin('district', e.target.value)} placeholder="Bairro" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>CEP</label>
+                                <input value={origin.postal_code} onChange={(e) => updateOrigin('postal_code', e.target.value)} placeholder="00000-000" className={inputClass} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <label className={labelClass}>Cidade</label>
+                                <input value={origin.city} onChange={(e) => updateOrigin('city', e.target.value)} placeholder="Sao Paulo" className={inputClass} />
+                            </div>
+                            <div>
+                                <label className={labelClass}>Estado (UF)</label>
+                                <input value={origin.state_abbr} onChange={(e) => updateOrigin('state_abbr', e.target.value)} placeholder="SP" maxLength={2} className={inputClass} />
+                            </div>
+                        </div>
+                    </div>
+
                     <div className="flex justify-end">
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className={`h-14 px-10 font-black uppercase tracking-widest text-[10px] rounded-2xl shadow-lg transition-all active:scale-95 disabled:opacity-50 ${saved
-                                    ? 'bg-emerald-500 text-white shadow-emerald-500/30'
-                                    : 'bg-slate-900 text-white hover:bg-rose-600 shadow-slate-900/20'
+                            className={`h-14 rounded-2xl px-10 text-[10px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 disabled:opacity-50 ${saved
+                                ? 'bg-emerald-500 text-white shadow-emerald-500/30'
+                                : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-rose-600'
                                 }`}
                         >
-                            {saving ? 'Salvando...' : saved ? '✓ Salvo com Sucesso' : 'Salvar Configurações'}
+                            {saving ? 'Salvando...' : saved ? 'Salvo com sucesso' : 'Salvar configuracoes'}
                         </button>
                     </div>
                 </div>
