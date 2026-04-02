@@ -13,6 +13,7 @@ export default function RegisterPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [cpf, setCpf] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
 
 
@@ -26,6 +27,10 @@ export default function RegisterPage() {
         }
         if (password.length < 8) {
             setError('A senha deve ter no mínimo 8 caracteres.');
+            return;
+        }
+        if (!termsAccepted) {
+            setError('Você precisa ler e aceitar os Termos e Condições para criar sua conta.');
             return;
         }
 
@@ -181,6 +186,27 @@ export default function RegisterPage() {
                                 <p className="text-[9px] font-black text-rose-600 uppercase tracking-wide">{error}</p>
                             </div>
                         )}
+
+                        {/* Termos de Uso Checkbox */}
+                        <div className="pt-2 pb-1">
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <div className="relative flex items-center justify-center mt-0.5">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={termsAccepted}
+                                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                                        className="peer appearance-none w-5 h-5 border-2 border-slate-200 rounded-lg checked:bg-rose-600 checked:border-rose-600 outline-none transition-all cursor-pointer"
+                                    />
+                                    <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 placeholder:transition-opacity pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                                <span className="text-[11px] font-bold text-slate-500 leading-tight pt-0.5">
+                                    Li, compreendi e concordo integralmente com os <br className="hidden sm:block"/>
+                                    <a href="/termos" target="_blank" className="text-rose-600 hover:text-rose-700 underline underline-offset-2">Termos e Condições de Uso</a> da plataforma.
+                                </span>
+                            </label>
+                        </div>
 
                         {/* Google Login Button */}
                         <div className="pt-2">
