@@ -39,8 +39,8 @@ export async function POST(request: Request) {
                 setsSynced: setsToSync.map((s: { name: string }) => s.name)
             });
         }
-    } catch (error) {
-        const msg = error instanceof Error ? error.message : 'Erro desconhecido';
+    } catch (error: any) {
+        const msg = error?.message || (typeof error === 'string' ? error : JSON.stringify(error)) || 'Erro desconhecido';
         return NextResponse.json({ success: false, error: msg }, { status: 500 });
     }
 }
@@ -90,8 +90,8 @@ async function syncSet(setId: string) {
         if (error) throw error;
 
         return { success: true, count: cardsToInsert.length };
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erro desconhecido';
+    } catch (err: any) {
+        const msg = err?.message || (typeof err === 'string' ? err : JSON.stringify(err)) || 'Erro desconhecido';
         console.error(`Erro ao sincronizar set ${setId}:`, err);
         return { success: false, error: msg };
     }
