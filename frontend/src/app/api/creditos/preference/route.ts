@@ -38,7 +38,7 @@ export async function POST(req: Request) {
         }
 
         const userId = auth.user.id;
-        const email = auth.user.email || 'guest@tcghub.com.br';
+        const email = auth.user.email || 'guest@tcg-megastore.com.br';
 
         const host = req.headers.get('host') || 'localhost:3000';
         const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
@@ -57,8 +57,8 @@ export async function POST(req: Request) {
                     installments: 12,
                 },
                 items: [{
-                    id: 'creditos-tcg-hub',
-                    title: 'DepÃ³sito de CrÃ©ditos TCG Hub',
+                    id: 'creditos-tcg-megastore',
+                    title: 'Depósito de Créditos TCG MEGASTORE',
                     quantity: 1,
                     unit_price: Number(amount),
                     currency_id: 'BRL',
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
                     failure: `${baseUrl}/minha-conta/creditos?status=failure`,
                 },
                 auto_return: 'approved',
-                statement_descriptor: 'TCG HUB CREDITOS',
+                statement_descriptor: 'TCGMEGASTORECRED',
                 external_reference: userId,
                 metadata: {
                     user_id: userId,

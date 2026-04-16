@@ -7,25 +7,25 @@ import { useAuctions } from '@/hooks/useAuctions';
 import AuctionCard from '@/components/AuctionCard';
 
 const RuleItem = ({ icon, title, desc }: { icon: string, title: string, desc: string }) => (
-    <div className="flex gap-4 group/rule bg-white/50 backdrop-blur-sm p-6 rounded-[32px] border border-slate-100 hover:border-rose-200 hover:bg-rose-50/50 transition-all duration-300 shadow-sm">
-        <div className="h-12 w-12 shrink-0 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-xl shadow-sm group-hover/rule:scale-110 transition-transform">
+    <div className="flex gap-4 group/rule bg-white/5 backdrop-blur-xl p-6 rounded-[32px] border border-white/5 hover:border-rose-500/40 hover:bg-white/10 transition-all duration-300 shadow-sm">
+        <div className="h-12 w-12 shrink-0 bg-white/10 border border-white/10 rounded-2xl flex items-center justify-center text-xl shadow-sm group-hover/rule:scale-110 transition-transform">
             {icon}
         </div>
         <div className="space-y-1">
-            <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest">{title}</h4>
-            <p className="text-[10px] text-slate-400 font-bold leading-relaxed uppercase tracking-tight">{desc}</p>
+            <h4 className="text-[11px] font-black text-white uppercase tracking-widest">{title}</h4>
+            <p className="text-[10px] text-slate-500 font-bold leading-relaxed uppercase tracking-tight">{desc}</p>
         </div>
     </div>
 );
 
 function AuctionSkeleton() {
     return (
-        <div className="bg-white border border-slate-100 rounded-[30px] overflow-hidden animate-pulse">
-            <div className="aspect-square bg-slate-100 rounded-t-[24px]" />
+        <div className="bg-[#191f31]/60 border border-white/5 rounded-[30px] overflow-hidden animate-pulse">
+            <div className="aspect-square bg-white/5 rounded-t-[24px]" />
             <div className="p-6 space-y-4">
-                <div className="h-3 bg-slate-100 rounded w-1/3" />
-                <div className="h-5 bg-slate-100 rounded w-3/4" />
-                <div className="h-10 bg-slate-50 rounded-xl" />
+                <div className="h-3 bg-white/5 rounded w-1/3" />
+                <div className="h-5 bg-white/5 rounded w-3/4" />
+                <div className="h-10 bg-white/5 rounded-xl" />
             </div>
         </div>
     );
@@ -59,7 +59,7 @@ export default function AuctionPage() {
             }
 
             // Permissão concedida! Vamos notificar no navegador para testar.
-            new Notification('TCG Hub - Alertas Ativados!', {
+            new Notification('TCG MEGASTORE - Alertas Ativados!', {
                 body: 'Você será avisado assim que novos Super Leilões começarem.',
                 icon: '/favicon.ico'
             });
@@ -95,20 +95,20 @@ export default function AuctionPage() {
     const ended = auctions.filter(a => a.status === 'ended' || new Date(a.endsAt) <= new Date());
 
     return (
-        <div className="max-w-7xl mx-auto px-6 py-12 animate-fade-up border-t border-slate-50">
+        <div className="max-w-7xl mx-auto px-6 py-12 animate-fade-up border-t border-white/5">
 
             {/* Header */}
-            <div className="flex flex-col lg:flex-row justify-between items-start gap-12 mb-20 border-b border-slate-200 pb-12">
+            <div className="flex flex-col lg:flex-row justify-between items-start gap-12 mb-20 border-b border-white/5 pb-12">
                 <div className="space-y-6 flex-1">
                     <div className="space-y-4">
-                        <div className="inline-flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                        <div className="inline-flex items-center gap-2 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
                             <span className="h-1.5 w-1.5 rounded-full bg-rose-600 animate-pulse" />
-                            <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Leilões ao Vivo via Secure Stream</span>
+                            <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Leilões ao Vivo via Secure Stream</span>
                         </div>
-                        <h1 className="text-5xl font-black tracking-tighter text-slate-900 leading-none">
+                        <h1 className="text-5xl font-black tracking-tighter text-white leading-none">
                             Leilão Exclusivo <span className="text-rose-600">Loja.</span>
                         </h1>
-                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest max-w-lg">
+                        <p className="text-slate-500 font-bold text-xs uppercase tracking-widest max-w-lg">
                             Oportunidades únicas de aquisição para membros da nossa comunidade.
                         </p>
                     </div>
@@ -132,11 +132,11 @@ export default function AuctionPage() {
 
                 <div className="flex gap-12 pt-8 lg:pt-0">
                     <div className="space-y-1">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Leilões Ativos</span>
-                        <p className="text-2xl font-black text-slate-900 tracking-tighter">{loading ? '—' : active.length}</p>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Leilões Ativos</span>
+                        <p className="text-2xl font-black text-white tracking-tighter">{loading ? '—' : active.length}</p>
                     </div>
                     <div className="space-y-1 text-right">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Volume Total</span>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Volume Total</span>
                         <p className="text-2xl font-black text-rose-600 tracking-tighter">
                             {loading ? '—' : `R$ ${(auctions.reduce((s, a) => s + a.currentBid, 0) / 1000).toFixed(1)}K`}
                         </p>
@@ -170,8 +170,8 @@ export default function AuctionPage() {
             {!loading && ended.length > 0 && (
                 <div className="mt-24 space-y-8">
                     <div className="flex items-center gap-6">
-                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 whitespace-nowrap">Leilões Encerrados</h2>
-                        <div className="h-[1px] flex-1 bg-slate-100" />
+                        <h2 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 whitespace-nowrap">Leilões Encerrados</h2>
+                        <div className="h-[1px] flex-1 bg-white/5" />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {ended.map(a => <AuctionCard key={a.id} auction={a} />)}
@@ -198,17 +198,17 @@ export default function AuctionPage() {
             </div>
 
             {/* General Rules Section */}
-            <div id="regras" className="mt-24 pt-12 border-t border-slate-100 animate-fade-up">
-                <div className="bg-slate-50/50 border border-slate-100 p-10 md:p-16 rounded-[60px] space-y-12">
+            <div id="regras" className="mt-24 pt-12 border-t border-white/5 animate-fade-up">
+                <div className="bg-[#191f31]/60 backdrop-blur-xl border border-white/5 p-10 md:p-16 rounded-[60px] space-y-12 shadow-2xl">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div className="space-y-4">
-                            <div className="inline-flex items-center gap-2 bg-rose-50 px-3 py-1 rounded-full border border-rose-100">
+                            <div className="inline-flex items-center gap-2 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
                                 <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
-                                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Protocolo de Segurança</span>
+                                <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Protocolo de Segurança</span>
                             </div>
-                            <h2 className="text-4xl font-black uppercase tracking-tighter text-slate-900 leading-none">Regras <span className="text-rose-600">Gerais.</span></h2>
+                            <h2 className="text-4xl font-black uppercase tracking-tighter text-white leading-none">Regras <span className="text-rose-600">Gerais.</span></h2>
                         </div>
-                        <p className="max-w-md text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                        <p className="max-w-md text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
                             Para garantir a melhor experiência em nossa plataforma, todos os usuários devem seguir as diretrizes abaixo.
                         </p>
                     </div>
@@ -232,7 +232,7 @@ export default function AuctionPage() {
                         <RuleItem
                             icon="💳"
                             title="Saldo em Créditos"
-                            desc="Necessário saldo em conta TCG Hub para cobrir o valor total do lance realizado."
+                            desc="Necessário saldo em conta TCG MEGASTORE para cobrir o valor total do lance realizado."
                         />
                     </div>
                 </div>

@@ -56,7 +56,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
     };
 
     return (
-        <div className={`group relative bg-white border border-slate-200 p-6 transition-all hover:border-rose-500/50 hover:shadow-[0_20px_50px_rgba(0,0,0,0.05)] hover:-translate-y-1.5 rounded-[2rem] overflow-hidden ${isOutOfStock ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+        <div className={`group relative bg-[#191f31]/60 backdrop-blur-xl border border-white/5 p-6 transition-all hover:border-rose-500/50 hover:shadow-[0_20px_50px_rgba(225,29,72,0.1)] hover:-translate-y-1.5 rounded-[2rem] overflow-hidden ${isOutOfStock ? 'opacity-75 grayscale-[0.5]' : ''}`}>
 
             {/* Header Info: Promo, Finish & Grade */}
             <div className="flex justify-between items-start mb-4 px-1">
@@ -111,7 +111,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
             </div>
 
             {/* Card Artwork Container */}
-            <Link href={`/marketplace/card/${id}`} className="block relative aspect-[3/4] overflow-hidden mb-6 bg-slate-50 border border-slate-100 rounded-2xl cursor-pointer">
+            <Link href={`/marketplace/card/${id}`} className="block relative aspect-[3/4] overflow-hidden mb-6 bg-black/20 border border-white/5 rounded-2xl cursor-pointer">
                 <img
                     src={currentImageUrl}
                     alt={name}
@@ -140,7 +140,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
             {/* Card Info Section (Center-aligned) */}
             <div className="flex flex-col items-center text-center space-y-3 pb-6">
                 <div className="space-y-1">
-                    <h3 className="min-h-[2.75rem] text-base font-black leading-tight tracking-[-0.03em] text-slate-900 transition-colors group-hover:text-rose-600 sm:text-lg">
+                    <h3 className="min-h-[2.75rem] text-base font-black leading-tight tracking-[-0.03em] text-white transition-colors group-hover:text-rose-600 sm:text-lg">
                         {name}
                     </h3>
                     {cardNumber && (
@@ -155,11 +155,11 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                 <div className="space-y-2 w-full">
                     <div className="flex flex-col items-center">
                         {originalPrice && price && originalPrice > price && (
-                            <span className="text-[10px] font-bold text-slate-400 line-through opacity-60">
+                            <span className="text-[10px] font-bold text-slate-500 line-through opacity-60">
                                 R$ {originalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                         )}
-                        <span className={`text-[1.65rem] font-black tracking-[-0.04em] ${originalPrice && price && originalPrice > price ? 'text-rose-600' : 'text-slate-900'}`}>
+                        <span className={`text-[1.65rem] font-black tracking-[-0.04em] ${originalPrice && price && originalPrice > price ? 'text-rose-600' : 'text-white'}`}>
                             R$ {(price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                     </div>
@@ -184,19 +184,19 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                 <div className="flex flex-col space-y-3">
                     {/* Quantity Picker (Hub minimalist style) */}
                     {!onDelete && (
-                        <div className="flex items-center justify-between px-4 h-10 bg-slate-50 border border-slate-100 rounded-xl">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Qtd.</span>
+                        <div className="flex items-center justify-between px-4 h-11 bg-white/5 border border-white/5 rounded-xl">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Qtd.</span>
                             <div className="flex items-center gap-4">
                                 <button
                                     onClick={decrement}
                                     disabled={selectedQty <= 1}
-                                    className="w-6 h-6 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 transition-all text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 border border-white/10 text-slate-400 hover:text-rose-500 hover:border-rose-500/50 transition-all text-xs disabled:opacity-30 disabled:cursor-not-allowed"
                                 >−</button>
-                                <span className="text-sm font-black text-slate-900 min-w-[12px] text-center">{selectedQty}</span>
+                                <span className="text-sm font-black text-white min-w-[12px] text-center">{selectedQty}</span>
                                 <button
                                     onClick={increment}
                                     disabled={selectedQty >= quantity}
-                                    className="w-6 h-6 flex items-center justify-center rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 transition-all text-xs disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 border border-white/10 text-slate-400 hover:text-rose-500 hover:border-rose-500/50 transition-all text-xs disabled:opacity-30 disabled:cursor-not-allowed"
                                 >+</button>
                             </div>
                         </div>

@@ -78,7 +78,7 @@ export default function MinhaContaDashboard() {
         },
         {
             title: 'Histórico de Arremates',
-            desc: 'Veja detalhes de todos os itens conquistados nas lives do TCG Hub.',
+            desc: 'Veja detalhes de todos os itens conquistados nas lives do TCG MEGASTORE.',
             href: '/minha-conta/arremates',
         },
         {
@@ -160,7 +160,7 @@ export default function MinhaContaDashboard() {
                         <div className="mb-6 flex items-end justify-between">
                             <div>
                                 <h2 className="text-2xl font-black tracking-[-0.05em] text-slate-950">Quadro de Medalhas</h2>
-                                <p className="text-sm text-slate-500 mt-1">Conquistas que você desbloqueou no TCG Hub.</p>
+                                <p className="text-sm text-slate-500 mt-1">Conquistas que você desbloqueou no TCG MEGASTORE.</p>
                             </div>
                             <div className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-600 bg-rose-50 px-4 py-2 rounded-xl">
                                 {achievements.length} Desbloqueadas
@@ -197,7 +197,7 @@ export default function MinhaContaDashboard() {
                             <div className="py-12 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center text-center">
                                 <span className="text-4xl mb-3 opacity-30 grayscale">🏆</span>
                                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-1">Quadro Vazio</h3>
-                                <p className="text-xs text-slate-400 max-w-sm">Você ainda não desbloqueou nenhuma conquista. Realize ações no TCG Hub para ganhar suas primeiras medalhas!</p>
+                                <p className="text-xs text-slate-400 max-w-sm">Você ainda não desbloqueou nenhuma conquista. Realize ações no TCG MEGASTORE para ganhar suas primeiras medalhas!</p>
                             </div>
                         )}
                     </div>

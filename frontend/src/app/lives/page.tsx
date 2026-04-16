@@ -69,7 +69,7 @@ export default function LivesDirectoryPage() {
                     <div className="bg-slate-900/50 border-2 border-dashed border-slate-800 rounded-[40px] p-20 text-center flex flex-col items-center justify-center">
                         <span className="text-6xl mb-6 grayscale opacity-30">💤</span>
                         <h3 className="text-xl font-black text-slate-300 uppercase tracking-widest mb-2">Nenhum leilão ativo</h3>
-                        <p className="text-slate-500 max-w-sm">Os lojistas do TCG Hub estão descansando agora. Volte mais tarde para participar da Bidding War.</p>
+                        <p className="text-slate-500 max-w-sm">Os lojistas do TCG MEGASTORE estão descansando agora. Volte mais tarde para participar da Bidding War.</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

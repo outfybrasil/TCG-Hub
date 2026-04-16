@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         let email = payer?.email || auth.user.email;
 
         if (!email) {
-            email = 'guest@tcghub.com.br';
+            email = 'guest@tcg-megastore.com.br';
         }
 
         const host = req.headers.get('host') || 'localhost:3000';
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
 
         const mpItems = items.map((item: PreferenceItemInput) => ({
             id: item.id || `item-${Date.now()}`,
-            title: item.title || item.card_name || 'Produto TCG Hub',
+            title: item.title || item.card_name || 'Produto TCG MEGASTORE',
             quantity: Number(item.quantity) || 1,
             unit_price: Number(item.unit_price) || Number(item.price) || 0,
             currency_id: 'BRL',
@@ -183,7 +183,7 @@ export async function POST(req: Request) {
                     failure: buildRedirectUrl(baseUrl, '/pagamento', { status: 'failure', purchaseId }),
                 },
                 auto_return: 'approved',
-                statement_descriptor: 'TCG HUB',
+                statement_descriptor: 'TCG MEGASTORE',
                 notification_url: `${baseUrl}/api/webhook/mercadopago`,
                 external_reference: purchaseId ? `purchase_${purchaseId}` : `user_${userId}_${Date.now()}`,
                 metadata: {

@@ -40,7 +40,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
                     <div className="space-y-4">
                         <h2 className="text-3xl font-black tracking-tighter text-slate-900 leading-none">Acesso Restrito ao <span className="text-rose-600">Admin</span></h2>
                         <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-relaxed">
-                            Apenas o administrador da TCG Hub pode gerenciar ferramentas globais e geradores de ativos.
+                            Apenas o administrador da TCG MEGASTORE pode gerenciar ferramentas globais e geradores de ativos.
                         </p>
                     </div>
                     {!user ? (

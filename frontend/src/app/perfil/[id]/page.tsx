@@ -131,13 +131,13 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
                             {profile.nickname}
                         </h1>
                         <p className="text-slate-400 font-medium max-w-xl">
-                            {profile.bio || 'Membro do TCG Hub, sempre em busca de boas oportunidades.'}
+                            {profile.bio || 'Membro do TCG MEGASTORE, sempre em busca de boas oportunidades.'}
                         </p>
                     </div>
 
                     <div className="shrink-0 w-full md:w-auto bg-slate-900/50 backdrop-blur-md border border-slate-800 p-6 rounded-3xl shadow-xl flex items-center justify-center">
                         <div className="text-center">
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Membro TCG Hub</span>
+                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1">Membro TCG MEGASTORE</span>
                             <span className="text-2xl font-black text-white px-8">🏅</span>
                         </div>
                     </div>

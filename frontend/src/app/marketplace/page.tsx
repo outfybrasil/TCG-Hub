@@ -162,56 +162,91 @@ export default function MarketplacePage() {
         : 0;
 
     return (
-        <div className="animate-fade-up pb-20 pt-10">
-            <section className="page-frame page-hero space-y-6">
+        <div className="animate-fade-up pb-20 pt-10" style={{ background: '#0c1324' }}>
+            {/* Page header */}
+            <section className="page-frame space-y-6 pb-10 pt-6">
                 <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
                     <div className="max-w-3xl space-y-4">
-                        <span className="eyebrow">Marketplace premium</span>
-                        <h1 className="text-3xl font-black leading-[0.95] tracking-[-0.04em] text-slate-950 sm:text-4xl lg:text-5xl">
-                            Catalogo organizado para leitura rapida, filtro util e compra direta.
+                        <div className="eyebrow">Marketplace Premium</div>
+                        <h1
+                            className="font-black leading-[0.92] tracking-tight text-white"
+                            style={{ fontSize: 'clamp(36px, 5vw, 56px)' }}
+                        >
+                            Catálogo Completo
                         </h1>
-                        <p className="max-w-2xl text-sm leading-7 text-slate-600">
-                            Em vez de blocos repetidos, a pagina agora concentra busca, filtros e contexto de mercado numa hierarquia mais simples.
+                        <p className="text-sm leading-relaxed" style={{ color: '#8b95b5' }}>
+                            Busque, filtre e compre diretamente. Estoque exclusivo de Pokémon TCG.
                         </p>
                     </div>
 
-                    <div className="grid gap-6 sm:grid-cols-3">
+                    <div className="grid gap-4 sm:grid-cols-3">
                         {[
-                            ['Ativos', `${availableCards}`],
-                            ['Filtros', activeFilters > 0 ? `${activeFilters} ativos` : 'Sem filtros'],
-                            ['Preco medio', averagePrice > 0 ? `R$ ${averagePrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Sem dados'],
+                            ['Disponíveis', `${availableCards}`],
+                            ['Filtros', activeFilters > 0 ? `${activeFilters} ativos` : 'Nenhum'],
+                            ['Preço Médio', averagePrice > 0 ? `R$ ${averagePrice.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'],
                         ].map(([label, value]) => (
-                            <div key={label} className="surface-card p-5 transition-all hover:scale-[1.02]">
-                                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
-                                <p className="mt-3 text-lg font-black tracking-[-0.03em] text-slate-950">{value}</p>
+                            <div
+                                key={label}
+                                className="p-4 transition-all hover:scale-[1.02]"
+                                style={{
+                                    background: '#191f31',
+                                    border: '1px solid rgba(255,255,255,0.06)',
+                                    borderRadius: '1rem',
+                                }}
+                            >
+                                <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: '#8b95b5' }}>{label}</p>
+                                <p className="mt-2 text-lg font-black tracking-tight text-white">{value}</p>
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
+                {/* Search + Sort */}
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px]">
                     <div className="relative">
                         <input
                             type="text"
-                            placeholder="Pesquisar por nome, edicao, numero ou certificacao"
-                            className="h-[52px] w-full rounded-2xl border border-slate-200 bg-white pl-12 pr-5 text-sm font-semibold text-slate-800 outline-none transition-all focus:border-rose-300 focus:shadow-[0_20px_50px_-35px_rgba(225,29,72,0.45)]"
+                            placeholder="Buscar por nome, edição, número ou grau PSA..."
+                            className="input-dark pl-14!"
                             value={searchTerm}
                             onChange={(event) => setSearchTerm(event.target.value)}
                         />
-                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">🔎</span>
+                        <svg
+                            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                            style={{ color: '#8b95b5' }}
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2.5}
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
                     </div>
 
                     <button
                         onClick={() => setIsSortModalOpen(true)}
-                        className="inline-flex h-14 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-[10px] font-black uppercase tracking-[0.22em] text-slate-600 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
+                        className="flex h-[52px] items-center justify-center rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+                        style={{
+                            background: '#191f31',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            color: '#8b95b5',
+                        }}
+                        onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(225,29,72,0.4)';
+                            (e.currentTarget as HTMLElement).style.color = '#ffb3b6';
+                        }}
+                        onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                            (e.currentTarget as HTMLElement).style.color = '#8b95b5';
+                        }}
                     >
                         Ordenar: {sortOptions.find((option) => option.id === sortBy)?.label}
                     </button>
                 </div>
             </section>
 
-            <section className="page-frame mt-8 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
-                <aside className="lg:sticky lg:top-28 lg:self-start">
+            <section className="page-frame mt-6 grid gap-6 pb-20 lg:grid-cols-[260px_minmax(0,1fr)]">
+                <aside className="lg:sticky lg:top-24 lg:self-start">
                     <FilterSidebar
                         options={filterOptions}
                         selected={{ sets: selectedSets, rarities: selectedRarities }}
@@ -220,25 +255,44 @@ export default function MarketplacePage() {
                     />
                 </aside>
 
-                <main className="space-y-6">
-                    <div className="surface-card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                <main className="space-y-4">
+                    {/* Result count bar */}
+                    <div
+                        className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                        style={{
+                            background: '#191f31',
+                            border: '1px solid rgba(255,255,255,0.06)',
+                            borderRadius: '0.875rem',
+                        }}
+                    >
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Resultado atual</p>
-                            <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950 sm:text-3xl">
-                                {sortedCards.length} carta{sortedCards.length === 1 ? '' : 's'} visiveis
+                            <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: '#8b95b5' }}>Resultado atual</p>
+                            <h2 className="mt-1 text-xl font-black tracking-tight text-white">
+                                {sortedCards.length} carta{sortedCards.length === 1 ? '' : 's'} disponíveis
                             </h2>
                         </div>
-                        <p className="max-w-xl text-sm leading-7 text-slate-600">
-                            O catalogo mostra o preco da TCG Hub e o comparativo enxuto com Liga e MYP dentro dos cards.
+                        <p className="text-sm" style={{ color: '#8b95b5' }}>
+                            Preços com comparativo de mercado nos cards
                         </p>
                     </div>
 
+                    {/* Sort modal */}
                     {isSortModalOpen && (
-                        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/35 p-6 backdrop-blur-sm">
-                            <div className="surface-card w-full max-w-sm p-8">
-                                <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Ordenacao</p>
-                                <h3 className="mt-3 text-2xl font-black tracking-[-0.05em] text-slate-950">Escolha a leitura do catalogo</h3>
-                                <div className="mt-6 space-y-3">
+                        <div className="fixed inset-0 z-[120] flex items-center justify-center p-6" style={{ background: 'rgba(7,13,31,0.7)', backdropFilter: 'blur(8px)' }}>
+                            <div
+                                className="w-full max-w-sm p-8 space-y-6"
+                                style={{
+                                    background: '#191f31',
+                                    border: '1px solid rgba(255,255,255,0.08)',
+                                    borderRadius: '1.5rem',
+                                    boxShadow: '0 40px 80px -20px rgba(0,0,0,0.6)',
+                                }}
+                            >
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: '#8b95b5' }}>Ordenação</p>
+                                    <h3 className="mt-2 text-xl font-black text-white">Escolher ordenação</h3>
+                                </div>
+                                <div className="space-y-3">
                                     {sortOptions.map((option) => (
                                         <button
                                             key={option.id}
@@ -246,19 +300,22 @@ export default function MarketplacePage() {
                                                 setSortBy(option.id);
                                                 setIsSortModalOpen(false);
                                             }}
-                                            className={`flex h-14 w-full items-center justify-between rounded-2xl border px-5 text-left text-[11px] font-black uppercase tracking-[0.22em] transition-all ${sortBy === option.id
-                                                ? 'border-rose-600 bg-rose-600 text-white'
-                                                : 'border-slate-200 bg-white text-slate-500 hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600'
-                                                }`}
+                                            className="flex h-12 w-full items-center justify-between rounded-xl px-5 text-left text-[11px] font-black uppercase tracking-[0.18em] transition-all"
+                                            style={
+                                                sortBy === option.id
+                                                    ? { background: '#e11d48', color: '#fff', border: '1px solid #e11d48' }
+                                                    : { background: 'rgba(255,255,255,0.04)', color: '#8b95b5', border: '1px solid rgba(255,255,255,0.08)' }
+                                            }
                                         >
                                             <span>{option.label}</span>
-                                            <span>{sortBy === option.id ? '•' : ''}</span>
+                                            <span>{sortBy === option.id ? '●' : ''}</span>
                                         </button>
                                     ))}
                                 </div>
                                 <button
                                     onClick={() => setIsSortModalOpen(false)}
-                                    className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-slate-950 text-[10px] font-black uppercase tracking-[0.22em] text-white transition-all hover:bg-rose-600"
+                                    className="btn-ghost w-full"
+                                    style={{ height: 44 }}
                                 >
                                     Fechar
                                 </button>
@@ -267,23 +324,35 @@ export default function MarketplacePage() {
                     )}
 
                     {loading ? (
-                        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {[1, 2, 3, 4, 5, 6].map((item) => (
-                                <div key={item} className="surface-card h-96 animate-pulse" />
+                                <div
+                                    key={item}
+                                    className="h-80 animate-pulse rounded-[1.25rem]"
+                                    style={{ background: '#191f31' }}
+                                />
                             ))}
                         </div>
                     ) : sortedCards.length === 0 ? (
-                        <div className="surface-card flex min-h-[320px] flex-col items-center justify-center gap-4 p-10 text-center">
-                            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Nenhum resultado</p>
-                            <h3 className="text-3xl font-black tracking-[-0.05em] text-slate-950">Nao encontramos cartas com essa combinacao.</h3>
-                            <p className="max-w-lg text-sm leading-7 text-slate-600">
-                                Limpe os filtros ou ajuste a busca para reabrir o catalogo completo.
+                        <div
+                            className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-10 text-center"
+                            style={{
+                                background: '#191f31',
+                                border: '1px solid rgba(255,255,255,0.06)',
+                                borderRadius: '1rem',
+                            }}
+                        >
+                            <p className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: '#8b95b5' }}>Nenhum resultado</p>
+                            <h3 className="text-2xl font-black tracking-tight text-white">Nenhuma carta encontrada.</h3>
+                            <p className="max-w-lg text-sm" style={{ color: '#8b95b5' }}>
+                                Limpe os filtros ou ajuste a busca para ver o catálogo completo.
                             </p>
                             <button
                                 onClick={clearFilters}
-                                className="inline-flex h-12 items-center justify-center rounded-2xl bg-rose-600 px-6 text-[10px] font-black uppercase tracking-[0.22em] text-white transition-all hover:bg-slate-950"
+                                className="btn-primary"
+                                style={{ height: 44 }}
                             >
-                                Limpar busca
+                                Limpar Busca
                             </button>
                         </div>
                     ) : (

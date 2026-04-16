@@ -30,7 +30,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         // Lazy initializer: runs only on first render, safe in Next.js since this is a client component
         if (typeof window === 'undefined') return [];
         try {
-            const stored = localStorage.getItem('@tcghub:cart');
+            const stored = localStorage.getItem('@tcgmegastore:cart');
             return stored ? (JSON.parse(stored) as CartItem[]) : [];
         } catch {
             return [];
@@ -39,7 +39,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
-        localStorage.setItem('@tcghub:cart', JSON.stringify(items));
+        localStorage.setItem('@tcgmegastore:cart', JSON.stringify(items));
     }, [items]);
 
     // Refresh stock from API and update maxStock on cart items

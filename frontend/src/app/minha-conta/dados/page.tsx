@@ -272,7 +272,7 @@ export default function DadosContaPage() {
                                     const dataStr = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(profile))}`;
                                     const downloadAnchorNode = document.createElement('a');
                                     downloadAnchorNode.setAttribute('href', dataStr);
-                                    downloadAnchorNode.setAttribute('download', 'meus_dados_tcghub.json');
+                                    downloadAnchorNode.setAttribute('download', 'meus_dados_tcgmegastore.json');
                                     document.body.appendChild(downloadAnchorNode);
                                     downloadAnchorNode.click();
                                     downloadAnchorNode.remove();

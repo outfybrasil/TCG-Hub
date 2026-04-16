@@ -13,7 +13,7 @@ export default function AdminLiveDashboard() {
     const [isEndConfirmOpen, setIsEndConfirmOpen] = useState(false);
     const [isStartConfirmOpen, setIsStartConfirmOpen] = useState(false);
     const [form, setForm] = useState({
-        title: 'Leilão Maluco TCG Hub!',
+        title: 'Leilão Maluco TCG MEGASTORE!',
         video_url: 'https://twitch.tv/gaules', // Exemplo
     });
     const [itemForm, setItemForm] = useState({
@@ -234,7 +234,7 @@ export default function AdminLiveDashboard() {
                             <h1 className="text-3xl font-black uppercase tracking-tighter text-white">📡 Cabine de Comando</h1>
                         </div>
                         <p className="text-slate-500 uppercase tracking-widest text-[9px] font-bold tracking-[0.2em]">
-                            {liveData ? `Sessão: ${liveData.title}` : 'Gerenciador de Leilões Ao Vivo TCG Hub'}
+                            {liveData ? `Sessão: ${liveData.title}` : 'Gerenciador de Leilões Ao Vivo TCG MEGASTORE'}
                         </p>
                     </div>
                     

@@ -28,7 +28,7 @@ interface PriceChartProps {
 
 type ChartPoint = Record<string, string | number | null>;
 type StoreSummary = {
-    key: 'TCG Hub' | 'Liga Pokemon' | 'MYP Cards';
+    key: 'TCG MEGASTORE' | 'Liga Pokemon' | 'MYP Cards';
     label: string;
     price: number | null;
     href?: string;
@@ -130,8 +130,8 @@ export default function PriceChart({
 
     const storeSummaries: StoreSummary[] = useMemo(() => ([
         {
-            key: 'TCG Hub',
-            label: 'TCG Hub',
+            key: 'TCG MEGASTORE',
+            label: 'TCG MEGASTORE',
             price: currentPrice ?? null,
             tone: 'slate',
         },
@@ -154,7 +154,7 @@ export default function PriceChart({
     const chartData = useMemo(() => {
         const withHub = data.map((point) => ({
             ...point,
-            'TCG Hub': currentPrice ?? null,
+            'TCG MEGASTORE': currentPrice ?? null,
         }));
 
         if (withHub.length > 0) {
@@ -168,7 +168,7 @@ export default function PriceChart({
 
         return [{
             date: 'Hoje',
-            'TCG Hub': currentPrice ?? null,
+            'TCG MEGASTORE': currentPrice ?? null,
             'Liga Pokemon': latestPrices?.['Liga Pokemon'] ?? null,
             'MYP Cards': latestPrices?.['MYP Cards'] ?? null,
         }];
@@ -196,7 +196,7 @@ export default function PriceChart({
                             Grafico comparativo das lojas
                         </h3>
                         <p className="mt-3 text-sm leading-7 text-slate-400">
-                            Leitura no estilo mercado: a linha da TCG Hub serve como referencia atual, enquanto Liga e MYP mostram a evolucao das ultimas coletas.
+                            Leitura no estilo mercado: a linha da TCG MEGASTORE serve como referencia atual, enquanto Liga e MYP mostram a evolucao das ultimas coletas.
                         </p>
                     </div>
 
@@ -246,7 +246,7 @@ export default function PriceChart({
                 <div className="flex h-[320px] flex-col items-center justify-center gap-3 px-6 text-center">
                     <span className="text-sm font-black text-white">Nenhum historico salvo ainda.</span>
                     <p className="max-w-lg text-sm text-slate-400">
-                        Use &quot;Atualizar leitura&quot; para registrar a primeira comparacao entre TCG Hub, Liga Pokemon e MYP Cards.
+                        Use &quot;Atualizar leitura&quot; para registrar a primeira comparacao entre TCG MEGASTORE, Liga Pokemon e MYP Cards.
                     </p>
                 </div>
             ) : (
@@ -300,8 +300,8 @@ export default function PriceChart({
 
                                 <Area
                                     type="monotone"
-                                    dataKey="TCG Hub"
-                                    name="TCG Hub"
+                                    dataKey="TCG MEGASTORE"
+                                    name="TCG MEGASTORE"
                                     stroke="#60a5fa"
                                     strokeWidth={2}
                                     fillOpacity={1}

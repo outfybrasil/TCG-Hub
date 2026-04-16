@@ -36,7 +36,7 @@ export async function POST(req: Request) {
                 payment_method_id: paymentMethodId,
                 transaction_amount: Number(transactionAmount),
                 installments: Number(installments),
-                description: auction_id ? `Arremate de LeilÃ£o #${auction_id}` : (body.description || 'Compra TCG Hub'),
+                description: auction_id ? `Arremate de Leilão #${auction_id}` : (body.description || 'Compra TCG MEGASTORE'),
                 payer: {
                     email: payerEmail || body.payer?.email || auth.user.email,
                     identification: body.payer?.identification,

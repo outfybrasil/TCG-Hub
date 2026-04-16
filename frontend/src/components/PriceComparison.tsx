@@ -138,7 +138,7 @@ export default function PriceComparison({
         return (
             <div className="flex items-center justify-center flex-wrap gap-x-2 gap-y-1 text-[9px] font-black tracking-tight">
                 {currentPrice !== undefined && (
-                    <span className="text-emerald-600 uppercase whitespace-nowrap">
+                    <span className="text-rose-400 uppercase whitespace-nowrap">
                         Site: {formatBRL(currentPrice)}
                     </span>
                 )}
@@ -150,7 +150,7 @@ export default function PriceComparison({
 
                     return (
                         <React.Fragment key={store.key}>
-                            <span className="text-slate-200">|</span>
+                            <span className="text-white/10">|</span>
                             <a
                                 href={href}
                                 target="_blank"
@@ -177,17 +177,17 @@ export default function PriceComparison({
                         void fetchPrices(false);
                     }
                 }}
-                className="flex items-center gap-2.5 py-2 px-4 bg-white border border-slate-100 rounded-full shadow-sm hover:border-rose-200 hover:shadow-md transition-all group"
+                className="flex items-center gap-2.5 py-2 px-4 bg-white/5 border border-white/5 rounded-full shadow-sm hover:border-rose-500/30 hover:bg-white/10 transition-all group"
             >
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest group-hover:text-rose-600 transition-colors">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-white transition-colors">
                     Comparar mercado BR
                 </span>
-                <span className={`text-[10px] text-slate-300 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}>v</span>
+                <span className={`text-[10px] text-slate-500 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}>v</span>
             </button>
 
             {expanded && (
-                <div className="bg-white/50 backdrop-blur-sm border border-slate-100 rounded-[2rem] p-6 space-y-5 shadow-[0_20px_50px_-20px_rgba(0,0,0,0.05)]">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="bg-[#191f31]/80 backdrop-blur-xl border border-white/5 rounded-[2rem] p-6 space-y-5 shadow-2xl">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
                         <div>
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
                                 MYP + Liga Pokemon
@@ -228,7 +228,7 @@ export default function PriceComparison({
                     {priceData && !loading && (
                         <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <SummaryCard label="Preco TCG Hub" value={formatBRL(currentPrice)} tone="slate" />
+                                <SummaryCard label="Preco TCG MEGASTORE" value={formatBRL(currentPrice)} tone="slate" />
                                 <SummaryCard
                                     label={priceData.bestMatched.price !== null ? 'Melhor comparavel' : 'Melhor disponivel'}
                                     value={formatBRL(priceData.bestMatched.price ?? priceData.bestAvailable.price)}
@@ -247,7 +247,7 @@ export default function PriceComparison({
                             </div>
 
                             {[priceData.sites.mypCards, priceData.sites.ligaPokemon].map((site) => (
-                                <div key={site.site} className="bg-white/80 border border-slate-100 rounded-[20px] p-5 space-y-4">
+                                <div key={site.site} className="bg-white/5 border border-white/5 rounded-[20px] p-5 space-y-4">
                                     <div className="flex items-center justify-between gap-4">
                                         <div>
                                             <h4 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">{site.site}</h4>
@@ -332,11 +332,11 @@ function buildStoreFallbackUrl(store: keyof typeof STORE_LABELS, cardName: strin
 function getCompactStoreClasses(accent: 'amber' | 'blue', hasPrice: boolean) {
     if (hasPrice) {
         return accent === 'amber'
-            ? 'text-amber-600 hover:text-amber-700 hover:underline'
-            : 'text-blue-600 hover:text-blue-700 hover:underline';
+            ? 'text-amber-400 hover:text-amber-300 hover:underline'
+            : 'text-sky-400 hover:text-sky-300 hover:underline';
     }
 
-    return 'text-slate-400 hover:text-slate-500 hover:underline';
+    return 'text-slate-600 hover:text-slate-500 hover:underline';
 }
 
 function SummaryCard({
@@ -351,9 +351,9 @@ function SummaryCard({
     tone: 'slate' | 'emerald' | 'amber';
 }) {
     const toneClass = {
-        slate: 'bg-slate-50 border-slate-100 text-slate-900',
-        emerald: 'bg-emerald-50 border-emerald-100 text-emerald-700',
-        amber: 'bg-amber-50 border-amber-100 text-amber-700',
+        slate: 'bg-white/5 border-white/5 text-white',
+        emerald: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+        amber: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
     }[tone];
 
     return (
@@ -369,9 +369,9 @@ function SummaryCard({
 
 function MetricCard({ label, value }: { label: string; value: string }) {
     return (
-        <div className="bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-center">
-            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-            <p className="text-sm font-black text-slate-900 tracking-tight">{value}</p>
+        <div className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3 text-center">
+            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-1">{label}</p>
+            <p className="text-sm font-black text-white tracking-tight">{value}</p>
         </div>
     );
 }

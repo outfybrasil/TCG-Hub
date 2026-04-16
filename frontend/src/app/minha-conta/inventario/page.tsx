@@ -296,10 +296,10 @@ export default function UserInventoryPage() {
                             </div>
                         )}
                     </div>
-                    <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-900">
-                        Meu <span className="text-rose-600">Inventario.</span>
+                    <h1 className="text-5xl font-black uppercase tracking-tighter text-white sm:text-6xl lg:text-7xl">
+                        <span className="text-white/20">Meu</span> <span className="text-rose-600">Inventario.</span>
                     </h1>
-                    <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500">
                         Acompanhe a valorizacao da sua colecao
                     </p>
                     {syncError && (
@@ -328,25 +328,25 @@ export default function UserInventoryPage() {
             </div>
 
             <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Investido</p>
-                    <h2 className="mt-3 text-4xl font-black tracking-tighter text-slate-900">
+                <div className="surface-card p-8">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Investido</p>
+                    <h2 className="mt-4 text-4xl font-black tracking-tighter text-white">
                         R$ {stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </h2>
                 </div>
-                <div className="rounded-[32px] border border-rose-100 bg-rose-50/60 p-8 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-500">Valor atual</p>
-                    <h2 className="mt-3 text-4xl font-black tracking-tighter text-slate-950">
+                <div className="surface-card p-8 border-rose-500/20 bg-rose-500/5">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-rose-500">Valor atual</p>
+                    <h2 className="mt-4 text-4xl font-black tracking-tighter text-white">
                         R$ {stats.currentMarketValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </h2>
                 </div>
-                <div className="rounded-[32px] border border-slate-200 bg-white p-8 shadow-sm">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Resultado</p>
-                    <div className="mt-3 flex items-center gap-3">
+                <div className="surface-card p-8">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">Resultado</p>
+                    <div className="mt-4 flex items-center gap-4">
                         <h2 className={`text-4xl font-black tracking-tighter ${profitLoss >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                             {profitLoss >= 0 ? '+' : ''}{profitPercentage.toFixed(1)}%
                         </h2>
-                        <span className={`rounded-lg px-2 py-1 text-[10px] font-bold ${profitLoss >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        <span className={`rounded-lg px-3 py-1.5 text-[11px] font-black ${profitLoss >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                             R$ {Math.abs(profitLoss).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                     </div>
@@ -355,10 +355,10 @@ export default function UserInventoryPage() {
 
             <div className="space-y-8">
                 <div className="mb-10 flex items-center gap-6">
-                    <h2 className="whitespace-nowrap text-[12px] font-black uppercase tracking-[0.3em] text-slate-900">
+                    <h2 className="whitespace-nowrap text-[13px] font-black uppercase tracking-[0.35rem] text-white">
                         Cards na colecao ({stats.itemsCount})
                     </h2>
-                    <div className="h-px flex-1 bg-slate-100"></div>
+                    <div className="h-px flex-1 bg-white/5"></div>
                 </div>
 
                 {collectionList.length === 0 ? (
@@ -384,12 +384,12 @@ export default function UserInventoryPage() {
                                     setSelectedCollection(collection.setName);
                                     setModalPage(1);
                                 }}
-                                className="group relative flex cursor-pointer flex-col items-center gap-4 rounded-[30px] border border-slate-100 bg-white p-6 text-center shadow-sm transition-all hover:border-rose-100 hover:shadow-xl"
+                                className="group relative flex cursor-pointer flex-col items-center gap-4 rounded-[30px] border border-white/5 bg-[#191f31]/60 p-8 text-center shadow-sm backdrop-blur-xl transition-all hover:border-rose-500/30 hover:bg-white/10 hover:shadow-2xl hover:shadow-rose-500/10"
                             >
                                 <button
                                     type="button"
                                     onClick={(e) => openCollectionDelete(e, collection.setName)}
-                                    className="absolute right-4 top-4 z-20 rounded-full border border-rose-100 bg-white p-2 text-rose-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                                    className="absolute right-4 top-4 z-20 rounded-full border border-white/10 bg-black/20 p-2 text-slate-500 transition-colors hover:bg-rose-600 hover:text-white"
                                     title="Apagar colecao inteira"
                                 >
                                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -403,24 +403,24 @@ export default function UserInventoryPage() {
                                         className="h-full w-full rounded-lg object-contain shadow-lg transition-transform duration-500 group-hover:scale-110"
                                     />
                                 </div>
-                                <div className="z-10 space-y-1 pointer-events-none">
-                                    <h3 className="text-xl font-black tracking-tight text-slate-900 transition-colors group-hover:text-rose-600">
+                                <div className="z-10 space-y-2 pointer-events-none">
+                                    <h3 className="text-2xl font-black tracking-tight text-white transition-colors group-hover:text-rose-500">
                                         {collection.setName}
                                     </h3>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-slate-500">
                                         {collection.totalItems} cartas na colecao
                                     </p>
                                 </div>
-                                <div className="z-10 mt-4 grid w-full grid-cols-2 gap-4 border-t border-slate-100 pt-4 text-center pointer-events-none">
+                                <div className="z-10 mt-4 grid w-full grid-cols-2 gap-4 border-t border-white/5 pt-6 text-center pointer-events-none">
                                     <div className="space-y-1">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Investido</p>
-                                        <p className="font-black text-slate-900">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Investido</p>
+                                        <p className="text-lg font-black text-white">
                                             R$ {collection.totalInvested.toFixed(2).replace('.', ',')}
                                         </p>
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-rose-500">Valor atual</p>
-                                        <p className="font-black text-slate-950">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-rose-500">Valor atual</p>
+                                        <p className="text-lg font-black text-white">
                                             R$ {collection.currentValue.toFixed(2).replace('.', ',')}
                                         </p>
                                     </div>
@@ -437,13 +437,13 @@ export default function UserInventoryPage() {
                         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
                         onClick={() => setSelectedCollection(null)}
                     ></div>
-                    <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[40px] bg-white shadow-2xl animate-fade-up">
-                        <div className="flex items-center justify-between border-b border-slate-100 p-8">
+                    <div className="relative flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-[40px] border border-white/10 bg-[#151a2a] shadow-2xl animate-fade-up">
+                        <div className="flex items-center justify-between border-b border-white/5 p-8">
                             <div>
-                                <h2 className="text-3xl font-black tracking-tight text-slate-900">
+                                <h2 className="text-4xl font-black tracking-tight text-white">
                                     {selectedCollectionData.setName}
                                 </h2>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                <p className="mt-2 text-[11px] font-black uppercase tracking-widest text-slate-500">
                                     {selectedCollectionData.totalItems} cartas | Valor total: R$ {selectedCollectionData.currentValue.toFixed(2).replace('.', ',')}
                                 </p>
                             </div>
@@ -471,7 +471,7 @@ export default function UserInventoryPage() {
                             {currentModalItems.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="group relative flex flex-col gap-4 rounded-[20px] border border-slate-200 bg-white p-4 md:flex-row md:items-center md:gap-6"
+                                    className="group relative flex flex-col gap-4 rounded-[20px] border border-white/5 bg-white/5 p-5 md:flex-row md:items-center md:gap-6"
                                 >
                                     <div className="flex w-full flex-1 items-center gap-4 md:w-auto">
                                         <div
@@ -488,17 +488,17 @@ export default function UserInventoryPage() {
                                             className="flex-1 cursor-pointer"
                                             onClick={() => router.push(`/minha-conta/inventario/${item.id}`)}
                                         >
-                                            <h4 className="text-lg font-black leading-tight text-slate-900 transition-colors group-hover:text-rose-600">
+                                            <h4 className="text-xl font-black leading-tight text-white transition-colors group-hover:text-rose-500">
                                                 {item.name}
                                             </h4>
-                                            <div className="mt-2 flex flex-wrap gap-2">
-                                                <span className="rounded-sm border border-slate-100 bg-slate-50 px-2 py-1 text-[8px] font-black uppercase text-slate-500">
+                                            <div className="mt-3 flex flex-wrap gap-2">
+                                                <span className="rounded-sm border border-white/10 bg-white/5 px-2.5 py-1 text-[9px] font-black uppercase text-slate-400">
                                                     {item.condition}
                                                 </span>
-                                                <span className="rounded-sm border border-slate-100 bg-slate-50 px-2 py-1 text-[8px] font-black uppercase text-slate-500">
+                                                <span className="rounded-sm border border-white/10 bg-white/5 px-2.5 py-1 text-[9px] font-black uppercase text-slate-400">
                                                     {item.finish}
                                                 </span>
-                                                <span className="rounded-sm border border-slate-100 bg-slate-50 px-2 py-1 text-[8px] font-black uppercase text-slate-500">
+                                                <span className="rounded-sm border border-white/10 bg-white/5 px-2.5 py-1 text-[9px] font-black uppercase text-slate-400">
                                                     {item.language}
                                                 </span>
                                             </div>
@@ -574,9 +574,9 @@ export default function UserInventoryPage() {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="w-24 text-center md:border-l md:border-slate-100 md:pl-4">
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-rose-500">Atual</p>
-                                            <p className="font-black text-slate-950">
+                                        <div className="w-24 text-center">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-rose-500">Atual</p>
+                                            <p className="text-lg font-black text-white">
                                                 R$ {item.currentValue.toFixed(2).replace('.', ',')}
                                             </p>
                                         </div>
@@ -630,15 +630,15 @@ export default function UserInventoryPage() {
                             if (!deleteLoading) setDeleteTarget(null);
                         }}
                     ></div>
-                    <div className="relative w-full max-w-md rounded-[32px] border border-slate-200 bg-white p-8 shadow-2xl">
-                        <div className="space-y-3">
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-600">
+                    <div className="relative w-full max-w-md rounded-[32px] border border-white/10 bg-[#151a2a] p-10 shadow-2xl">
+                        <div className="space-y-4">
+                            <p className="text-[11px] font-black uppercase tracking-[0.35rem] text-rose-600">
                                 Confirmacao
                             </p>
-                            <h3 className="text-3xl font-black tracking-tight text-slate-950">
+                            <h3 className="text-4xl font-black tracking-tight text-white">
                                 {deleteTarget.title}
                             </h3>
-                            <p className="text-sm font-medium leading-6 text-slate-500">
+                            <p className="text-base font-medium leading-7 text-slate-400">
                                 {deleteTarget.message}
                             </p>
                         </div>

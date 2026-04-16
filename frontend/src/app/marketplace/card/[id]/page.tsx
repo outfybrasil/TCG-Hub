@@ -201,7 +201,7 @@ export default function CardDetailsPage({ params }: { params: Promise<{ id: stri
                                 <MetaPill label="Idioma" value={card.language || 'Nao informado'} />
                                 <MetaPill label="Acabamento" value={card.finish || 'Normal'} />
                                 <MetaPill label="Raridade" value={card.rarity || 'Nao informada'} />
-                                <MetaPill label="Vendedor" value={card.seller_name || 'TCG Mega Store'} />
+                                <MetaPill label="Vendedor" value={card.seller_name || 'TCG MEGASTORE'} />
                             </div>
                         </div>
 
@@ -239,7 +239,7 @@ export default function CardDetailsPage({ params }: { params: Promise<{ id: stri
                                     className={`flex w-full flex-[2] flex-col items-center justify-center gap-3 rounded-[34px] px-8 text-center text-[10px] font-black uppercase tracking-[0.2em] transition-all ${isOutOfStock ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400' : 'border border-slate-950 bg-slate-950 text-white hover:bg-rose-600 hover:border-rose-600'}`}
                                 >
                                     <ShoppingCart className="h-6 w-6" />
-                                    <span>{isOutOfStock ? 'Indisponivel' : 'Comprar da TCG Hub'}</span>
+                                    <span>{isOutOfStock ? 'Indisponivel' : 'Comprar da TCG MEGASTORE'}</span>
                                 </button>
                                 
                                 <Link 

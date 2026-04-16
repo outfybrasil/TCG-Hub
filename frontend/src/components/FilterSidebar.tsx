@@ -1,84 +1,172 @@
 "use client";
 
 interface FilterSidebarProps {
-    options: {
-        sets: string[];
-        rarities: string[];
-    };
-    selected: {
-        sets: string[];
-        rarities: string[];
-    };
-    onToggle: (category: string, value: string) => void;
-    onClear: () => void;
+  options: {
+    sets: string[];
+    rarities: string[];
+  };
+  selected: {
+    sets: string[];
+    rarities: string[];
+  };
+  onToggle: (category: string, value: string) => void;
+  onClear: () => void;
 }
 
 function FilterSection({
-    items,
-    title,
-    values,
-    onToggle,
-    category,
+  items,
+  title,
+  values,
+  onToggle,
+  category,
 }: {
-    items: string[];
-    title: string;
-    values: string[];
-    onToggle: (category: string, value: string) => void;
-    category: string;
+  items: string[];
+  title: string;
+  values: string[];
+  onToggle: (category: string, value: string) => void;
+  category: string;
 }) {
-    return (
-        <section className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">{title}</h3>
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-300">{items.length}</span>
-            </div>
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3
+          className="text-[10px] font-black uppercase tracking-[0.24em]"
+          style={{ color: '#8b95b5' }}
+        >
+          {title}
+        </h3>
+        <span
+          className="rounded-full px-2 py-0.5 text-[9px] font-black"
+          style={{
+            background: 'rgba(255,255,255,0.06)',
+            color: '#8b95b5',
+          }}
+        >
+          {items.length}
+        </span>
+      </div>
 
-            {items.length === 0 ? (
-                <p className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-xs font-medium text-slate-400">
-                    Nenhuma opcao disponivel agora.
-                </p>
-            ) : (
-                <div className="flex flex-wrap gap-2">
-                    {items.map((item) => {
-                        const selected = values.includes(item);
-
-                        return (
-                            <button
-                                key={item}
-                                onClick={() => onToggle(category, item)}
-                                className={`rounded-full px-4 py-2 text-[11px] font-bold uppercase tracking-[0.12em] transition-all ${selected
-                                    ? 'border border-rose-600 bg-rose-600 text-white'
-                                    : 'border border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600'
-                                    }`}
-                            >
-                                {item}
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-        </section>
-    );
+      {items.length === 0 ? (
+        <p
+          className="rounded-xl px-4 py-3 text-xs font-medium"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px dashed rgba(255,255,255,0.08)',
+            color: '#8b95b5',
+          }}
+        >
+          Nenhuma opção disponível ainda.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => {
+            const isSelected = values.includes(item);
+            return (
+              <button
+                key={item}
+                onClick={() => onToggle(category, item)}
+                className="rounded-full px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all"
+                style={
+                  isSelected
+                    ? {
+                        background: '#e11d48',
+                        color: '#fff',
+                        border: '1px solid #e11d48',
+                        boxShadow: '0 0 12px rgba(225,29,72,0.3)',
+                      }
+                    : {
+                        background: 'rgba(255,255,255,0.04)',
+                        color: '#8b95b5',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                      }
+                }
+                onMouseEnter={(e) => {
+                  if (!isSelected) {
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(225,29,72,0.4)';
+                    (e.currentTarget as HTMLElement).style.color = '#ffb3b6';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected) {
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                    (e.currentTarget as HTMLElement).style.color = '#8b95b5';
+                  }
+                }}
+              >
+                {item}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 }
 
-export default function FilterSidebar({ options, selected, onToggle, onClear }: FilterSidebarProps) {
-    return (
-        <div className="surface-card space-y-8 p-6 animate-fade-in">
-            <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
-                <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Refinar busca</p>
-                    <h2 className="mt-2 text-xl font-black tracking-[-0.03em] text-slate-950">Filtros ativos</h2>
-                </div>
-                <button
-                    onClick={onClear}
-                    className="rounded-full border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
-                >
-                    Limpar
-                </button>
-            </div>
-
-            <FilterSection category="sets" items={options.sets} title="Edicoes" values={selected.sets} onToggle={onToggle} />
-            <FilterSection category="rarities" items={options.rarities} title="Raridade e condicao" values={selected.rarities} onToggle={onToggle} />
+export default function FilterSidebar({
+  options,
+  selected,
+  onToggle,
+  onClear,
+}: FilterSidebarProps) {
+  return (
+    <div
+      className="space-y-6 p-5"
+      style={{
+        background: '#191f31',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: '1rem',
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between gap-4 border-b pb-4"
+        style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+      >
+        <div>
+          <p
+            className="text-[10px] font-black uppercase tracking-[0.24em]"
+            style={{ color: '#8b95b5' }}
+          >
+            Refinar busca
+          </p>
+          <h2 className="mt-1 text-lg font-black tracking-tight text-white">
+            Filtros
+          </h2>
         </div>
-    );
+        <button
+          onClick={onClear}
+          className="rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wider transition-all"
+          style={{
+            background: 'rgba(225,29,72,0.1)',
+            color: '#ffb3b6',
+            border: '1px solid rgba(225,29,72,0.2)',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(225,29,72,0.2)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(225,29,72,0.1)';
+          }}
+        >
+          Limpar
+        </button>
+      </div>
+
+      <FilterSection
+        category="sets"
+        items={options.sets}
+        title="Edições / Set"
+        values={selected.sets}
+        onToggle={onToggle}
+      />
+      <FilterSection
+        category="rarities"
+        items={options.rarities}
+        title="Raridade e Condição"
+        values={selected.rarities}
+        onToggle={onToggle}
+      />
+    </div>
+  );
 }

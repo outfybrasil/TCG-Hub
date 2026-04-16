@@ -282,7 +282,7 @@ export default function AuctionCheckoutPage() {
                         )}
 
                         <p className="text-[8px] text-slate-500 font-medium text-center uppercase tracking-widest">
-                            Checkout Seguro via Mercado Pago & TCG Hub
+                            Checkout Seguro via Mercado Pago & TCG MEGASTORE
                         </p>
                     </div>
                 </div>

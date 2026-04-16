@@ -264,11 +264,11 @@ export default function VenderPage() {
                 <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
                     <div className="max-w-2xl space-y-3">
                         <span className="eyebrow">Painel do vendedor</span>
-                        <h1 className="text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+                        <h1 className="text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
                             Suas vendas,<br />seu controle.
                         </h1>
-                        <p className="text-sm text-slate-500 leading-relaxed">
-                            Publique cartas, gerencie pedidos e solicite repasses. Taxa da plataforma: <strong className="text-slate-800">8% por venda</strong>.
+                        <p className="text-base text-slate-400 leading-relaxed">
+                            Publique cartas, gerencie pedidos e solicite repasses. Taxa da plataforma: <strong className="text-rose-500">8% por venda</strong>.
                         </p>
                     </div>
 
@@ -276,7 +276,7 @@ export default function VenderPage() {
                         <Link
                             href="/vender/nova-carta"
                             id="btn-nova-carta"
-                            className="inline-flex h-12 items-center gap-2 rounded-2xl bg-rose-600 px-6 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-slate-950"
+                            className="inline-flex h-12 items-center gap-2 rounded-2xl bg-rose-600 px-6 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-slate-950"
                         >
                             <span>+</span> Publicar carta
                         </Link>
@@ -291,9 +291,9 @@ export default function VenderPage() {
                         ['Saldo pendente', formatBRL(profile?.balance_pending || 0)],
                         ['Saldo disponível', formatBRL(profile?.balance_available || 0)],
                     ].map(([label, value]) => (
-                        <div key={label} className="surface-card p-5 transition-all hover:scale-[1.02]">
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
-                            <p className="mt-3 text-xl font-black tracking-tight text-slate-950">{value}</p>
+                        <div key={label} className="surface-card p-6 transition-all hover:scale-[1.02] hover:bg-white/10">
+                            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">{label}</p>
+                            <p className="mt-4 text-3xl font-black tracking-tight text-white">{value}</p>
                         </div>
                     ))}
                 </div>
@@ -333,10 +333,10 @@ export default function VenderPage() {
                             key={key}
                             id={`tab-${key}`}
                             onClick={() => setTab(key)}
-                            className={`flex-1 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                            className={`flex-1 h-12 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                                 tab === key
-                                    ? 'bg-slate-950 text-white shadow'
-                                    : 'text-slate-500 hover:bg-slate-50'
+                                    ? 'bg-white text-slate-950 shadow-lg'
+                                    : 'text-slate-400 hover:bg-white/5'
                             }`}
                         >
                             {label}

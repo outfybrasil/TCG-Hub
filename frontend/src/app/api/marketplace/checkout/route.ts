@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     if ('response' in auth) return auth.response;
 
     const userId = auth.user.id;
-    const email = auth.user.email || 'comprador@tcghub.com.br';
+    const email = auth.user.email || 'comprador@tcg-megastore.com.br';
 
     const body: CheckoutBody = await req.json();
     const { listing_id, quantity = 1, shipping_address } = body;
@@ -127,7 +127,7 @@ export async function POST(req: Request) {
                     failure: `${baseUrl}/marketplace?status=failure&orderId=${orderId}`,
                 },
                 auto_return: 'approved',
-                statement_descriptor: 'TCG HUB P2P',
+                statement_descriptor: 'TCG MEGASTORE',
                 notification_url: `${baseUrl}/api/webhook/mercadopago`,
                 external_reference: `seller_order_${orderId}`,
                 metadata: {
