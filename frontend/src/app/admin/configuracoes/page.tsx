@@ -302,6 +302,7 @@ export default function AdminSettingsPage() {
                             </button>
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
         </AdminGuard>
