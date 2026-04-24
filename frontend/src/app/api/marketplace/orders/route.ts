@@ -45,5 +45,26 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ orders: data });
+    const { data: auctionData, error: auctionError } = await supabaseAdmin
+        .from('purchases')
+        .select(`
+            *,
+            live_auctions (
+                current_item_name,
+                current_item_image,
+                title
+            )
+        `)
+        .eq(role === 'buyer' ? 'user_id' : 'seller_id', userId)
+        .eq('type', 'LIVE_AUCTION')
+        .order('created_at', { ascending: false });
+
+    if (auctionError) {
+        console.error("Erro ao buscar leilões", auctionError);
+    }
+
+    return NextResponse.json({ 
+        orders: data, 
+        live_auctions: auctionData || [] 
+    });
 }

@@ -91,16 +91,30 @@ export default function UserInventoryPage() {
         if (isInitial) setLoading(true);
 
         try {
-            const res = await fetch('/api/user/inventory', {
-                headers: await getAuthHeaders(),
-            });
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-                throw new Error(data?.error || 'Falha ao carregar o inventario.');
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                setLoading(false);
+                return;
             }
 
-            setItems(data?.collection || []);
+            const { data, error } = await supabase
+                .from('user_collections')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                throw new Error(error.message || 'Falha ao carregar o inventario.');
+            }
+
+            const enrichedCollection = (data || []).map((card) => ({
+                ...card,
+                currentValue: card.market_price || 0,
+                lastSync: card.last_valuation_at,
+                marketSite: card.market_price_site,
+            }));
+
+            setItems(enrichedCollection);
 
             if (isInitial) {
                 void syncInventory();
@@ -119,9 +133,14 @@ export default function UserInventoryPage() {
         setSyncing(true);
         setSyncError(null);
         try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+
             const res = await fetch('/api/user/inventory/sync', {
                 method: 'POST',
-                headers: await getAuthHeaders(),
+                headers: {
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
             });
 
             const data = await res.json().catch(() => null);
@@ -210,22 +229,19 @@ export default function UserInventoryPage() {
 
         setDeleteLoading(true);
         try {
-            const isItemDelete = deleteTarget.type === 'item';
-            const query = isItemDelete ? `?id=${encodeURIComponent(deleteTarget.id)}` : '';
-            const body = isItemDelete
-                ? { id: deleteTarget.id }
-                : { set_name: deleteTarget.setName };
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuário não autenticado.');
 
-            const res = await fetch(`/api/user/inventory${query}`, {
-                method: 'DELETE',
-                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify(body),
-            });
+            let query = supabase.from('user_collections').delete().eq('user_id', user.id);
 
-            const data = await res.json().catch(() => null);
-            if (!res.ok) {
-                throw new Error(data?.error || 'Erro ao remover item do inventario.');
+            if (deleteTarget.type === 'item') {
+                query = query.eq('id', deleteTarget.id);
+            } else {
+                query = query.eq('set_name', deleteTarget.setName);
             }
+
+            const { error } = await query;
+            if (error) throw error;
 
             await fetchInventory(false);
 
@@ -249,16 +265,12 @@ export default function UserInventoryPage() {
             let priceNum = parseFloat(editingPriceValue.replace(',', '.'));
             if (Number.isNaN(priceNum) || priceNum < 0) priceNum = 0;
 
-            const res = await fetch('/api/user/inventory', {
-                method: 'PATCH',
-                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ id, updates: { purchase_price: priceNum } }),
-            });
+            const { error } = await supabase
+                .from('user_collections')
+                .update({ purchase_price: priceNum })
+                .eq('id', id);
 
-            if (!res.ok) {
-                const data = await res.json().catch(() => null);
-                throw new Error(data?.error || 'Erro ao atualizar preco.');
-            }
+            if (error) throw error;
 
             await fetchInventory(false);
             setEditingPriceTarget(null);
@@ -271,7 +283,7 @@ export default function UserInventoryPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-44">
-                <div className="h-10 w-10 rounded-full border-2 border-rose-600 border-t-transparent animate-spin"></div>
+                <div className="h-10 w-10 border-2 border-white/10 border-t-rose-600 rounded-full animate-spin" />
             </div>
         );
     }
@@ -314,13 +326,13 @@ export default function UserInventoryPage() {
                         type="button"
                         onClick={syncInventory}
                         disabled={syncing}
-                        className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors hover:border-rose-200 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-slate-300 transition-colors hover:border-rose-500/50 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-60 shadow-sm"
                     >
                         {syncing ? 'Sincronizando...' : 'Sincronizar valores'}
                     </button>
                     <NextLink
                         href="/minha-conta/inventario/novo"
-                        className="rounded-2xl bg-slate-950 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-rose-600"
+                        className="rounded-2xl bg-rose-600 px-5 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-rose-500 shadow-lg shadow-rose-900/20"
                     >
                         Adicionar cartas
                     </NextLink>
@@ -362,15 +374,15 @@ export default function UserInventoryPage() {
                 </div>
 
                 {collectionList.length === 0 ? (
-                    <div className="space-y-6 rounded-[40px] border-2 border-dashed border-slate-200 bg-white p-20 text-center">
-                        <div className="text-5xl">[]</div>
-                        <h3 className="text-2xl font-black text-slate-900">Sua colecao esta vazia.</h3>
+                    <div className="space-y-6 rounded-[40px] border border-dashed border-white/10 bg-slate-900 p-20 text-center">
+                        <div className="text-5xl text-slate-500">[]</div>
+                        <h3 className="text-2xl font-black text-white">Sua colecao esta vazia.</h3>
                         <p className="mx-auto max-w-sm font-medium text-slate-400">
                             Comece a adicionar suas cartas para acompanhar o valor de mercado.
                         </p>
                         <NextLink
                             href="/minha-conta/inventario/novo"
-                            className="inline-flex h-12 items-center rounded-xl bg-slate-950 px-8 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-rose-600"
+                            className="inline-flex h-12 items-center rounded-xl bg-rose-600 px-8 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-rose-500 shadow-lg shadow-rose-900/20"
                         >
                             Comecar agora
                         </NextLink>
@@ -596,23 +608,23 @@ export default function UserInventoryPage() {
                         </div>
 
                         {totalPages > 1 && (
-                            <div className="mt-auto flex items-center justify-between border-t border-slate-200 bg-slate-50 p-6">
+                            <div className="mt-auto flex items-center justify-between border-t border-white/5 bg-slate-900 p-6">
                                 <button
                                     type="button"
                                     onClick={() => setModalPage((page) => Math.max(1, page - 1))}
                                     disabled={modalPage === 1}
-                                    className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-700 shadow-sm transition-all hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-300 shadow-sm transition-all hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Anterior
                                 </button>
-                                <span className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 shadow-sm">
-                                    Pagina <span className="text-slate-900">{modalPage}</span> de {totalPages}
+                                <span className="rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 shadow-sm">
+                                    Pagina <span className="text-white">{modalPage}</span> de {totalPages}
                                 </span>
                                 <button
                                     type="button"
                                     onClick={() => setModalPage((page) => Math.min(totalPages, page + 1))}
                                     disabled={modalPage === totalPages}
-                                    className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-700 shadow-sm transition-all hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-300 shadow-sm transition-all hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Proxima
                                 </button>
@@ -647,7 +659,7 @@ export default function UserInventoryPage() {
                                 type="button"
                                 onClick={() => setDeleteTarget(null)}
                                 disabled={deleteLoading}
-                                className="rounded-2xl border border-slate-200 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="rounded-2xl border border-white/10 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 transition-colors hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 Cancelar
                             </button>
@@ -655,7 +667,7 @@ export default function UserInventoryPage() {
                                 type="button"
                                 onClick={() => void confirmDelete()}
                                 disabled={deleteLoading}
-                                className="rounded-2xl bg-rose-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="rounded-2xl bg-rose-600 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white transition-colors hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60 shadow-lg shadow-rose-900/20"
                             >
                                 {deleteLoading ? 'Apagando...' : 'Confirmar exclusao'}
                             </button>

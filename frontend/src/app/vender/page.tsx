@@ -48,15 +48,15 @@ interface Order {
 }
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-    active:    { label: 'Ativa', color: 'text-emerald-600 bg-emerald-50' },
-    paused:    { label: 'Pausada', color: 'text-amber-600 bg-amber-50' },
-    sold:      { label: 'Vendida', color: 'text-slate-400 bg-slate-50' },
-    cancelled: { label: 'Cancelada', color: 'text-red-500 bg-red-50' },
-    pending:   { label: 'Aguardando pagamento', color: 'text-amber-600 bg-amber-50' },
-    paid:      { label: 'Pago — Enviar', color: 'text-blue-600 bg-blue-50' },
-    shipped:   { label: 'Enviado', color: 'text-indigo-600 bg-indigo-50' },
-    delivered: { label: 'Entregue', color: 'text-emerald-600 bg-emerald-50' },
-    disputed:  { label: 'Disputado', color: 'text-rose-600 bg-rose-50' },
+    active:    { label: 'Ativa', color: 'text-emerald-400 bg-emerald-500/10' },
+    paused:    { label: 'Pausada', color: 'text-amber-400 bg-amber-500/10' },
+    sold:      { label: 'Vendida', color: 'text-slate-400 bg-white/5' },
+    cancelled: { label: 'Cancelada', color: 'text-rose-400 bg-rose-500/10' },
+    pending:   { label: 'Aguardando pagamento', color: 'text-amber-400 bg-amber-500/10' },
+    paid:      { label: 'Pago — Enviar', color: 'text-blue-400 bg-blue-500/10' },
+    shipped:   { label: 'Enviado', color: 'text-indigo-400 bg-indigo-500/10' },
+    delivered: { label: 'Entregue', color: 'text-emerald-400 bg-emerald-500/10' },
+    disputed:  { label: 'Disputado', color: 'text-rose-400 bg-rose-500/10' },
 };
 
 export default function VenderPage() {
@@ -65,7 +65,8 @@ export default function VenderPage() {
     const [profile, setProfile] = useState<SellerProfile | null>(null);
     const [listings, setListings] = useState<Listing[]>([]);
     const [orders, setOrders] = useState<Order[]>([]);
-    const [tab, setTab] = useState<'listings' | 'orders' | 'balance' | 'config'>('listings');
+    const [liveAuctions, setLiveAuctions] = useState<any[]>([]);
+    const [tab, setTab] = useState<'listings' | 'orders' | 'balance' | 'config' | 'auctions'>('listings');
     const [loading, setLoading] = useState(true);
     const [trackingModal, setTrackingModal] = useState<{ orderId: string; open: boolean } | null>(null);
     const [trackingCode, setTrackingCode] = useState('');
@@ -97,6 +98,7 @@ export default function VenderPage() {
         if (ordersRes.ok) {
             const d = await ordersRes.json();
             setOrders(d.orders || []);
+            setLiveAuctions(d.live_auctions || []);
         }
 
         // Buscar perfil de vendedor
@@ -300,19 +302,19 @@ export default function VenderPage() {
 
                 {/* Alerta de pedidos a enviar */}
                 {pendingOrders.length > 0 && (
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 flex items-center gap-4">
+                    <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-5 flex items-center gap-4">
                         <span className="text-2xl">📦</span>
                         <div>
-                            <p className="font-black text-amber-800">
+                            <p className="font-black text-amber-400">
                                 {pendingOrders.length} pedido{pendingOrders.length > 1 ? 's' : ''} aguardando envio
                             </p>
-                            <p className="text-sm text-amber-600 mt-0.5">
+                            <p className="text-sm text-amber-500/80 mt-0.5">
                                 Clique em &ldquo;Pedidos&rdquo; para registrar o código de rastreio.
                             </p>
                         </div>
                         <button
                             onClick={() => setTab('orders')}
-                            className="ml-auto shrink-0 h-9 px-5 rounded-xl bg-amber-500 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-amber-600"
+                            className="ml-auto shrink-0 h-9 px-5 rounded-xl bg-amber-500 text-[10px] font-black uppercase tracking-widest text-slate-950 transition-all hover:bg-amber-400"
                         >
                             Ver pedidos
                         </button>
@@ -326,6 +328,7 @@ export default function VenderPage() {
                     {([
                         ['listings', 'Minhas Listagens'],
                         ['orders', `Pedidos ${pendingOrders.length > 0 ? `(${pendingOrders.length})` : ''}`],
+                        ['auctions', 'Leilões'],
                         ['balance', 'Saldo & Saques'],
                         ['config', 'Configurações'],
                     ] as const).map(([key, label]) => (
@@ -335,7 +338,7 @@ export default function VenderPage() {
                             onClick={() => setTab(key)}
                             className={`flex-1 h-12 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                                 tab === key
-                                    ? 'bg-white text-slate-950 shadow-lg'
+                                    ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20'
                                     : 'text-slate-400 hover:bg-white/5'
                             }`}
                         >
@@ -350,7 +353,7 @@ export default function VenderPage() {
                         {listings.length === 0 ? (
                             <div className="surface-card flex min-h-64 flex-col items-center justify-center gap-4 p-10 text-center">
                                 <span className="text-5xl">🎴</span>
-                                <h2 className="text-2xl font-black tracking-tight text-slate-950">Nenhuma listagem ainda</h2>
+                                <h2 className="text-2xl font-black tracking-tight text-white">Nenhuma listagem ainda</h2>
                                 <p className="text-sm text-slate-500">Publique sua primeira carta e comece a vender.</p>
                                 <Link
                                     href="/vender/nova-carta"
@@ -363,33 +366,33 @@ export default function VenderPage() {
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-slate-100">
+                                        <tr className="border-b border-white/5">
                                             {['Carta', 'Preço', 'Qtd', 'Status', 'Views', 'Ações'].map(h => (
-                                                <th key={h} className="py-4 pr-4 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{h}</th>
+                                                <th key={h} className="py-4 pr-4 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-500">{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-50">
+                                    <tbody className="divide-y divide-white/5">
                                         {listings.map(listing => {
-                                            const st = STATUS_LABEL[listing.status] || { label: listing.status, color: 'text-slate-400 bg-slate-50' };
+                                            const st = STATUS_LABEL[listing.status] || { label: listing.status, color: 'text-slate-400 bg-white/5' };
                                             return (
-                                                <tr key={listing.id} className="group hover:bg-slate-50/50 transition-colors">
+                                                <tr key={listing.id} className="group hover:bg-white/5 transition-colors">
                                                     <td className="py-4 pr-4">
                                                         <div className="flex items-center gap-3">
                                                             {listing.image_url && (
                                                                 <img src={listing.image_url} alt={listing.card_name} className="h-12 w-8 rounded-lg object-contain shadow" />
                                                             )}
                                                             <div>
-                                                                <p className="font-black text-sm text-slate-900">{listing.card_name}</p>
-                                                                <p className="text-[10px] font-bold text-slate-400 uppercase">{listing.card_set} · {listing.condition} · {listing.language}</p>
+                                                                <p className="font-black text-sm text-white">{listing.card_name}</p>
+                                                                <p className="text-[10px] font-bold text-slate-500 uppercase">{listing.card_set} · {listing.condition} · {listing.language}</p>
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td className="py-4 pr-4">
-                                                        <p className="font-black text-slate-900">{formatBRL(listing.price)}</p>
+                                                        <p className="font-black text-white">{formatBRL(listing.price)}</p>
                                                     </td>
                                                     <td className="py-4 pr-4">
-                                                        <p className="font-black text-slate-700">{listing.quantity}</p>
+                                                        <p className="font-black text-slate-300">{listing.quantity}</p>
                                                     </td>
                                                     <td className="py-4 pr-4">
                                                         <span className={`inline-block rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-widest ${st.color}`}>
@@ -404,7 +407,7 @@ export default function VenderPage() {
                                                             {listing.status !== 'sold' && listing.status !== 'cancelled' && (
                                                                 <button
                                                                     onClick={() => toggleListingStatus(listing)}
-                                                                    className="h-8 px-3 rounded-xl bg-slate-100 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200 transition-all"
+                                                                    className="h-8 px-3 rounded-xl bg-white/5 text-[9px] font-black uppercase tracking-widest text-slate-300 hover:bg-white/10 transition-all"
                                                                 >
                                                                     {listing.status === 'active' ? 'Pausar' : 'Ativar'}
                                                                 </button>
@@ -412,7 +415,7 @@ export default function VenderPage() {
                                                             {listing.status !== 'sold' && (
                                                                 <button
                                                                     onClick={() => deleteListing(listing.id)}
-                                                                    className="h-8 px-3 rounded-xl bg-slate-100 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:bg-rose-50 transition-all"
+                                                                    className="h-8 px-3 rounded-xl bg-rose-500/10 text-[9px] font-black uppercase tracking-widest text-rose-400 hover:bg-rose-500/20 transition-all"
                                                                 >
                                                                     Remover
                                                                 </button>
@@ -440,20 +443,20 @@ export default function VenderPage() {
                         ) : (
                             <div className="space-y-3">
                                 {orders.map(order => {
-                                    const st = STATUS_LABEL[order.status] || { label: order.status, color: 'text-slate-400 bg-slate-50' };
+                                    const st = STATUS_LABEL[order.status] || { label: order.status, color: 'text-slate-400 bg-white/5' };
                                     return (
-                                        <div key={order.id} className="surface-card p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div key={order.id} className="surface-card p-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between transition-colors hover:bg-white/5">
                                             <div className="flex items-center gap-4">
                                                 {order.seller_listings?.image_url && (
                                                     <img src={order.seller_listings.image_url} alt="" className="h-14 w-10 rounded-lg object-contain shadow shrink-0" />
                                                 )}
                                                 <div>
-                                                    <p className="font-black text-slate-900 text-sm">{order.seller_listings?.card_name || 'Carta'}</p>
+                                                    <p className="font-black text-white text-sm">{order.seller_listings?.card_name || 'Carta'}</p>
                                                     <p className="text-[10px] font-bold text-slate-400 mt-0.5">
-                                                        {order.quantity}x · {formatBRL(order.unit_price)} · Você recebe: <strong className="text-emerald-600">{formatBRL(order.seller_net_amount)}</strong>
+                                                        {order.quantity}x · {formatBRL(order.unit_price)} · Você recebe: <strong className="text-emerald-400">{formatBRL(order.seller_net_amount)}</strong>
                                                     </p>
                                                     {order.tracking_code && (
-                                                        <p className="text-[10px] font-bold text-indigo-500 mt-0.5">Rastreio: {order.tracking_code}</p>
+                                                        <p className="text-[10px] font-bold text-indigo-400 mt-0.5">Rastreio: {order.tracking_code}</p>
                                                     )}
                                                 </div>
                                             </div>
@@ -479,19 +482,67 @@ export default function VenderPage() {
                     </div>
                 )}
 
+                {/* ---- TAB: Leilões (Histórico) ---- */}
+                {tab === 'auctions' && (
+                    <div className="surface-card p-6 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Histórico de Leilões</p>
+                                <p className="mt-1 text-xs text-slate-500">Cartas arrematadas em suas lives.</p>
+                            </div>
+                        </div>
+
+                        {liveAuctions.length === 0 ? (
+                            <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 py-16 text-center flex flex-col items-center">
+                                <span className="text-4xl opacity-30 grayscale mb-4">📺</span>
+                                <p className="text-sm font-bold text-slate-400">Nenhum leilão finalizado ainda.</p>
+                                <p className="text-xs text-slate-500 mt-1">Inicie uma live e venda suas cartas.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {liveAuctions.map(auction => (
+                                        <div key={auction.id} className="flex flex-col gap-4 rounded-2xl border border-white/5 bg-slate-900 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between transition-all hover:bg-white/5">
+                                        <div className="flex items-center gap-4">
+                                            {auction.live_auctions?.current_item_image && (
+                                                <img src={auction.live_auctions.current_item_image} alt="" className="h-14 w-10 rounded-lg object-contain shadow shrink-0 bg-slate-950" />
+                                            )}
+                                            <div>
+                                                <p className="font-black text-white text-sm">{auction.live_auctions?.current_item_name || 'Item de Leilão'}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                                    Vendido em: {new Date(auction.created_at).toLocaleString('pt-BR')}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 shrink-0">
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Arremate</p>
+                                                <p className="font-black text-emerald-400 text-sm">{formatBRL(auction.amount)}</p>
+                                            </div>
+                                            <span className="rounded-lg px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400 bg-white/5">
+                                                {auction.status === 'PENDING' ? 'Aguardando Pagamento' : 'Pago'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* ---- TAB: Saldo ---- */}
                 {tab === 'balance' && (
                     <div className="grid gap-6 lg:grid-cols-2">
                         <div className="surface-card p-8 space-y-6">
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Saldo disponível para saque</p>
-                                <p className="mt-2 text-4xl font-black tracking-tight text-emerald-600">
+                                <p className="mt-2 text-4xl font-black tracking-tight text-emerald-400">
                                     {formatBRL(profile?.balance_available || 0)}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Saldo pendente (aguardando entrega)</p>
-                                <p className="mt-2 text-2xl font-black tracking-tight text-amber-500">
+                                <p className="mt-2 text-2xl font-black tracking-tight text-amber-400">
                                     {formatBRL(profile?.balance_pending || 0)}
                                 </p>
                             </div>
@@ -517,9 +568,9 @@ export default function VenderPage() {
                                     ['Taxa da plataforma (8%)', formatBRL((profile?.total_revenue || 0) * 0.08)],
                                     ['Avaliação média', profile?.rating_count ? `${(profile.rating_avg || 0).toFixed(1)} ★ (${profile.rating_count} avaliações)` : 'Sem avaliações'],
                                 ].map(([label, value]) => (
-                                    <div key={label} className="flex justify-between items-center py-2 border-b border-slate-50">
+                                    <div key={label} className="flex justify-between items-center py-2 border-b border-white/5">
                                         <span className="text-xs text-slate-500">{label}</span>
-                                        <span className="text-xs font-black text-slate-900">{value}</span>
+                                        <span className="text-xs font-black text-white">{value}</span>
                                     </div>
                                 ))}
                             </div>
@@ -541,7 +592,7 @@ export default function VenderPage() {
                                 <select
                                     value={pixConfig.type}
                                     onChange={e => setPixConfig(p => ({ ...p, type: e.target.value }))}
-                                    className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 outline-none focus:border-rose-300"
+                                    className="w-full h-12 rounded-2xl border border-white/10 bg-slate-900 px-4 text-sm font-bold text-white outline-none focus:border-rose-500/50"
                                 >
                                     <option value="email">Email</option>
                                     <option value="cpf">CPF</option>
@@ -556,7 +607,7 @@ export default function VenderPage() {
                                     value={pixConfig.key}
                                     onChange={e => setPixConfig(p => ({ ...p, key: e.target.value }))}
                                     placeholder={pixConfig.type === 'cpf' ? '000.000.000-00' : pixConfig.type === 'email' ? 'seu@email.com' : 'Informe sua chave'}
-                                    className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 outline-none focus:border-rose-300"
+                                    className="w-full h-12 rounded-2xl border border-white/10 bg-slate-900 px-4 text-sm font-bold text-white outline-none focus:border-rose-500/50"
                                 />
                             </div>
                             <button
@@ -569,7 +620,7 @@ export default function VenderPage() {
                             </button>
                         </div>
 
-                        <div className="rounded-2xl bg-slate-50 p-5 space-y-2">
+                        <div className="rounded-2xl bg-white/5 p-5 space-y-2">
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Como funciona o repasse</p>
                             <ol className="space-y-2 text-xs text-slate-500 list-decimal list-inside">
                                 <li>Comprador paga → valor entra em &ldquo;Saldo Pendente&rdquo;</li>
@@ -588,20 +639,20 @@ export default function VenderPage() {
                     <div className="surface-card w-full max-w-md p-8 space-y-6">
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Informar envio</p>
-                            <h3 className="mt-2 text-xl font-black text-slate-950">Código de rastreio</h3>
+                            <h3 className="mt-2 text-xl font-black text-white">Código de rastreio</h3>
                         </div>
                         <input
                             type="text"
                             value={trackingCode}
                             onChange={e => setTrackingCode(e.target.value.toUpperCase())}
                             placeholder="Ex: BR123456789BR"
-                            className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-800 outline-none focus:border-rose-300 uppercase"
+                            className="w-full h-12 rounded-2xl border border-white/10 bg-slate-900 px-4 text-sm font-bold text-white outline-none focus:border-rose-500/50 uppercase"
                         />
                         <p className="text-xs text-slate-400">Informe o código dos Correios/transportadora. O comprador poderá rastrear o envio.</p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setTrackingModal(null)}
-                                className="flex-1 h-12 rounded-2xl border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all"
+                                className="flex-1 h-12 rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-white/5 transition-all"
                             >
                                 Cancelar
                             </button>
@@ -624,9 +675,9 @@ export default function VenderPage() {
                     <div className="surface-card w-full max-w-md p-8 space-y-6">
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Solicitar saque</p>
-                            <h3 className="mt-2 text-xl font-black text-slate-950">Quanto deseja sacar?</h3>
+                            <h3 className="mt-2 text-xl font-black text-white">Quanto deseja sacar?</h3>
                             <p className="mt-1 text-sm text-slate-500">
-                                Disponível: <strong className="text-emerald-600">{formatBRL(profile?.balance_available || 0)}</strong>
+                                Disponível: <strong className="text-emerald-400">{formatBRL(profile?.balance_available || 0)}</strong>
                             </p>
                         </div>
                         <input
@@ -637,13 +688,13 @@ export default function VenderPage() {
                             value={withdrawAmount}
                             onChange={e => setWithdrawAmount(e.target.value)}
                             placeholder="0,00"
-                            className="w-full h-14 rounded-2xl border border-slate-200 px-4 text-2xl font-black text-slate-900 outline-none focus:border-rose-300"
+                            className="w-full h-14 rounded-2xl border border-white/10 bg-slate-900 px-4 text-2xl font-black text-white outline-none focus:border-rose-500/50"
                         />
-                        <p className="text-xs text-slate-400">Chave PIX: <strong>{profile?.pix_key || 'Não configurada'}</strong></p>
+                        <p className="text-xs text-slate-400">Chave PIX: <strong className="text-white">{profile?.pix_key || 'Não configurada'}</strong></p>
                         <div className="flex gap-3">
                             <button
                                 onClick={() => setWithdrawModal(false)}
-                                className="flex-1 h-12 rounded-2xl border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all"
+                                className="flex-1 h-12 rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-white/5 transition-all"
                             >
                                 Cancelar
                             </button>

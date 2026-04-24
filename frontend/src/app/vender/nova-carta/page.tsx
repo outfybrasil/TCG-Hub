@@ -158,12 +158,12 @@ export default function NovaCartaPage() {
         <div className="animate-fade-up pb-20 pt-10">
             <section className="page-frame page-hero space-y-6">
                 <div className="max-w-2xl space-y-3">
-                    <span className="eyebrow">Publicar carta</span>
-                    <h1 className="text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl">
+                    <span className="eyebrow text-slate-400">Publicar carta</span>
+                    <h1 className="text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl">
                         Venda sua carta<br />em 2 passos.
                     </h1>
                     <p className="text-sm text-slate-500">
-                        Taxa da plataforma: <strong className="text-slate-800">8%</strong> sobre o valor de venda.
+                        Taxa da plataforma: <strong className="text-white">8%</strong> sobre o valor de venda.
                     </p>
                 </div>
 
@@ -174,15 +174,15 @@ export default function NovaCartaPage() {
                         [2, 'Detalhes & preço'],
                     ] as [number, string][]).map(([s, label]) => (
                         <React.Fragment key={s}>
-                            <div className={`flex items-center gap-2 ${step === s ? 'text-slate-950' : step > s ? 'text-slate-400' : 'text-slate-300'}`}>
+                            <div className={`flex items-center gap-2 ${step === s ? 'text-white' : step > s ? 'text-slate-500' : 'text-slate-600'}`}>
                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black transition-all ${
-                                    step === s ? 'bg-rose-600 text-white' : step > s ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'
+                                    step === s ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/20' : step > s ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/5 border border-white/10 text-slate-500'
                                 }`}>
                                     {step > s ? '✓' : s}
                                 </div>
                                 <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
                             </div>
-                            {s === 1 && <div className="flex-1 h-px bg-slate-100 max-w-12" />}
+                            {s === 1 && <div className="flex-1 h-px bg-white/10 max-w-12" />}
                         </React.Fragment>
                     ))}
                 </div>
@@ -191,25 +191,25 @@ export default function NovaCartaPage() {
             <section className="page-frame mt-8">
                 {/* Step 1: Buscar carta */}
                 {step === 1 && (
-                    <div className="surface-card p-8 space-y-8">
+                    <div className="bg-slate-900 border border-white/5 rounded-[40px] p-8 space-y-8 shadow-sm">
                         <div className="flex items-center gap-4">
-                            <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 whitespace-nowrap">1. Buscar a carta</h2>
-                            <div className="h-px flex-1 bg-slate-100" />
+                            <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-white whitespace-nowrap">1. Buscar a carta</h2>
+                            <div className="h-px flex-1 bg-white/5" />
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-4 bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                        <div className="flex flex-col sm:flex-row gap-4 bg-white/5 p-5 rounded-3xl border border-white/10">
                             <input
                                 type="text"
                                 placeholder="Nome da carta..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && searchCards()}
-                                className="flex-1 h-12 px-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-rose-300 transition-all"
+                                className="flex-1 h-12 px-4 bg-slate-900 border border-white/10 rounded-2xl text-sm font-bold text-white outline-none focus:border-rose-500/50 transition-all"
                             />
                             <select
                                 value={selectedSet}
                                 onChange={e => setSelectedSet(e.target.value)}
-                                className="flex-1 h-12 px-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 outline-none focus:border-rose-300 transition-all cursor-pointer appearance-none"
+                                className="flex-1 h-12 px-4 bg-slate-900 border border-white/10 rounded-2xl text-sm font-bold text-white outline-none focus:border-rose-500/50 transition-all cursor-pointer appearance-none"
                             >
                                 <option value="">Todas as coleções</option>
                                 {sets.map(s => (
@@ -219,7 +219,7 @@ export default function NovaCartaPage() {
                             <button
                                 onClick={searchCards}
                                 disabled={searching}
-                                className="h-12 px-10 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all disabled:opacity-50"
+                                className="h-12 px-10 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-500 transition-all disabled:opacity-50 shadow-lg shadow-rose-900/20"
                             >
                                 {searching ? 'Buscando...' : 'Buscar'}
                             </button>
@@ -232,13 +232,13 @@ export default function NovaCartaPage() {
                                         key={card.id}
                                         id={`select-card-${card.id}`}
                                         onClick={() => selectCard(card)}
-                                        className="group bg-white border border-slate-100 rounded-2xl p-3 hover:border-rose-400 hover:shadow-lg transition-all text-left"
+                                        className="group bg-white/5 border border-white/10 rounded-2xl p-3 hover:border-rose-500/50 hover:bg-rose-500/5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 text-left"
                                     >
-                                        <div className="aspect-[3/4] mb-2 overflow-hidden rounded-xl">
+                                        <div className="aspect-[3/4] mb-2 overflow-hidden rounded-xl bg-slate-800">
                                             <img src={card.image_url} alt={card.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
                                         </div>
-                                        <p className="text-[10px] font-black text-slate-900 truncate">{card.name}</p>
-                                        <p className="text-[8px] font-bold text-slate-400 truncate uppercase mt-0.5">{card.set_name}</p>
+                                        <p className="text-[10px] font-black text-white truncate">{card.name}</p>
+                                        <p className="text-[8px] font-bold text-slate-500 truncate uppercase mt-0.5">{card.set_name}</p>
                                     </button>
                                 ))}
                             </div>
@@ -250,15 +250,15 @@ export default function NovaCartaPage() {
                 {step === 2 && (
                     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
                         {/* Form */}
-                        <div className="surface-card p-8 space-y-8">
+                        <div className="bg-slate-900 border border-white/5 rounded-[40px] p-8 space-y-8 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 whitespace-nowrap">2. Detalhes & preço</h2>
-                                    <div className="h-px flex-1 bg-slate-100 w-8" />
+                                    <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-white whitespace-nowrap">2. Detalhes & preço</h2>
+                                    <div className="h-px flex-1 bg-white/5 w-8" />
                                 </div>
                                 <button
                                     onClick={() => setStep(1)}
-                                    className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-colors"
+                                    className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-500 transition-colors"
                                 >
                                     ← Trocar carta
                                 </button>
@@ -271,7 +271,7 @@ export default function NovaCartaPage() {
                                     <select
                                         value={form.condition}
                                         onChange={e => setForm(p => ({ ...p, condition: e.target.value }))}
-                                        className="w-full h-12 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-slate-900 outline-none focus:border-rose-300 bg-white cursor-pointer"
+                                        className="w-full h-12 rounded-2xl border border-white/10 px-4 text-sm font-bold text-white outline-none focus:border-rose-500/50 bg-slate-950 cursor-pointer"
                                     >
                                         <option value="M">Mint (M)</option>
                                         <option value="NM">Near Mint (NM)</option>
@@ -288,7 +288,7 @@ export default function NovaCartaPage() {
                                     <select
                                         value={form.language}
                                         onChange={e => setForm(p => ({ ...p, language: e.target.value }))}
-                                        className="w-full h-12 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-slate-900 outline-none focus:border-rose-300 bg-white cursor-pointer"
+                                        className="w-full h-12 rounded-2xl border border-white/10 px-4 text-sm font-bold text-white outline-none focus:border-rose-500/50 bg-slate-950 cursor-pointer"
                                     >
                                         <option>Português</option>
                                         <option>Inglês</option>
@@ -304,7 +304,7 @@ export default function NovaCartaPage() {
                                     <select
                                         value={form.finish}
                                         onChange={e => setForm(p => ({ ...p, finish: e.target.value }))}
-                                        className="w-full h-12 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-slate-900 outline-none focus:border-rose-300 bg-white cursor-pointer"
+                                        className="w-full h-12 rounded-2xl border border-white/10 px-4 text-sm font-bold text-white outline-none focus:border-rose-500/50 bg-slate-950 cursor-pointer"
                                     >
                                         <option>Normal</option>
                                         <option>Foil / Holo</option>
@@ -323,7 +323,7 @@ export default function NovaCartaPage() {
                                         value={form.grade}
                                         onChange={e => setForm(p => ({ ...p, grade: e.target.value }))}
                                         placeholder="Deixe vazio se não gradada"
-                                        className="w-full h-12 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-slate-900 outline-none focus:border-rose-300"
+                                        className="w-full h-12 rounded-2xl border border-white/10 px-4 text-sm font-bold text-white outline-none focus:border-rose-500/50 bg-white/5"
                                     />
                                 </div>
 
@@ -338,12 +338,12 @@ export default function NovaCartaPage() {
                                         value={form.price}
                                         onChange={e => setForm(p => ({ ...p, price: e.target.value }))}
                                         placeholder="0,00"
-                                        className="w-full h-12 rounded-2xl border border-slate-200 px-4 text-sm font-black text-rose-600 outline-none focus:border-rose-300"
+                                        className="w-full h-12 rounded-2xl border border-white/10 px-4 text-sm font-black text-rose-500 outline-none focus:border-rose-500/50 bg-white/5"
                                     />
                                     {form.price && parseFloat(form.price) > 0 && (
-                                        <p className="text-[10px] text-slate-400">
-                                            Você recebe: <strong className="text-emerald-600">{netReceive.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-                                            {' '}(8% retido pela plataforma)
+                                        <p className="text-[10px] text-slate-500">
+                                            Você recebe: <strong className="text-emerald-500">{netReceive.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+                                            {' '}(8% retido)
                                         </p>
                                     )}
                                 </div>
@@ -357,7 +357,7 @@ export default function NovaCartaPage() {
                                         max="99"
                                         value={form.quantity}
                                         onChange={e => setForm(p => ({ ...p, quantity: e.target.value }))}
-                                        className="w-full h-12 rounded-2xl border border-slate-200 px-4 text-sm font-black text-slate-900 outline-none focus:border-rose-300"
+                                        className="w-full h-12 rounded-2xl border border-white/10 px-4 text-sm font-black text-white outline-none focus:border-rose-500/50 bg-white/5"
                                     />
                                 </div>
 
@@ -367,7 +367,7 @@ export default function NovaCartaPage() {
                                     <select
                                         value={form.ships_from_state}
                                         onChange={e => setForm(p => ({ ...p, ships_from_state: e.target.value }))}
-                                        className="w-full h-12 rounded-2xl border border-slate-200 px-4 text-sm font-bold text-slate-900 outline-none focus:border-rose-300 bg-white cursor-pointer"
+                                        className="w-full h-12 rounded-2xl border border-white/10 px-4 text-sm font-bold text-white outline-none focus:border-rose-500/50 bg-slate-950 cursor-pointer"
                                     >
                                         <option value="">Selecione...</option>
                                         {STATES.map(s => <option key={s}>{s}</option>)}
@@ -379,11 +379,11 @@ export default function NovaCartaPage() {
                                     <label className="flex items-center gap-3 cursor-pointer">
                                         <div
                                             onClick={() => setForm(p => ({ ...p, free_shipping: !p.free_shipping }))}
-                                            className={`w-10 h-6 rounded-full relative transition-colors ${form.free_shipping ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                                            className={`w-10 h-6 rounded-full relative transition-colors ${form.free_shipping ? 'bg-emerald-500' : 'bg-white/10 border border-white/10'}`}
                                         >
                                             <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.free_shipping ? 'left-4' : 'left-0.5'}`} />
                                         </div>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">Frete grátis</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Frete grátis</span>
                                     </label>
                                 </div>
                             </div>
@@ -397,9 +397,9 @@ export default function NovaCartaPage() {
                                     placeholder="Ex: Carta comprada originalmente em pack. Sem marcas de uso. Guarda em sleeve."
                                     rows={3}
                                     maxLength={500}
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-800 outline-none focus:border-rose-300 resize-none"
+                                    className="w-full rounded-2xl border border-white/10 px-4 py-3 text-sm text-white outline-none focus:border-rose-500/50 bg-white/5 resize-none"
                                 />
-                                <p className="text-[10px] text-slate-400 text-right">{form.notes.length}/500</p>
+                                <p className="text-[10px] text-slate-500 text-right">{form.notes.length}/500</p>
                             </div>
 
                             {error && (
@@ -411,7 +411,7 @@ export default function NovaCartaPage() {
                             <div className="flex gap-4 pt-2">
                                 <Link
                                     href="/vender"
-                                    className="flex-1 h-14 inline-flex items-center justify-center rounded-2xl border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all"
+                                    className="flex-1 h-14 inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-white/10 hover:text-white transition-all"
                                 >
                                     Cancelar
                                 </Link>
@@ -419,7 +419,7 @@ export default function NovaCartaPage() {
                                     id="btn-publicar"
                                     onClick={handleSubmit}
                                     disabled={submitting}
-                                    className="flex-1 h-14 rounded-2xl bg-rose-600 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-slate-950 disabled:opacity-60 shadow-xl shadow-rose-500/20"
+                                    className="flex-1 h-14 rounded-2xl bg-rose-600 text-[10px] font-black uppercase tracking-widest text-white transition-all hover:bg-rose-500 disabled:opacity-60 shadow-xl shadow-rose-900/20"
                                 >
                                     {submitting ? 'Publicando...' : 'Publicar carta'}
                                 </button>
@@ -428,8 +428,8 @@ export default function NovaCartaPage() {
 
                         {/* Preview lateral */}
                         <div className="space-y-4">
-                            <div className="surface-card p-6 space-y-4">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pré-visualização</p>
+                            <div className="bg-slate-900 border border-white/5 p-6 space-y-4 rounded-[40px] shadow-sm">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Pré-visualização</p>
                                 {form.image_url && (
                                     <img
                                         src={form.image_url}
@@ -438,11 +438,11 @@ export default function NovaCartaPage() {
                                     />
                                 )}
                                 <div className="space-y-2">
-                                    <p className="font-black text-slate-900">{form.card_name || '—'}</p>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                    <p className="font-black text-white">{form.card_name || '—'}</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase">
                                         {form.card_set}{form.card_number ? ` · #${form.card_number}` : ''}
                                     </p>
-                                    <div className="pt-2 space-y-1.5">
+                                    <div className="pt-2 space-y-1.5 border-t border-white/5 mt-2">
                                         {[
                                             ['Condição', form.condition],
                                             ['Idioma', form.language],
@@ -450,22 +450,22 @@ export default function NovaCartaPage() {
                                             ['Preço', form.price ? parseFloat(form.price).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'],
                                             ['Você recebe', netReceive > 0 ? netReceive.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'],
                                         ].map(([label, value]) => (
-                                            <div key={label} className="flex justify-between">
-                                                <span className="text-[10px] text-slate-400">{label}</span>
-                                                <span className="text-[10px] font-black text-slate-800">{value}</span>
+                                            <div key={label} className="flex justify-between mt-1">
+                                                <span className="text-[10px] text-slate-500">{label}</span>
+                                                <span className="text-[10px] font-black text-white">{value}</span>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="rounded-2xl bg-amber-50 border border-amber-100 p-5 space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Lembre-se</p>
-                                <ul className="space-y-1.5 text-xs text-amber-700">
+                            <div className="rounded-[40px] bg-rose-500/5 border border-rose-500/10 p-6 space-y-2">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-rose-500">Lembre-se</p>
+                                <ul className="space-y-1.5 text-xs text-rose-400/80 font-medium">
                                     <li>• Descreva a condição com honestidade</li>
                                     <li>• Embale bem antes de enviar</li>
                                     <li>• Responda rápido para boa reputação</li>
-                                    <li>• 8% de taxa é retida do seu valor recebido</li>
+                                    <li>• 8% de taxa é retida do valor</li>
                                 </ul>
                             </div>
                         </div>

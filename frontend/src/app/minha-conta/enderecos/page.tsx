@@ -147,18 +147,18 @@ export default function EnderecosPage() {
         <div className="max-w-4xl mx-auto px-6 py-16 min-h-screen animate-fade-up">
             <div className="mb-12 flex items-center justify-between">
                 <div className="space-y-3">
-                    <span className="inline-block px-3 py-1 rounded-full bg-slate-100 text-slate-500 font-black text-[9px] uppercase tracking-widest border border-slate-200">
+                    <span className="inline-block px-3 py-1 rounded-full bg-white/5 text-slate-400 font-black text-[9px] uppercase tracking-widest border border-white/10">
                         Minha Conta
                     </span>
-                    <h1 className="text-4xl font-black tracking-tighter text-slate-900">
+                    <h1 className="text-4xl font-black tracking-tighter text-white">
                         Meus <span className="text-rose-600">Endereços.</span>
                     </h1>
-                    <p className="text-slate-400 text-sm">Gerencie seus locais de entrega.</p>
+                    <p className="text-slate-500 text-sm">Gerencie seus locais de entrega.</p>
                 </div>
                 {!showForm && (
                     <button
                         onClick={() => { resetForm(); setShowForm(true); }}
-                        className="h-12 px-6 bg-slate-900 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-600 transition-all shadow-lg"
+                        className="h-12 px-6 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-500 transition-all shadow-lg shadow-rose-900/20"
                     >
                         + Novo Endereço
                     </button>
@@ -166,60 +166,60 @@ export default function EnderecosPage() {
             </div>
 
             {showForm ? (
-                <div className="bg-white border border-slate-100 p-8 rounded-[40px] shadow-sm animate-fade-in">
+                <div className="bg-slate-900 border border-white/5 p-8 rounded-[40px] shadow-sm animate-fade-in">
                     <form onSubmit={handleSave} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Local (ex: Casa, Trabalho)</label>
-                                <input required type="text" value={label} onChange={e => setLabel(e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none" />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome do Local (ex: Casa, Trabalho)</label>
+                                <input required type="text" value={label} onChange={e => setLabel(e.target.value)} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white focus:ring-2 focus:ring-rose-500/50 outline-none" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CEP</label>
-                                <input required type="text" maxLength={8} value={cep} onChange={handleCepChange} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none" />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">CEP</label>
+                                <input required type="text" maxLength={8} value={cep} onChange={handleCepChange} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white focus:ring-2 focus:ring-rose-500/50 outline-none" />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Rua / Logradouro</label>
-                            <input required type="text" value={street} onChange={e => setStreet(e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none" />
+                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Rua / Logradouro</label>
+                            <input required type="text" value={street} onChange={e => setStreet(e.target.value)} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white focus:ring-2 focus:ring-rose-500/50 outline-none" />
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Número</label>
-                                <input required type="text" value={number} onChange={e => setNumber(e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none" />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Número</label>
+                                <input required type="text" value={number} onChange={e => setNumber(e.target.value)} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white focus:ring-2 focus:ring-rose-500/50 outline-none" />
                             </div>
                             <div className="space-y-2 col-span-1 md:col-span-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Complemento</label>
-                                <input type="text" value={complement} onChange={e => setComplement(e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none" />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Complemento</label>
+                                <input type="text" value={complement} onChange={e => setComplement(e.target.value)} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white focus:ring-2 focus:ring-rose-500/50 outline-none" />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bairro</label>
-                                <input required type="text" value={neighborhood} onChange={e => setNeighborhood(e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none" />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Bairro</label>
+                                <input required type="text" value={neighborhood} onChange={e => setNeighborhood(e.target.value)} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white focus:ring-2 focus:ring-rose-500/50 outline-none" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cidade</label>
-                                <input required type="text" value={city} onChange={e => setCity(e.target.value)} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none" />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Cidade</label>
+                                <input required type="text" value={city} onChange={e => setCity(e.target.value)} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white focus:ring-2 focus:ring-rose-500/50 outline-none" />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado (UF)</label>
-                                <input required type="text" maxLength={2} value={state} onChange={e => setState(e.target.value.toUpperCase())} className="w-full h-12 px-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-rose-500/20 outline-none" />
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Estado (UF)</label>
+                                <input required type="text" maxLength={2} value={state} onChange={e => setState(e.target.value.toUpperCase())} className="w-full h-12 px-4 bg-white/5 border border-white/10 rounded-2xl text-sm text-white focus:ring-2 focus:ring-rose-500/50 outline-none" />
                             </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <input type="checkbox" id="isDefault" checked={isDefault} onChange={e => setIsDefault(e.target.checked)} className="rounded border-slate-300 text-rose-600 focus:ring-rose-500" />
-                            <label htmlFor="isDefault" className="text-xs font-bold text-slate-600">Definir como endereço principal</label>
+                            <input type="checkbox" id="isDefault" checked={isDefault} onChange={e => setIsDefault(e.target.checked)} className="rounded border-white/10 bg-white/5 text-rose-600 focus:ring-rose-500 focus:ring-offset-slate-900" />
+                            <label htmlFor="isDefault" className="text-xs font-bold text-slate-400">Definir como endereço principal</label>
                         </div>
 
-                        <div className="flex gap-4 pt-4">
-                            <button type="submit" disabled={saving} className="flex-1 h-14 bg-rose-600 text-white font-black uppercase tracking-widest text-[11px] rounded-[20px] shadow-xl shadow-rose-500/20 hover:bg-rose-700 transition-all">
+                        <div className="flex gap-4 pt-4 border-t border-white/5 mt-6">
+                            <button type="submit" disabled={saving} className="flex-1 h-14 bg-rose-600 text-white font-black uppercase tracking-widest text-[11px] rounded-[20px] shadow-xl shadow-rose-900/20 hover:bg-rose-500 transition-all">
                                 {saving ? 'Salvando...' : 'Salvar Endereço'}
                             </button>
-                            <button type="button" onClick={() => setShowForm(false)} className="px-8 bg-slate-100 text-slate-500 font-black uppercase tracking-widest text-[10px] rounded-[20px] hover:bg-slate-200 transition-all">
+                            <button type="button" onClick={() => setShowForm(false)} className="px-8 border border-white/10 bg-white/5 text-slate-400 font-black uppercase tracking-widest text-[10px] rounded-[20px] hover:bg-white/10 hover:text-white transition-all">
                                 Cancelar
                             </button>
                         </div>
@@ -228,32 +228,32 @@ export default function EnderecosPage() {
             ) : (
                 <div className="space-y-4">
                     {loading ? (
-                        <div className="text-center py-20 text-slate-400 animate-pulse font-bold text-sm uppercase">Buscando endereços...</div>
+                        <div className="text-center py-20 text-slate-500 animate-pulse font-bold text-sm uppercase">Buscando endereços...</div>
                     ) : addresses.length === 0 ? (
-                        <div className="text-center py-20 bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
+                        <div className="text-center py-20 bg-slate-900 rounded-[40px] border border-dashed border-white/10">
                             <div className="text-4xl mb-4">📍</div>
-                            <p className="text-slate-400 font-bold text-sm uppercase tracking-widest">Nenhum endereço cadastrado.</p>
+                            <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">Nenhum endereço cadastrado.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {addresses.map((addr) => (
-                                <div key={addr.id} className="bg-white border border-slate-100 p-8 rounded-[40px] shadow-sm hover:shadow-md transition-all relative group">
+                                <div key={addr.id} className="bg-slate-900 border border-white/5 p-8 rounded-[40px] shadow-sm hover:shadow-rose-900/10 hover:border-white/10 hover:-translate-y-1 transition-all duration-300 relative group">
                                     {addr.is_default && (
-                                        <span className="absolute top-6 right-6 px-3 py-1 bg-emerald-50 text-emerald-600 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-100">
+                                        <span className="absolute top-6 right-6 px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">
                                             Principal
                                         </span>
                                     )}
-                                    <h3 className="text-xl font-black text-slate-900 mb-2">{addr.label}</h3>
-                                    <div className="space-y-1 text-slate-500 text-sm font-medium">
+                                    <h3 className="text-xl font-black text-white mb-2">{addr.label}</h3>
+                                    <div className="space-y-1 text-slate-400 text-sm font-medium">
                                         <p>{addr.street}, {addr.number}</p>
                                         {addr.complement && <p>{addr.complement}</p>}
                                         <p>{addr.neighborhood}</p>
                                         <p>{addr.city} - {addr.state}</p>
-                                        <p className="text-[10px] font-black tracking-widest text-slate-300 mt-2">{addr.cep}</p>
+                                        <p className="text-[10px] font-black tracking-widest text-slate-500 mt-2">{addr.cep}</p>
                                     </div>
-                                    <div className="flex gap-4 mt-8 pt-6 border-t border-slate-50">
-                                        <button onClick={() => startEdit(addr)} className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-colors">Editar</button>
-                                        <button onClick={() => handleDelete(addr.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 transition-colors">Excluir</button>
+                                    <div className="flex gap-4 mt-8 pt-6 border-t border-white/5">
+                                        <button onClick={() => startEdit(addr)} className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-500 transition-colors">Editar</button>
+                                        <button onClick={() => handleDelete(addr.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-rose-500 transition-colors">Excluir</button>
                                     </div>
                                 </div>
                             ))}

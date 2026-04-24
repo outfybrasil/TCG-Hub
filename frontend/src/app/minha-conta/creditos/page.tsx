@@ -206,7 +206,7 @@ export default function CreditosPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-44">
-                <div className="h-10 w-10 animate-spin rounded-full border-2 border-rose-600 border-t-transparent" />
+                <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-rose-600" />
             </div>
         );
     }
@@ -214,11 +214,11 @@ export default function CreditosPage() {
     return (
         <div className="mx-auto max-w-4xl animate-fade-up px-6 py-16">
             <div className="mb-12 space-y-3">
-                <Link href="/minha-conta" className="text-[9px] font-black uppercase tracking-widest text-slate-400 transition-colors hover:text-rose-600">
+                <Link href="/minha-conta" className="text-[9px] font-black uppercase tracking-widest text-slate-500 transition-colors hover:text-rose-500">
                     Voltar para Minha Conta
                 </Link>
                 <div className="flex items-center gap-4">
-                    <h1 className="text-4xl font-black uppercase leading-none tracking-[-0.04em] text-slate-900 sm:text-5xl">
+                    <h1 className="text-4xl font-black uppercase leading-none tracking-[-0.04em] text-white sm:text-5xl">
                         Meus <span className="text-rose-600">Creditos.</span>
                     </h1>
                 </div>
@@ -228,13 +228,13 @@ export default function CreditosPage() {
             </div>
 
             <div className="mb-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
-                <div className="relative overflow-hidden rounded-[40px] bg-slate-900 p-8 text-white shadow-xl shadow-slate-200">
+                <div className="relative overflow-hidden rounded-[40px] bg-slate-900 p-8 text-white shadow-xl shadow-rose-900/10 border border-white/5">
                     <div className="absolute right-0 top-0 -mr-12 -mt-12 h-24 w-24 rounded-bl-full bg-rose-500/10" />
-                    <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">Disponivel</p>
+                    <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Disponivel</p>
                     <p className="text-4xl font-black tracking-tighter text-white">R$ {available.toFixed(2).replace('.', ',')}</p>
                     <p className="mt-2 text-[8px] font-black uppercase tracking-widest text-emerald-400">Pronto para lances</p>
                 </div>
-                <div className="rounded-[40px] border border-slate-100 bg-white p-8 shadow-sm">
+                <div className="rounded-[40px] border border-white/5 bg-slate-900 p-8 shadow-sm">
                     <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Bloqueado</p>
                     <p className="text-3xl font-black tracking-tighter text-amber-500">R$ {credits.locked.toFixed(2).replace('.', ',')}</p>
                     <div className="mt-2 flex items-center gap-2">
@@ -242,20 +242,20 @@ export default function CreditosPage() {
                         <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Em lances ativos</p>
                     </div>
                 </div>
-                <div className="rounded-[40px] border border-slate-100 bg-white p-8 shadow-sm">
+                <div className="rounded-[40px] border border-white/5 bg-slate-900 p-8 shadow-sm">
                     <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-400">Historico Total</p>
-                    <p className="text-3xl font-black tracking-tighter text-slate-900">R$ {credits.balance.toFixed(2).replace('.', ',')}</p>
-                    <p className="mt-2 text-[9px] font-bold uppercase tracking-widest text-slate-400">Acumulado</p>
+                    <p className="text-3xl font-black tracking-tighter text-white">R$ {credits.balance.toFixed(2).replace('.', ',')}</p>
+                    <p className="mt-2 text-[9px] font-bold uppercase tracking-widest text-slate-500">Acumulado</p>
                 </div>
             </div>
 
             <div className="mb-12 grid grid-cols-1 items-start gap-8 lg:grid-cols-5">
-                <div className="relative rounded-[40px] border border-slate-100 bg-white p-10 shadow-sm lg:col-span-3">
+                <div className="relative rounded-[40px] border border-white/5 bg-slate-900 p-10 shadow-sm lg:col-span-3">
                     <div className="mb-8 flex items-center justify-between">
-                        <h2 className="text-lg font-black uppercase tracking-tighter text-slate-900">Recarregar Saldo</h2>
+                        <h2 className="text-lg font-black uppercase tracking-tighter text-white">Recarregar Saldo</h2>
                         <div className="flex gap-1">
                             {[1, 2].map((i) => (
-                                <div key={i} className={`h-1.5 w-1.5 rounded-full ${step >= i ? 'bg-rose-600' : 'bg-slate-100'}`} />
+                                <div key={i} className={`h-1.5 w-1.5 rounded-full ${step >= i ? 'bg-rose-600' : 'bg-slate-700'}`} />
                             ))}
                         </div>
                     </div>
@@ -270,7 +270,7 @@ export default function CreditosPage() {
                                         onClick={() => setDepositAmount(String(value))}
                                         className={`h-12 rounded-2xl border-2 text-xs font-black transition-all ${depositAmount === String(value)
                                             ? 'border-rose-600 bg-rose-600 text-white shadow-lg shadow-rose-900/20'
-                                            : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
+                                            : 'border-white/5 bg-white/5 text-slate-400 hover:border-white/10 hover:bg-white/10'
                                             }`}
                                     >
                                         R$ {value.toLocaleString('pt-BR', { minimumFractionDigits: value < 1 ? 2 : 0, maximumFractionDigits: 2 })}
@@ -278,19 +278,19 @@ export default function CreditosPage() {
                                 ))}
                             </div>
                             <div className="relative">
-                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">R$</span>
+                                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-sm font-black text-slate-500">R$</span>
                                 <input
                                     type="number"
                                     placeholder="Outro valor..."
                                     value={depositAmount}
                                     onChange={(e) => setDepositAmount(e.target.value)}
-                                    className="h-14 w-full rounded-2xl border-none bg-slate-50 pl-12 pr-5 text-sm font-black text-slate-900 transition-all focus:ring-2 focus:ring-rose-500"
+                                    className="h-14 w-full rounded-2xl border-none bg-white/5 pl-12 pr-5 text-sm font-black text-white transition-all focus:ring-2 focus:ring-rose-500"
                                 />
                             </div>
                             <button
                                 onClick={handleGeneratePreference}
                                 disabled={depositing || !depositAmount || parseFloat(depositAmount) < 0.01}
-                                className="h-14 w-full rounded-2xl bg-slate-900 text-[10px] font-black uppercase tracking-widest text-white shadow-xl transition-all hover:bg-rose-600 disabled:opacity-50"
+                                className="h-14 w-full rounded-2xl bg-rose-600 text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-500 disabled:opacity-50"
                             >
                                 {depositing ? 'Gerando checkout...' : 'Continuar para pagamento'}
                             </button>
@@ -312,10 +312,10 @@ export default function CreditosPage() {
                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Checkout Pro</p>
                             </div>
 
-                            <div className="mb-4 flex items-center justify-between rounded-3xl border border-slate-100 bg-slate-50 p-6">
+                            <div className="mb-4 flex items-center justify-between rounded-3xl border border-white/5 bg-white/5 p-6">
                                 <div>
                                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Valor da Recarga</p>
-                                    <p className="text-2xl font-black text-slate-900">R$ {parseFloat(depositAmount).toFixed(2).replace('.', ',')}</p>
+                                    <p className="text-2xl font-black text-white">R$ {parseFloat(depositAmount).toFixed(2).replace('.', ',')}</p>
                                 </div>
                             </div>
 
@@ -369,20 +369,20 @@ export default function CreditosPage() {
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            className="relative w-full max-w-lg overflow-hidden rounded-[40px] bg-white p-8 text-center shadow-2xl sm:p-12"
+                            className="relative w-full max-w-lg overflow-hidden rounded-[40px] border border-white/10 bg-slate-900 p-8 text-center shadow-2xl shadow-emerald-900/10 sm:p-12"
                         >
                             <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-r from-emerald-400 to-emerald-600" />
                             <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-50 text-3xl text-emerald-600">
                                 R$
                             </div>
-                            <h2 className="mb-4 text-3xl font-black uppercase tracking-tighter text-slate-900">Confirmar Conversao?</h2>
-                            <p className="mb-10 px-4 text-sm font-bold leading-relaxed text-slate-500">
-                                Voce esta transformando <span className="font-black text-emerald-600">R$ {cashbackBalance.toFixed(2).replace('.', ',')}</span> de cashback em creditos de site. Esta acao e instantanea e nao pode ser desfeita.
+                            <h2 className="mb-4 text-3xl font-black uppercase tracking-tighter text-white">Confirmar Conversao?</h2>
+                            <p className="mb-10 px-4 text-sm font-bold leading-relaxed text-slate-400">
+                                Voce esta transformando <span className="font-black text-emerald-400">R$ {cashbackBalance.toFixed(2).replace('.', ',')}</span> de cashback em creditos de site. Esta acao e instantanea e nao pode ser desfeita.
                             </p>
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <button
                                     onClick={() => setShowConfirmModal(false)}
-                                    className="h-14 rounded-2xl bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all hover:bg-slate-100"
+                                    className="h-14 rounded-2xl bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all hover:bg-white/10"
                                 >
                                     Cancelar
                                 </button>
@@ -421,26 +421,26 @@ export default function CreditosPage() {
                         </ul>
                     </div>
 
-                    <div className="overflow-hidden rounded-[40px] border border-slate-100 bg-white shadow-sm">
-                        <div className="flex items-center justify-between border-b border-slate-50 px-8 py-6">
-                            <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-900">Historico</h2>
-                            <Link href="/minha-conta/pedidos" className="text-[8px] font-black uppercase tracking-widest text-rose-600">
+                    <div className="overflow-hidden rounded-[40px] border border-white/5 bg-slate-900 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-white/5 px-8 py-6">
+                            <h2 className="text-[11px] font-black uppercase tracking-widest text-white">Historico</h2>
+                            <Link href="/minha-conta/pedidos" className="text-[8px] font-black uppercase tracking-widest text-rose-600 hover:text-rose-400">
                                 Ver Todos
                             </Link>
                         </div>
-                        <div className="max-h-[300px] divide-y divide-slate-50 overflow-y-auto">
+                        <div className="max-h-[300px] divide-y divide-white/5 overflow-y-auto">
                             {transactions.length === 0 ? (
                                 <div className="space-y-3 p-10 text-center">
-                                    <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-200">?</div>
-                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Nenhuma movimentacao</p>
+                                    <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-400">?</div>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Nenhuma movimentacao</p>
                                 </div>
                             ) : (
                                 transactions.map((tx) => {
                                     const meta = typeLabels[tx.type] || { label: tx.type, color: 'text-slate-600', sign: '' };
                                     return (
-                                        <div key={tx.id} className="flex items-center justify-between px-8 py-5 transition-colors hover:bg-slate-50">
+                                            <div key={tx.id} className="flex items-center justify-between px-8 py-5 transition-colors hover:bg-white/5">
                                             <div>
-                                                <p className="text-[10px] font-black text-slate-900">{meta.label}</p>
+                                                <p className="text-[10px] font-black text-white">{meta.label}</p>
                                                 <p className="mt-0.5 text-[8px] font-black uppercase tracking-widest text-slate-400">
                                                     {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} - {new Date(tx.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
@@ -462,9 +462,9 @@ export default function CreditosPage() {
                 </div>
             </div>
 
-            <div className="rounded-[32px] border border-rose-100 bg-rose-50 p-8 text-center">
-                <p className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-rose-600">Seguranca Garantida</p>
-                <p className="mx-auto max-w-xl text-[10px] font-bold leading-relaxed text-rose-900">
+            <div className="rounded-[32px] border border-rose-500/20 bg-rose-500/5 p-8 text-center">
+                <p className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-rose-500">Seguranca Garantida</p>
+                <p className="mx-auto max-w-xl text-[10px] font-bold leading-relaxed text-rose-200/60">
                     Todos os pagamentos sao processados via Mercado Pago com criptografia de ponta a ponta. Solicitacoes de estorno seguem taxa administrativa de {businessRules.creditRefundFeePercentage}% e podem levar ate {businessRules.creditRefundProcessingHours}h para conclusao.
                 </p>
             </div>

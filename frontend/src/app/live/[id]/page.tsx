@@ -19,6 +19,7 @@ export default function LiveRoomPage() {
     const [winnerHistory, setWinnerHistory] = useState<any[]>([]);
     const [userBalance, setUserBalance] = useState<number | null>(null);
     const [customBid, setCustomBid] = useState<string>('');
+    const [viewerCount, setViewerCount] = useState<number>(1);
 
     useEffect(() => {
         loadSession();
@@ -57,6 +58,28 @@ export default function LiveRoomPage() {
             supabase.removeChannel(historyChannel);
         };
     }, [liveId]);
+
+    // Track Realtime Presence (Viewer Count)
+    useEffect(() => {
+        const presenceChannel = supabase.channel(`live_presence_${liveId}`, {
+            config: { presence: { key: userId || Math.random().toString() } }
+        });
+
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.presenceState();
+                setViewerCount(Math.max(1, Object.keys(state).length));
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await presenceChannel.track({ online_at: new Date().toISOString() });
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(presenceChannel);
+        };
+    }, [liveId, userId]);
 
     const loadSession = async () => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -154,7 +177,7 @@ export default function LiveRoomPage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs font-black" style={{ color: '#6ee591' }}>
                     <span>●</span>
-                    <span>{Math.floor(Math.random() * 30) + 10} Online</span>
+                    <span>{viewerCount} Online</span>
                 </div>
             </div>
 

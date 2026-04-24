@@ -67,8 +67,12 @@ export async function requireAuthenticatedUser(request: Request): Promise<AuthRe
 
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
+        console.error('[Auth] getUser failed:', error);
         return {
-            response: NextResponse.json({ error: 'Nao autorizado. Sessao invalida.' }, { status: 401 }),
+            response: NextResponse.json({ 
+                error: 'Nao autorizado. Sessao invalida.',
+                details: error?.message 
+            }, { status: 401 }),
         };
     }
 

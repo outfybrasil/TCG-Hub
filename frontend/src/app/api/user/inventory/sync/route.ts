@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { buildMarketInputFromCard, buildMarketSearchKeyFromCard, summarizeMarketResult } from '@/lib/market-cache';
 import { lookupBrazilianMarketPrices } from '@/lib/market-pricing';
+import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 interface UserCollectionRow {
     id: string;
@@ -23,13 +24,11 @@ interface PokemonCardMetaRow {
 
 export async function POST(request: Request) {
     try {
-        const authHeader = request.headers.get('Authorization');
-        const token = authHeader?.split(' ')[1];
-        
-        const { data: { user } } = await supabase.auth.getUser(token);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const auth = await requireAuthenticatedUser(request);
+        if ('response' in auth) {
+            return auth.response;
         }
+        const user = auth.user;
 
         const { data: collection, error } = await supabaseAdmin
             .from('user_collections')

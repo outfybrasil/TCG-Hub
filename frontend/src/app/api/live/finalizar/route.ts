@@ -50,7 +50,8 @@ export async function POST(req: Request) {
                 is_auction: true,
                 is_live: true,
                 live_id: liveId,
-                item_type: itemType || 'Carta'
+                item_type: itemType || 'Carta',
+                seller_id: liveData.streamer_id
             }],
             total_amount: Number(amount),
             discount_amount: 0,

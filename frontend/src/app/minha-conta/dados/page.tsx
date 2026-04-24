@@ -124,7 +124,7 @@ export default function DadosContaPage() {
 
     if (loading) {
         return (
-            <div className="mx-auto max-w-4xl px-6 py-32 text-center text-sm font-black uppercase tracking-[0.22em] text-slate-300">
+            <div className="mx-auto max-w-4xl px-6 py-32 text-center text-sm font-black uppercase tracking-[0.22em] text-slate-500">
                 Carregando seus dados...
             </div>
         );
@@ -133,19 +133,19 @@ export default function DadosContaPage() {
     return (
         <div className="mx-auto min-h-screen max-w-4xl px-6 py-16 animate-fade-up">
             <div className="mb-12 space-y-3">
-                <Link href="/minha-conta" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-rose-600 hover:underline">
+                <Link href="/minha-conta" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-rose-500 transition-colors">
                     ← Voltar para painel
                 </Link>
-                <h1 className="text-4xl font-black tracking-[-0.04em] text-slate-900">
+                <h1 className="text-4xl font-black tracking-[-0.04em] text-white">
                     Dados da <span className="text-rose-600">conta.</span>
                 </h1>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-400">
                     Atualize suas informacoes pessoais, senha e email. O gerenciamento de cartao fica direto no Mercado Pago.
                 </p>
             </div>
 
             {message && (
-                <div className={`mb-8 flex items-center gap-3 rounded-2xl border p-4 ${message.type === 'success' ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-rose-100 bg-rose-50 text-rose-600'}`}>
+                <div className={`mb-8 flex items-center gap-3 rounded-2xl border p-4 ${message.type === 'success' ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-500' : 'border-rose-500/20 bg-rose-500/5 text-rose-500'}`}>
                     <span className="text-lg">{message.type === 'success' ? '✓' : '!'}</span>
                     <p className="text-xs font-bold uppercase tracking-[0.18em]">{message.text}</p>
                 </div>
@@ -153,38 +153,38 @@ export default function DadosContaPage() {
 
             <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
                 <div className="space-y-8">
-                    <div className="rounded-[40px] border border-slate-100 bg-white p-8 shadow-sm">
+                    <div className="rounded-[40px] border border-white/5 bg-slate-900 p-8 shadow-sm">
                         <div className="mb-8 flex items-center gap-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">P</div>
-                            <h2 className="text-lg font-black tracking-[-0.03em] text-slate-900">Informacoes pessoais</h2>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-400">P</div>
+                            <h2 className="text-lg font-black tracking-[-0.03em] text-white">Informacoes pessoais</h2>
                         </div>
 
                         <form onSubmit={handleUpdateProfile} className="space-y-6">
                             <div className="space-y-2">
-                                <label className="ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Nome completo</label>
+                                <label className="ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Nome completo</label>
                                 <input
                                     required
                                     type="text"
                                     value={profile.full_name}
                                     onChange={(event) => setProfile({ ...profile, full_name: event.target.value })}
-                                    className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
+                                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white outline-none transition-all focus:ring-2 focus:ring-rose-500/50"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <label className="ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Telefone / WhatsApp</label>
+                                <label className="ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Telefone / WhatsApp</label>
                                 <input
                                     type="text"
                                     placeholder="(00) 00000-0000"
                                     value={profile.phone}
                                     onChange={(event) => setProfile({ ...profile, phone: event.target.value })}
-                                    className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
+                                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white outline-none transition-all focus:ring-2 focus:ring-rose-500/50"
                                 />
                             </div>
 
                             <button
                                 disabled={saving}
-                                className="h-12 w-full rounded-xl bg-slate-900 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-rose-600 disabled:opacity-50"
+                                className="h-12 w-full rounded-xl bg-rose-600 text-[10px] font-black uppercase tracking-[0.2em] text-white transition-all hover:bg-rose-500 disabled:opacity-50 shadow-lg shadow-rose-900/20"
                             >
                                 {saving ? 'Salvando...' : 'Salvar alteracoes'}
                             </button>
@@ -200,21 +200,21 @@ export default function DadosContaPage() {
                 </div>
 
                 <div className="space-y-8">
-                    <div className="rounded-[40px] border border-slate-100 bg-white p-8 shadow-sm">
+                    <div className="rounded-[40px] border border-white/5 bg-slate-900 p-8 shadow-sm">
                         <div className="mb-8 flex items-center gap-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">S</div>
-                            <h2 className="text-lg font-black tracking-[-0.03em] text-slate-900">Seguranca</h2>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-400">S</div>
+                            <h2 className="text-lg font-black tracking-[-0.03em] text-white">Seguranca</h2>
                         </div>
 
                         <form onSubmit={handleUpdatePassword} className="space-y-4">
-                            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Alterar senha</p>
+                            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Alterar senha</p>
                             <input
                                 required
                                 type="password"
                                 placeholder="Nova senha"
                                 value={newPassword}
                                 onChange={(event) => setNewPassword(event.target.value)}
-                                className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
+                                className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white outline-none transition-all focus:ring-2 focus:ring-rose-500/50"
                             />
                             <input
                                 required
@@ -222,47 +222,47 @@ export default function DadosContaPage() {
                                 placeholder="Confirmar nova senha"
                                 value={confirmPassword}
                                 onChange={(event) => setConfirmPassword(event.target.value)}
-                                className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
+                                className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white outline-none transition-all focus:ring-2 focus:ring-rose-500/50"
                             />
                             <button
                                 disabled={saving}
-                                className="h-12 w-full rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 transition-all hover:bg-slate-50 disabled:opacity-50"
+                                className="h-12 w-full rounded-xl border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 transition-all hover:bg-white/5 hover:text-white disabled:opacity-50"
                             >
                                 Atualizar senha
                             </button>
                         </form>
 
-                        <div className="my-8 h-px bg-slate-50" />
+                        <div className="my-8 h-px bg-white/5" />
 
                         <form onSubmit={handleUpdateEmail} className="space-y-4">
-                            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Alterar email</p>
+                            <p className="mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Alterar email</p>
                             <div className="space-y-1">
-                                <p className="ml-1 text-[9px] font-bold italic text-slate-400">Atual: {profile.email}</p>
+                                <p className="ml-1 text-[9px] font-bold italic text-slate-500">Atual: {profile.email}</p>
                                 <input
                                     required
                                     type="email"
                                     placeholder="Novo email"
                                     value={newEmail}
                                     onChange={(event) => setNewEmail(event.target.value)}
-                                    className="h-12 w-full rounded-2xl border border-slate-100 bg-slate-50 px-4 text-sm font-medium outline-none transition-all focus:ring-2 focus:ring-rose-500/20"
+                                    className="h-12 w-full rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-medium text-white outline-none transition-all focus:ring-2 focus:ring-rose-500/50"
                                 />
                             </div>
                             <button
                                 disabled={saving}
-                                className="h-12 w-full rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 transition-all hover:bg-slate-50 disabled:opacity-50"
+                                className="h-12 w-full rounded-xl border border-white/10 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 transition-all hover:bg-white/5 hover:text-white disabled:opacity-50"
                             >
                                 Alterar email
                             </button>
                         </form>
                     </div>
 
-                    <div className="rounded-[40px] border border-slate-100 bg-white p-8 shadow-sm">
+                    <div className="rounded-[40px] border border-white/5 bg-slate-900 p-8 shadow-sm">
                         <div className="mb-6 flex items-center gap-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500">L</div>
-                            <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-slate-900">Sua privacidade</h2>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/5 text-slate-400">L</div>
+                            <h2 className="text-lg font-black uppercase tracking-[-0.03em] text-white">Sua privacidade</h2>
                         </div>
 
-                        <p className="mb-8 text-xs leading-relaxed text-slate-500">
+                        <p className="mb-8 text-xs leading-relaxed text-slate-400">
                             Em conformidade com a LGPD, voce tem controle sobre seus dados e pode exportar ou excluir sua conta.
                         </p>
 
@@ -278,7 +278,7 @@ export default function DadosContaPage() {
                                     downloadAnchorNode.remove();
                                     setMessage({ type: 'success', text: 'Exportacao de dados iniciada.' });
                                 }}
-                                className="group flex h-12 w-full items-center justify-between rounded-xl bg-slate-50 px-6 text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 transition-all hover:bg-slate-100"
+                                className="group flex h-12 w-full items-center justify-between rounded-xl bg-white/5 px-6 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 transition-all hover:bg-white/10 hover:text-white"
                             >
                                 Solicitar exportacao de dados
                                 <span className="opacity-0 transition-opacity group-hover:opacity-100">↓</span>
@@ -305,15 +305,15 @@ export default function DadosContaPage() {
 
                                     setSaving(false);
                                 }}
-                                className="group flex h-12 w-full items-center justify-between rounded-xl bg-rose-50 px-6 text-[9px] font-black uppercase tracking-[0.2em] text-rose-600 transition-all hover:bg-rose-100"
+                                className="group flex h-12 w-full items-center justify-between rounded-xl bg-rose-500/10 border border-rose-500/20 px-6 text-[9px] font-black uppercase tracking-[0.2em] text-rose-500 transition-all hover:bg-rose-500/20"
                             >
                                 Excluir minha conta permanentemente
                                 <span className="opacity-0 transition-opacity group-hover:opacity-100">X</span>
                             </button>
                         </div>
 
-                        <div className="mt-8 border-t border-slate-50 pt-6 text-center">
-                            <Link href="/privacidade" className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 hover:text-rose-600">
+                        <div className="mt-8 border-t border-white/5 pt-6 text-center">
+                            <Link href="/privacidade" className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 hover:text-rose-500">
                                 Ver politica de privacidade completa
                             </Link>
                         </div>

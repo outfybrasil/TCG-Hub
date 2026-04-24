@@ -5,6 +5,34 @@ import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+function LiveViewerCount({ liveId }: { liveId: string }) {
+    const [count, setCount] = useState(1);
+
+    useEffect(() => {
+        const presenceChannel = supabase.channel(`live_presence_${liveId}`, {
+            config: { presence: { key: Math.random().toString() } }
+        });
+
+        presenceChannel
+            .on('presence', { event: 'sync' }, () => {
+                const state = presenceChannel.presenceState();
+                setCount(Math.max(1, Object.keys(state).length));
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(presenceChannel);
+        };
+    }, [liveId]);
+
+    return (
+        <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-white/20">
+            <span className="text-[10px] opacity-90 font-medium">👁</span>
+            <span>{count}</span>
+        </div>
+    );
+}
+
 export default function LivesDirectoryPage() {
     const router = useRouter();
     const [lives, setLives] = useState<any[]>([]);
@@ -81,7 +109,11 @@ export default function LivesDirectoryPage() {
                                     
                                     {/* LIVE Badge */}
                                     <div className="absolute top-4 left-4 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md flex items-center gap-2">
-                                        <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping"></span> AO VIVO
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping shrink-0"></span>
+                                            <span>AO VIVO</span>
+                                        </div>
+                                        <LiveViewerCount liveId={live.id} />
                                     </div>
                                     
                                     {/* Info no Thumbnail */}

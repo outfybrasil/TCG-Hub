@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import LiveChat from '@/components/LiveChat';
@@ -27,6 +27,49 @@ export default function AdminLiveDashboard() {
     const [form, setForm] = useState({ title: 'Leilão TCG MEGASTORE!', video_url: '' });
     const [itemForm, setItemForm] = useState({ name: '', type: 'Carta', image: '', starting_bid: 10, timer_seconds: 60 });
     const [timeLeft, setTimeLeft] = useState(0);
+
+    const [showCamera, setShowCamera] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+
+    const startCamera = async () => {
+        setShowCamera(true);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                videoRef.current.play();
+            }
+        } catch (err) {
+            console.error("Erro ao acessar câmera", err);
+            alert("Não foi possível acessar a câmera. Verifique as permissões do navegador.");
+            setShowCamera(false);
+        }
+    };
+
+    const takePhoto = () => {
+        if (videoRef.current && canvasRef.current) {
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+                setItemForm({ ...itemForm, image: dataUrl });
+                stopCamera();
+            }
+        }
+    };
+
+    const stopCamera = () => {
+        if (videoRef.current?.srcObject) {
+            const stream = videoRef.current.srcObject as MediaStream;
+            stream.getTracks().forEach(track => track.stop());
+        }
+        setShowCamera(false);
+    };
 
     useEffect(() => {
         if (!liveData?.ends_at) { setTimeLeft(0); return; }
@@ -188,8 +231,13 @@ export default function AdminLiveDashboard() {
                                         <input required type="text" value={itemForm.name} onChange={e => setItemForm({ ...itemForm, name: e.target.value })} className={inputCls} style={inputStyle} placeholder="Nome da carta ou lote" />
                                     </div>
                                     <div>
-                                        <label className="block mb-1.5" style={labelStyle}>URL da Imagem</label>
-                                        <input type="text" value={itemForm.image} onChange={e => setItemForm({ ...itemForm, image: e.target.value })} className={inputCls} style={inputStyle} placeholder="Opcional" />
+                                        <label className="block mb-1.5" style={labelStyle}>Imagem (URL ou Câmera)</label>
+                                        <div className="flex gap-2">
+                                            <input type="text" value={itemForm.image} onChange={e => setItemForm({ ...itemForm, image: e.target.value })} className={inputCls} style={{ ...inputStyle, flex: 1 }} placeholder="Cole a URL ou tire foto" />
+                                            <button type="button" onClick={startCamera} className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all hover:bg-slate-700 active:scale-95" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                                📷
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
@@ -220,6 +268,27 @@ export default function AdminLiveDashboard() {
                                     </button>
                                 </form>
                             </div>
+
+                            {/* Camera Modal */}
+                            {showCamera && (
+                                <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-sm">
+                                    <div className="w-full max-w-sm bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800">
+                                        <div className="p-4 bg-slate-800 flex justify-between items-center">
+                                            <h3 className="font-black text-white text-sm uppercase tracking-widest">Câmera (Tirar Foto)</h3>
+                                            <button onClick={stopCamera} className="text-slate-400 hover:text-white">✕</button>
+                                        </div>
+                                        <div className="relative bg-black aspect-[3/4]">
+                                            <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover" />
+                                            <canvas ref={canvasRef} className="hidden" />
+                                        </div>
+                                        <div className="p-4 bg-slate-800 flex justify-center">
+                                            <button onClick={takePhoto} className="w-16 h-16 rounded-full bg-rose-600 border-4 border-slate-900 shadow-[0_0_0_2px_#e11d48] flex items-center justify-center text-white text-2xl hover:scale-105 active:scale-95 transition-all">
+                                                📸
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Chat */}
                             <div className="rounded-[24px] p-4" style={{ background: ELYSIUM.surface, border: '1px solid rgba(255,255,255,0.08)', height: '360px', display: 'flex', flexDirection: 'column' }}>
