@@ -85,9 +85,10 @@ export default function VenderPage() {
     const fetchData = useCallback(async (userId: string, token: string) => {
         const headers = { Authorization: `Bearer ${token}` };
 
-        const [listingsRes, ordersRes] = await Promise.all([
+        const [listingsRes, ordersRes, vendasRes] = await Promise.all([
             fetch('/api/marketplace/listings?status=all&seller_id=' + userId, { headers }),
             fetch('/api/marketplace/orders?role=seller', { headers }),
+            fetch('/api/user/vendas', { headers }),
         ]);
 
         if (listingsRes.ok) {
@@ -98,7 +99,11 @@ export default function VenderPage() {
         if (ordersRes.ok) {
             const d = await ordersRes.json();
             setOrders(d.orders || []);
-            setLiveAuctions(d.live_auctions || []);
+        }
+
+        if (vendasRes.ok) {
+            const d = await vendasRes.json();
+            setLiveAuctions(d.purchases || []);
         }
 
         // Buscar perfil de vendedor
@@ -171,25 +176,57 @@ export default function VenderPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        const res = await fetch(`/api/marketplace/orders/${trackingModal.orderId}`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ action: 'ship', tracking_code: trackingCode }),
-        });
+        // Verificar se é uma venda de leilão (live) ou pedido de marketplace
+        const isLiveVenda = liveAuctions.some((v: any) => v.id === trackingModal.orderId);
 
-        if (res.ok) {
-            setOrders(prev => prev.map(o =>
-                o.id === trackingModal.orderId ? { ...o, status: 'shipped', tracking_code: trackingCode } : o
-            ));
-            setTrackingModal(null);
-            setTrackingCode('');
-            showToast('Código de rastreio registrado!');
+        if (isLiveVenda) {
+            // Usar a API de vendas de leilão
+            const res = await fetch('/api/user/vendas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({
+                    purchaseId: trackingModal.orderId,
+                    trackingCode: trackingCode,
+                    status: 'shipped'
+                }),
+            });
+
+            if (res.ok) {
+                setLiveAuctions((prev: any[]) => prev.map((v: any) =>
+                    v.id === trackingModal.orderId ? { ...v, status: 'shipped', tracking_code: trackingCode } : v
+                ));
+                setTrackingModal(null);
+                setTrackingCode('');
+                showToast('Código de rastreio registrado!');
+            } else {
+                const d = await res.json();
+                showToast(d.error || 'Erro ao registrar envio.');
+            }
         } else {
-            const d = await res.json();
-            showToast(d.error || 'Erro ao registrar envio.');
+            // Usar a API de pedidos de marketplace
+            const res = await fetch(`/api/marketplace/orders/${trackingModal.orderId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify({ action: 'ship', tracking_code: trackingCode }),
+            });
+
+            if (res.ok) {
+                setOrders(prev => prev.map(o =>
+                    o.id === trackingModal.orderId ? { ...o, status: 'shipped', tracking_code: trackingCode } : o
+                ));
+                setTrackingModal(null);
+                setTrackingCode('');
+                showToast('Código de rastreio registrado!');
+            } else {
+                const d = await res.json();
+                showToast(d.error || 'Erro ao registrar envio.');
+            }
         }
         setActionLoading(false);
     };
@@ -500,31 +537,62 @@ export default function VenderPage() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {liveAuctions.map(auction => (
-                                        <div key={auction.id} className="flex flex-col gap-4 rounded-2xl border border-white/5 bg-slate-900 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between transition-all hover:bg-white/5">
-                                        <div className="flex items-center gap-4">
-                                            {auction.live_auctions?.current_item_image && (
-                                                <img src={auction.live_auctions.current_item_image} alt="" className="h-14 w-10 rounded-lg object-contain shadow shrink-0 bg-slate-950" />
-                                            )}
-                                            <div>
-                                                <p className="font-black text-white text-sm">{auction.live_auctions?.current_item_name || 'Item de Leilão'}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 mt-0.5">
-                                                    Vendido em: {new Date(auction.created_at).toLocaleString('pt-BR')}
-                                                </p>
+                                {liveAuctions.map((venda: any) => {
+                                    const item = venda.items?.[0];
+                                    return (
+                                        <div key={venda.id} className="flex flex-col gap-4 rounded-2xl border border-white/5 bg-slate-900 p-5 shadow-sm sm:flex-row sm:items-start sm:justify-between transition-all hover:bg-white/5">
+                                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                {item?.image_url ? (
+                                                    <img src={item.image_url} alt="" className="h-14 w-10 rounded-lg object-contain shadow shrink-0 bg-slate-950" />
+                                                ) : (
+                                                    <div className="h-14 w-10 rounded-lg bg-slate-800 flex items-center justify-center shrink-0 text-xl">🎴</div>
+                                                )}
+                                                <div className="min-w-0">
+                                                    <p className="font-black text-white text-sm truncate">{item?.name || 'Item de Leilão'}</p>
+                                                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">
+                                                        Comprador: <span className="text-slate-300">{venda.buyer_name}</span>
+                                                    </p>
+                                                    <p className="text-[10px] font-bold text-slate-500 mt-0.5">
+                                                        {new Date(venda.created_at).toLocaleString('pt-BR')}
+                                                    </p>
+                                                    {/* Endereço */}
+                                                    {venda.shipping_address ? (
+                                                        <p className="text-[10px] font-bold text-indigo-400 mt-1">
+                                                            📦 {venda.shipping_address.rua}, {venda.shipping_address.numero} — {venda.shipping_address.cidade}/{venda.shipping_address.estado} · CEP {venda.shipping_address.cep}
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-[10px] font-bold text-amber-500 mt-1">⚠️ Endereço não cadastrado pelo comprador</p>
+                                                    )}
+                                                    {venda.tracking_code && (
+                                                        <p className="text-[10px] font-bold text-emerald-400 mt-1">🚚 Rastreio: {venda.tracking_code}</p>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
 
-                                        <div className="flex items-center gap-4 shrink-0">
-                                            <div className="text-right">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Arremate</p>
-                                                <p className="font-black text-emerald-400 text-sm">{formatBRL(auction.amount)}</p>
+                                            <div className="flex flex-col items-end gap-3 shrink-0">
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Arremate</p>
+                                                    <p className="font-black text-emerald-400 text-lg">{formatBRL(venda.my_total_amount || venda.total_amount)}</p>
+                                                </div>
+                                                <span className={`rounded-lg px-3 py-1 text-[9px] font-black uppercase tracking-widest ${
+                                                    venda.status === 'shipped' ? 'text-blue-400 bg-blue-500/10' :
+                                                    venda.status === 'delivered' ? 'text-slate-400 bg-white/5' :
+                                                    'text-emerald-400 bg-emerald-500/10'
+                                                }`}>
+                                                    {venda.status === 'shipped' ? 'Enviado' : venda.status === 'delivered' ? 'Entregue' : 'Preparar Envio'}
+                                                </span>
+                                                {venda.status !== 'delivered' && (
+                                                    <button
+                                                        onClick={() => { setTrackingModal({ orderId: venda.id, open: true }); setTrackingCode(venda.tracking_code || ''); }}
+                                                        className="h-9 px-4 rounded-xl bg-rose-600 text-[9px] font-black uppercase tracking-widest text-white hover:bg-slate-950 transition-all"
+                                                    >
+                                                        {venda.tracking_code ? 'Atualizar Rastreio' : 'Informar Envio'}
+                                                    </button>
+                                                )}
                                             </div>
-                                            <span className="rounded-lg px-3 py-1 text-[9px] font-black uppercase tracking-widest text-slate-400 bg-white/5">
-                                                {auction.status === 'PENDING' ? 'Aguardando Pagamento' : 'Pago'}
-                                            </span>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

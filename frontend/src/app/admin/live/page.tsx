@@ -116,7 +116,6 @@ export default function AdminLiveDashboard() {
         setIsProcessing(true);
         try {
             if (liveData.current_item_name && liveData.current_item_name !== 'Aguardando Lote...' && liveData.winning_user_id) {
-                await supabase.from('live_auction_history').insert({ live_id: liveData.id, item_name: liveData.current_item_name, item_type: liveData.current_item_type, item_image: liveData.current_item_image, winner_id: liveData.winning_user_id, winner_name: liveData.winning_user_name, final_bid: liveData.current_bid });
                 await finalizarArremate(liveData);
             }
             const endDate = new Date(Date.now() + (itemForm.timer_seconds * 1000)).toISOString();
@@ -130,7 +129,6 @@ export default function AdminLiveDashboard() {
         setIsProcessing(true);
         try {
             if (liveData.current_item_name && liveData.current_item_name !== 'Aguardando Lote...' && liveData.winning_user_id) {
-                await supabase.from('live_auction_history').insert({ live_id: liveData.id, item_name: liveData.current_item_name, item_type: liveData.current_item_type, item_image: liveData.current_item_image, winner_id: liveData.winning_user_id, winner_name: liveData.winning_user_name, final_bid: liveData.current_bid });
                 await finalizarArremate(liveData);
             }
             const { error } = await supabase.from('live_auctions').update({ current_item_name: 'Aguardando Lote...', current_item_type: 'Carta', current_item_image: null, starting_bid: 0, current_bid: 0, winning_user_id: null, winning_user_name: null, ends_at: null }).eq('id', liveData.id);
@@ -144,7 +142,6 @@ export default function AdminLiveDashboard() {
         setIsProcessing(true);
         try {
             if (liveData.current_item_name && liveData.current_item_name !== 'Aguardando Lote...' && liveData.winning_user_id) {
-                await supabase.from('live_auction_history').insert({ live_id: liveData.id, item_name: liveData.current_item_name, item_type: liveData.current_item_type, item_image: liveData.current_item_image, winner_id: liveData.winning_user_id, winner_name: liveData.winning_user_name, final_bid: liveData.current_bid });
                 await finalizarArremate(liveData);
             }
             const { error } = await supabase.from('live_auctions').update({ status: 'ENDED' }).eq('id', liveData.id);

@@ -22,6 +22,7 @@ const menuItems = [
     { title: 'Meus Pedidos', desc: 'Histórico de compras, status de pagamento e acompanhamento de envio.', href: '/minha-conta/pedidos', icon: '📦' },
     { title: 'Central de Live', desc: 'Gerencie suas transmissões ao vivo e configure lotes de leilão.', href: '/admin/live', icon: '📡' },
     { title: 'Arremates', desc: 'Histórico de todos os itens conquistados nas lives do TCG MEGASTORE.', href: '/minha-conta/arremates', icon: '🔨' },
+    { title: 'Minhas Vendas', desc: 'Gerencie os itens que você vendeu durante suas lives (status, envios, rastreio).', href: '/minha-conta/vendas', icon: '🤝' },
     { title: 'Créditos de Leilão', desc: 'Saldo disponível, bloqueado e movimentações para leilões.', href: '/minha-conta/creditos', icon: '💎' },
     { title: 'Perfil Público', desc: 'Gerencie sua exibição de medalhas e títulos para outros usuários.', href: '/minha-conta/perfil', icon: '🏅' },
     { title: 'Endereços', desc: 'Locais de entrega para checkout mais rápido e organizado.', href: '/minha-conta/enderecos', icon: '📍' },

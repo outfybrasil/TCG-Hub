@@ -39,6 +39,21 @@ export async function POST(req: Request) {
             // Continua mesmo com erro pra não perder o pedido
         }
 
+        // 1.5 Gravar histórico da live no painel ao vivo
+        const { error: historyError } = await supabaseAdmin.from('live_auction_history').insert({
+            live_id: liveId,
+            item_name: itemName,
+            item_type: itemType || 'Carta',
+            item_image: itemImage,
+            winner_id: winnerId,
+            winner_name: winnerName,
+            final_bid: amount
+        });
+
+        if (historyError) {
+            console.error('Erro ao salvar histórico do leilão:', historyError);
+        }
+
         // 2. Criar pedido na tabela purchases (usando supabaseAdmin para bypass RLS)
         const { data: purchase, error: purchaseError } = await supabaseAdmin.from('purchases').insert({
             user_id: winnerId,

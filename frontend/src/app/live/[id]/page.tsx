@@ -48,7 +48,11 @@ export default function LiveRoomPage() {
 
         const historyChannel = supabase.channel(`live_history_${liveId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_auction_history', filter: `live_id=eq.${liveId}` }, (payload) => {
-                setWinnerHistory(prev => [payload.new, ...prev].slice(0, 5));
+                setWinnerHistory(prev => {
+                    // Deduplica: ignora se já existe um item com o mesmo id
+                    if (prev.some(h => h.id === payload.new.id)) return prev;
+                    return [payload.new, ...prev].slice(0, 5);
+                });
             })
             .subscribe();
 
@@ -81,6 +85,18 @@ export default function LiveRoomPage() {
         };
     }, [liveId, userId]);
 
+    const fetchHistory = async () => {
+        try {
+            const res = await fetch(`/api/live/history?liveId=${liveId}`);
+            if (res.ok) {
+                const json = await res.json();
+                setWinnerHistory(json.history || []);
+            }
+        } catch (err) {
+            console.error('Erro ao buscar historico:', err);
+        }
+    };
+
     const loadSession = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         setUserId(session?.user?.id || null);
@@ -96,14 +112,14 @@ export default function LiveRoomPage() {
         }
 
         const { data, error } = await supabase.from('live_auctions').select('*').eq('id', liveId).single();
-        const { data: history } = await supabase.from('live_auction_history').select('*').eq('live_id', liveId).order('created_at', { ascending: false }).limit(5);
-
-        if (history) setWinnerHistory(history);
         if (error || !data) { router.push('/lives'); return; }
-        
+
         setLiveData(data);
         if (data.ends_at) setTimeLeft(Math.max(0, Math.floor((new Date(data.ends_at).getTime() - Date.now()) / 1000)));
         setLoading(false);
+        
+        // Busca o histórico após carregar os dados da live
+        await fetchHistory();
     };
 
     const placeBid = async (amount: number, isAbsolute: boolean = false) => {
