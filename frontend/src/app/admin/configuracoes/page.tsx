@@ -120,14 +120,14 @@ export default function AdminSettingsPage() {
         }));
     };
 
-    const inputClass = 'w-full h-11 px-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 outline-none transition-all placeholder:text-slate-300';
+    const inputClass = 'w-full h-11 px-4 bg-white/5 border border-white/10 rounded-xl text-sm font-medium text-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 outline-none transition-all placeholder:text-slate-600';
     const labelClass = 'text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block';
 
     if (loading) {
         return (
             <AdminGuard>
-                <div className="max-w-4xl mx-auto px-6 py-12 animate-pulse text-center text-slate-400">
-                    Carregando configuracoes...
+                <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+                    <div className="h-10 w-10 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div>
                 </div>
             </AdminGuard>
         );
@@ -135,26 +135,30 @@ export default function AdminSettingsPage() {
 
     return (
         <AdminGuard>
-            <div className="max-w-4xl mx-auto px-6 py-12 animate-fade-up">
-                <div className="mb-12 space-y-4">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-rose-100 bg-rose-50 px-3 py-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-rose-600" />
-                        <span className="text-[9px] font-black uppercase tracking-widest text-rose-600">Painel Administrativo</span>
-                    </div>
-                    <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-900">
-                        Configura<span className="text-rose-600">coes.</span>
-                    </h1>
-                </div>
-
-                <div className="space-y-8">
-                    <div className="space-y-6 rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <span className="text-xl">API</span>
-                            <div>
-                                <h2 className="text-sm font-black uppercase tracking-tight text-slate-900">Melhor Envio</h2>
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Token de integracao para geracao de etiquetas</p>
-                            </div>
+            <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
+                <div className="max-w-4xl mx-auto px-6 py-20 animate-fade-up">
+                    <div className="mb-16 space-y-4">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.6)]" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-rose-500">Painel Administrativo</span>
                         </div>
+                        <h1 className="text-5xl font-black uppercase tracking-tighter">
+                            Configura<span className="text-rose-600">ções.</span>
+                        </h1>
+                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none">
+                            Controle de Variáveis Globais e Integrações
+                        </p>
+                    </div>
+
+                    <div className="space-y-8">
+                        <div className="space-y-6 rounded-[40px] border border-white/10 bg-white/5 p-10 shadow-2xl backdrop-blur-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 bg-rose-600/20 rounded-xl flex items-center justify-center text-rose-500 font-black">API</div>
+                                <div>
+                                    <h2 className="text-sm font-black uppercase tracking-tight">Melhor Envio</h2>
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Token de integração para geração de etiquetas</p>
+                                </div>
+                            </div>
                         <div>
                             <label className={labelClass}>Token de API</label>
                             <input
@@ -170,14 +174,14 @@ export default function AdminSettingsPage() {
                         </div>
                     </div>
 
-                    <div className="space-y-6 rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <span className="text-xl">R$</span>
-                            <div>
-                                <h2 className="text-sm font-black uppercase tracking-tight text-slate-900">Regras Comerciais</h2>
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Taxa e prazo para estorno de creditos</p>
+                        <div className="space-y-6 rounded-[40px] border border-white/10 bg-white/5 p-10 shadow-2xl backdrop-blur-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 bg-rose-600/20 rounded-xl flex items-center justify-center text-rose-500 font-black">R$</div>
+                                <div>
+                                    <h2 className="text-sm font-black uppercase tracking-tight">Regras Comerciais</h2>
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Taxa e prazo para estorno de créditos</p>
+                                </div>
                             </div>
-                        </div>
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
@@ -213,18 +217,18 @@ export default function AdminSettingsPage() {
                         </div>
                     </div>
 
-                    <div className="space-y-6 rounded-[32px] border border-slate-100 bg-white p-8 shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <span className="text-xl">Origem</span>
-                            <div>
-                                <h2 className="text-sm font-black uppercase tracking-tight text-slate-900">Endereco de Origem</h2>
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Remetente padrao para todas as etiquetas</p>
+                        <div className="space-y-6 rounded-[40px] border border-white/10 bg-white/5 p-10 shadow-2xl backdrop-blur-sm">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 bg-rose-600/20 rounded-xl flex items-center justify-center text-rose-500 font-black">🏠</div>
+                                <div>
+                                    <h2 className="text-sm font-black uppercase tracking-tight">Endereço de Origem</h2>
+                                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Remetente padrão para todas as etiquetas</p>
+                                </div>
                             </div>
-                        </div>
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                <label className={labelClass}>Nome do Responsavel</label>
+                                <label className={labelClass}>Nome do Responsável</label>
                                 <input value={origin.name} onChange={(e) => updateOrigin('name', e.target.value)} placeholder="Nome completo" className={inputClass} />
                             </div>
                             <div>
@@ -241,15 +245,15 @@ export default function AdminSettingsPage() {
                             </div>
                         </div>
 
-                        <div className="h-px bg-slate-100" />
+                        <div className="h-px bg-white/10" />
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div className="md:col-span-2">
-                                <label className={labelClass}>Endereco</label>
+                                <label className={labelClass}>Endereço</label>
                                 <input value={origin.address} onChange={(e) => updateOrigin('address', e.target.value)} placeholder="Rua / Avenida" className={inputClass} />
                             </div>
                             <div>
-                                <label className={labelClass}>Numero</label>
+                                <label className={labelClass}>Número</label>
                                 <input value={origin.number} onChange={(e) => updateOrigin('number', e.target.value)} placeholder="123" className={inputClass} />
                             </div>
                         </div>
@@ -272,26 +276,31 @@ export default function AdminSettingsPage() {
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <label className={labelClass}>Cidade</label>
-                                <input value={origin.city} onChange={(e) => updateOrigin('city', e.target.value)} placeholder="Sao Paulo" className={inputClass} />
+                                <input value={origin.city} onChange={(e) => updateOrigin('city', e.target.value)} placeholder="São Paulo" className={inputClass} />
                             </div>
                             <div>
                                 <label className={labelClass}>Estado (UF)</label>
                                 <input value={origin.state_abbr} onChange={(e) => updateOrigin('state_abbr', e.target.value)} placeholder="SP" maxLength={2} className={inputClass} />
                             </div>
                         </div>
-                    </div>
 
-                    <div className="flex justify-end">
-                        <button
-                            onClick={handleSave}
-                            disabled={saving}
-                            className={`h-14 rounded-2xl px-10 text-[10px] font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 disabled:opacity-50 ${saved
-                                ? 'bg-emerald-500 text-white shadow-emerald-500/30'
-                                : 'bg-slate-900 text-white shadow-slate-900/20 hover:bg-rose-600'
-                                }`}
-                        >
-                            {saving ? 'Salvando...' : saved ? 'Salvo com sucesso' : 'Salvar configuracoes'}
-                        </button>
+                        <div className="h-px bg-white/10" />
+                        
+                        <div className="flex items-center justify-between">
+                            <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest max-w-[240px]">
+                                As alterações refletem imediatamente em todas as novas etiquetas geradas.
+                            </p>
+                            <button
+                                onClick={handleSave}
+                                disabled={saving}
+                                className={`h-16 rounded-2xl px-12 text-[11px] font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95 disabled:opacity-50 ${saved
+                                    ? 'bg-emerald-600 text-white shadow-emerald-600/20'
+                                    : 'bg-rose-600 text-white shadow-rose-600/30 hover:bg-rose-700 hover:-translate-y-1'
+                                    }`}
+                            >
+                                {saving ? 'Salvando...' : saved ? 'Salvo com sucesso' : 'Salvar configurações'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -308,262 +308,266 @@ export default function SyncAdminPage() {
         set.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    if (loading && !syncProgress) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-slate-900">
+                <div className="h-10 w-10 border-2 border-rose-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
     return (
         <AdminGuard>
-            <div className="max-w-4xl mx-auto p-12 space-y-8 animate-fade-up">
-                <div className="flex justify-between items-end border-b border-slate-100 pb-8">
-                    <div className="space-y-4">
-                        <h1 className="text-4xl font-black tracking-tighter text-slate-900 leading-none">
-                            Painel de <span className="text-rose-600">Sincronizacao</span>
-                        </h1>
-                        <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none">
-                            Importacao de catalogo mestre TCGdex (PT-BR)
-                        </p>
-                    </div>
-                    <div className="bg-slate-900 px-6 py-4 rounded-2xl text-white flex flex-col items-end">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-1">Catalogo local</span>
-                        <span className="text-2xl font-black tabular-nums">{cardCount.toLocaleString('pt-BR')} <span className="text-xs text-slate-500 uppercase">Cards</span></span>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-xl shadow-slate-200/50 h-fit">
-                        <h2 className="text-xl font-black text-slate-900 tracking-tighter">Sincronizacao em lote</h2>
-                        <p className="text-slate-500 text-sm font-medium">Sincroniza as 5 colecoes mais recentes da lista exibida abaixo.</p>
-
-                        <button
-                            onClick={() => void handleSync()}
-                            disabled={loading}
-                            className="w-full h-14 bg-rose-600 text-white font-black uppercase tracking-widest text-[11px] rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/30 disabled:opacity-50"
-                        >
-                            {loading ? 'Processando...' : (selectedSets.size > 0 ? `Sincronizar selecionadas (${selectedSets.size})` : 'Sincronizar ultimas 5')}
-                        </button>
-
-                        {syncProgress && (
-                            <div className="space-y-2 animate-fade-in">
-                                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                    <span>{syncProgress.current}</span>
-                                    <span>{syncProgress.done}/{syncProgress.total}</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-rose-600 transition-all duration-500"
-                                        style={{ width: `${(syncProgress.done / syncProgress.total) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        {status && (
-                            <div className={`p-4 rounded-xl text-[11px] font-bold animate-fade-in ${status.startsWith('Erro') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                {status}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-xl shadow-slate-200/50 h-fit">
-                        <h2 className="text-xl font-black text-slate-900 tracking-tighter">Mercado em background</h2>
-                        <p className="text-slate-500 text-sm font-medium">
-                            Atualiza o cache de precos do marketplace para o cliente ja ver o comparativo ao abrir a vitrine.
-                        </p>
-
-                        {marketStats && (
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Com cache</p>
-                                    <p className="text-2xl font-black tracking-tighter text-slate-900">{marketStats.cachedItems}</p>
-                                    <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">
-                                        de {marketStats.activeInventory} ativos
-                                    </p>
-                                </div>
-                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Sem cache</p>
-                                    <p className="text-2xl font-black tracking-tighter text-rose-600">{marketStats.uncachedItems}</p>
-                                    <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">
-                                        precisam sincronizar
-                                    </p>
-                                </div>
-                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Atualizadas 24h</p>
-                                    <p className="text-2xl font-black tracking-tighter text-emerald-600">{marketStats.refreshed24h}</p>
-                                    <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">
-                                        snapshot recente
-                                    </p>
-                                </div>
-                                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Historico</p>
-                                    <p className="text-2xl font-black tracking-tighter text-slate-900">{marketStats.historySnapshots}</p>
-                                    <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mt-1">
-                                        registros salvos
-                                    </p>
-                                </div>
-                            </div>
-                        )}
-
-                        <button
-                            onClick={() => void handleMarketSync()}
-                            disabled={marketSyncing}
-                            className="w-full h-14 bg-slate-900 text-white font-black uppercase tracking-widest text-[11px] rounded-2xl hover:bg-rose-600 transition-all shadow-lg shadow-slate-900/20 disabled:opacity-50"
-                        >
-                            {marketSyncing ? 'Atualizando...' : 'Sincronizar precos do mercado'}
-                        </button>
-
-                        {marketStatus && (
-                            <div className={`p-4 rounded-xl text-[11px] font-bold animate-fade-in ${marketStatus.startsWith('Erro') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                {marketStatus}
-                            </div>
-                        )}
-
-                        {marketErrors.length > 0 && (
-                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-2">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">
-                                    Primeiros erros da sincronizacao
+            <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
+                <div className="max-w-7xl mx-auto px-6 py-20 animate-fade-up">
+                    {/* Header */}
+                    <div className="mb-16 space-y-6">
+                        <div className="inline-flex items-center gap-2 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.6)]"></span>
+                            <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Motor de Sincronização</span>
+                        </div>
+                        <div className="flex flex-col md:flex-row justify-between items-end gap-8">
+                            <div className="space-y-2">
+                                <h1 className="text-6xl font-black tracking-tighter text-white uppercase leading-none">
+                                    TCGdex <span className="text-rose-600">Sync.</span>
+                                </h1>
+                                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest leading-none">
+                                    Importação de catálogo mestre TCGdex (PT-BR)
                                 </p>
-                                <div className="space-y-1">
-                                    {marketErrors.map((error) => (
-                                        <p key={error} className="text-[11px] font-medium text-amber-900 break-words">
-                                            {error}
-                                        </p>
-                                    ))}
-                                </div>
                             </div>
-                        )}
-
-                        {marketStats?.lastFetchedAt && (
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
-                                Ultima atualizacao: {new Date(marketStats.lastFetchedAt).toLocaleString('pt-BR')}
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="bg-white border border-slate-200 p-8 rounded-3xl space-y-6 shadow-xl shadow-slate-200/50 h-[600px] flex flex-col md:col-span-2">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <h2 className="text-xl font-black text-slate-900 tracking-tighter">Sincronizar por colecao</h2>
-                            <div className="relative w-full md:w-64">
-                                <input
-                                    type="text"
-                                    placeholder="Buscar coleção..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full h-10 pl-10 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
-                                />
-                                <svg className="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
+                            <div className="bg-white/5 px-6 py-4 rounded-2xl border border-white/10 flex flex-col items-end">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-1">Catálogo Local</span>
+                                <span className="text-2xl font-black tabular-nums text-white">
+                                    {cardCount.toLocaleString('pt-BR')} <span className="text-xs text-slate-500 uppercase">Cards</span>
+                                </span>
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto pr-2 space-y-2">
-                            {filteredSets.length === 0 ? (
-                                <div className="py-12 text-center space-y-3">
-                                    <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-                                        <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
-                                    </div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nenhuma coleção encontrada</p>
-                                </div>
-                            ) : (
-                                filteredSets.map((set) => {
-                                    const isSynced = syncedSets.has(set.id);
-                                    const isSelected = selectedSets.has(set.id);
-                                    const imageSrc = getSetImageSrc(set.logo);
+                    </div>
 
-                                    return (
-                                        <div
-                                            key={set.id}
-                                            onClick={() => toggleSetSelection(set.id)}
-                                            className={`flex items-center justify-between p-3 rounded-xl border transition-colors cursor-pointer ${isSelected
-                                                ? 'bg-rose-50 border-rose-300'
-                                                : (isSynced ? 'bg-emerald-50 border-emerald-100 hover:border-emerald-300' : 'bg-slate-50 border-slate-100 hover:border-slate-300')
-                                                }`}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-4 h-4 rounded ring-1 flex items-center justify-center transition-all ${isSelected ? 'bg-rose-600 ring-rose-600' : 'bg-white ring-slate-300'}`}>
-                                                    {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="space-y-8 lg:col-span-1">
+                            {/* Batch Sync Card */}
+                            <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6 shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-rose-600/5 blur-[60px] -z-10"></div>
+                                <h2 className="text-xl font-black text-white tracking-tighter uppercase">Sincronização em Lote</h2>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-tight leading-relaxed">
+                                    Sincroniza as 5 coleções mais recentes ou a seleção personalizada abaixo.
+                                </p>
+
+                                <button
+                                    onClick={() => void handleSync()}
+                                    disabled={loading}
+                                    className="w-full h-14 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20 disabled:opacity-50"
+                                >
+                                    {loading ? 'Processando...' : (selectedSets.size > 0 ? `Sincronizar Selecionadas (${selectedSets.size})` : 'Sincronizar Últimas 5')}
+                                </button>
+
+                                {syncProgress && (
+                                    <div className="space-y-3 animate-fade-in bg-slate-950/50 p-4 rounded-2xl border border-white/5">
+                                        <div className="flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-500">
+                                            <span className="truncate max-w-[150px]">{syncProgress.current}</span>
+                                            <span className="text-rose-500 tabular-nums">{syncProgress.done}/{syncProgress.total}</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.4)] transition-all duration-500"
+                                                style={{ width: `${(syncProgress.done / syncProgress.total) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {status && (
+                                    <div className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-fade-in border ${status.startsWith('Erro') ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'}`}>
+                                        {status}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Market Sync Card */}
+                            <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6 shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-600/5 blur-[60px] -z-10"></div>
+                                <h2 className="text-xl font-black text-white tracking-tighter uppercase">Mercado Background</h2>
+                                <p className="text-slate-400 text-xs font-bold uppercase tracking-tight leading-relaxed">
+                                    Atualiza o cache de preços global para comparação instantânea na vitrine.
+                                </p>
+
+                                {marketStats && (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Com Cache</p>
+                                            <p className="text-2xl font-black tracking-tighter text-white tabular-nums">{marketStats.cachedItems}</p>
+                                            <p className="text-[8px] font-bold uppercase tracking-widest text-slate-600 mt-1">de {marketStats.activeInventory} ativos</p>
+                                        </div>
+                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Sem Cache</p>
+                                            <p className="text-2xl font-black tracking-tighter text-rose-500 tabular-nums">{marketStats.uncachedItems}</p>
+                                            <p className="text-[8px] font-bold uppercase tracking-widest text-rose-500/60 mt-1">pendentes</p>
+                                        </div>
+                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Update 24h</p>
+                                            <p className="text-2xl font-black tracking-tighter text-emerald-500 tabular-nums">{marketStats.refreshed24h}</p>
+                                            <p className="text-[8px] font-bold uppercase tracking-widest text-emerald-500/60 mt-1">snapshot ok</p>
+                                        </div>
+                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Histórico</p>
+                                            <p className="text-2xl font-black tracking-tighter text-slate-300 tabular-nums">{marketStats.historySnapshots}</p>
+                                            <p className="text-[8px] font-bold uppercase tracking-widest text-slate-600 mt-1">registros</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={() => void handleMarketSync()}
+                                    disabled={marketSyncing}
+                                    className="w-full h-14 bg-white text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-200 transition-all disabled:opacity-50"
+                                >
+                                    {marketSyncing ? 'Sincronizando...' : 'Update Preços Mercado'}
+                                </button>
+
+                                {marketStatus && (
+                                    <div className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-fade-in border ${marketStatus.startsWith('Erro') ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'}`}>
+                                        {marketStatus}
+                                    </div>
+                                )}
+
+                                {marketStats?.lastFetchedAt && (
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 text-center">
+                                        Última Sincronização: {new Date(marketStats.lastFetchedAt).toLocaleString('pt-BR')}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="lg:col-span-2 bg-white/5 border border-white/10 p-10 rounded-[48px] shadow-2xl flex flex-col h-[750px]">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+                                <div>
+                                    <h2 className="text-2xl font-black text-white tracking-tighter uppercase">Coleções TCGdex</h2>
+                                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mt-1">Selecione para sincronização individual ou em lote</p>
+                                </div>
+                                <div className="relative w-full md:w-80">
+                                    <input
+                                        type="text"
+                                        placeholder="FILTRAR COLEÇÃO..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full h-12 pl-12 pr-6 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest focus:outline-none focus:border-rose-600 transition-all placeholder:text-slate-600"
+                                    />
+                                    <svg className="w-4 h-4 text-slate-500 absolute left-4 top-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto pr-4 space-y-3 custom-scrollbar">
+                                {filteredSets.length === 0 ? (
+                                    <div className="py-24 text-center space-y-4">
+                                        <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center mx-auto border border-white/10">
+                                            <svg className="w-8 h-8 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                            </svg>
+                                        </div>
+                                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Nenhuma coleção encontrada_</p>
+                                    </div>
+                                ) : (
+                                    filteredSets.map((set) => {
+                                        const isSynced = syncedSets.has(set.id);
+                                        const isSelected = selectedSets.has(set.id);
+                                        const imageSrc = getSetImageSrc(set.logo);
+
+                                        return (
+                                            <div
+                                                key={set.id}
+                                                onClick={() => toggleSetSelection(set.id)}
+                                                className={`flex items-center justify-between p-4 rounded-3xl border transition-all cursor-pointer group ${isSelected
+                                                    ? 'bg-rose-600/10 border-rose-600 shadow-[0_0_20px_rgba(225,29,72,0.1)]'
+                                                    : (isSynced ? 'bg-emerald-500/5 border-white/5 hover:border-emerald-500/30' : 'bg-white/5 border-white/5 hover:border-white/20')
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-6">
+                                                    <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-rose-600 border-rose-600 shadow-[0_0_10px_rgba(225,29,72,0.4)]' : 'bg-transparent border-white/20 group-hover:border-white/40'}`}>
+                                                        {isSelected && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4} d="M5 13l4 4L19 7" /></svg>}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="h-12 w-12 bg-white/10 rounded-2xl p-2 flex items-center justify-center border border-white/5 group-hover:bg-white/20 transition-all">
+                                                            {imageSrc ? (
+                                                                <img src={imageSrc} alt={set.name} className="max-h-full w-auto brightness-110" />
+                                                            ) : (
+                                                                <span className="text-[8px] font-black uppercase tracking-widest text-slate-600">SET</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col">
+                                                            <span className={`text-sm font-black tracking-tight leading-tight uppercase ${isSynced ? 'text-emerald-400' : 'text-white'}`}>
+                                                                {set.name}
+                                                            </span>
+                                                            <span className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${isSynced ? 'text-emerald-500/60' : 'text-slate-500'}`}>
+                                                                {isSynced ? 'Sincronizado' : `${set.cards} cards`}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
 
                                                 <div className="flex items-center gap-3">
-                                                    <div className="h-8 w-8 bg-white rounded-lg p-1 flex items-center justify-center border border-slate-100 shadow-sm">
-                                                        {imageSrc ? (
-                                                            // eslint-disable-next-line @next/next/no-img-element
-                                                            <img src={imageSrc} alt={set.name} className="max-h-full w-auto grayscale opacity-80" />
-                                                        ) : (
-                                                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-300">Set</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className={`text-[11px] font-bold leading-tight ${isSynced ? 'text-emerald-700' : 'text-slate-700'}`}>
-                                                            {set.name}
-                                                        </span>
-                                                        <span className={`text-[9px] font-black uppercase tracking-widest ${isSynced ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                                            {isSynced ? 'Sincronizado' : `${set.cards} cards`}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                                {isSynced && (
-                                                    <div className="flex items-center gap-1">
-                                                        {confirmingSetId === set.id ? (
-                                                            <div className="flex items-center gap-1 animate-fade-in">
+                                                    {isSynced && (
+                                                        <div className="flex items-center gap-2">
+                                                            {confirmingSetId === set.id ? (
+                                                                <div className="flex items-center gap-2 animate-fade-in">
+                                                                    <button
+                                                                        onClick={(event) => {
+                                                                            event.stopPropagation();
+                                                                            void handleDeleteSet(set.id, set.name);
+                                                                        }}
+                                                                        className="px-3 py-1.5 bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-rose-700 shadow-xl shadow-rose-600/20"
+                                                                    >
+                                                                        DELETAR?
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(event) => {
+                                                                            event.stopPropagation();
+                                                                            setConfirmingSetId(null);
+                                                                        }}
+                                                                        className="p-2 text-slate-500 hover:text-white transition-colors"
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
                                                                 <button
                                                                     onClick={(event) => {
                                                                         event.stopPropagation();
-                                                                        void handleDeleteSet(set.id, set.name);
+                                                                        setConfirmingSetId(set.id);
                                                                     }}
-                                                                    disabled={loading}
-                                                                    className="px-2 py-1.5 bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-rose-700 shadow-lg shadow-rose-600/20"
+                                                                    className="h-10 w-10 bg-white/5 text-slate-500 hover:bg-rose-600/10 hover:text-rose-500 border border-white/5 rounded-xl flex items-center justify-center transition-all"
+                                                                    title="Deletar cards desta coleção"
                                                                 >
-                                                                    Deletar?
-                                                                </button>
-                                                                <button
-                                                                    onClick={(event) => {
-                                                                        event.stopPropagation();
-                                                                        setConfirmingSetId(null);
-                                                                    }}
-                                                                    className="p-1.5 text-slate-400 hover:text-slate-600"
-                                                                >
-                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                                     </svg>
                                                                 </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button
-                                                                onClick={(event) => {
-                                                                    event.stopPropagation();
-                                                                    void handleDeleteSet(set.id, set.name);
-                                                                }}
-                                                                disabled={loading}
-                                                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                                                                title="Deletar cards desta coleção"
-                                                            >
-                                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                <button
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        void handleSync(set.id);
-                                                    }}
-                                                    disabled={loading}
-                                                    className={`px-4 py-2 border text-[9px] font-black uppercase tracking-widest rounded-lg transition-all disabled:opacity-50 ${isSynced
-                                                        ? 'bg-white border-emerald-200 text-emerald-600 hover:bg-emerald-50'
-                                                        : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-900 hover:text-white'
-                                                        }`}
-                                                >
-                                                    {isSynced ? 'Re-sync' : 'Sync'}
-                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            void handleSync(set.id);
+                                                        }}
+                                                        className={`h-10 px-5 text-[9px] font-black uppercase tracking-widest rounded-xl border transition-all ${isSynced
+                                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20'
+                                                            : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        {isSynced ? 'RE-SYNC' : 'SYNC'}
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })
-                            )}
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
