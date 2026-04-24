@@ -30,7 +30,13 @@ interface MarketSyncResponse {
 
 function normalizeSetName(set: Pick<TcgSet, 'id' | 'name'>) {
     if (set.id === 'me01') {
-        return 'Megaevolucao - Equilibrio Perfeito';
+        return 'Megaevolucao - Equilibrio Perfeito'; // legacy
+    }
+    if (set.id === 'me03') {
+        return 'Equilíbrio Perfeito';
+    }
+    if (set.id === 'sv09') {
+        return 'Parceiros Iniciais';
     }
 
     return set.name;

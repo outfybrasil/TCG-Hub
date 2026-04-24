@@ -47,37 +47,52 @@ export async function POST(request: Request) {
 
 async function syncSet(setId: string) {
     try {
-        // Fetch from both Portuguese and English endpoints
-        const [resPt, resEn] = await Promise.all([
+        // Fetch from all languages endpoints
+        const [resPt, resEn, resEs] = await Promise.all([
             fetch(`https://api.tcgdex.net/v2/pt/sets/${setId}`),
-            fetch(`https://api.tcgdex.net/v2/en/sets/${setId}`)
+            fetch(`https://api.tcgdex.net/v2/en/sets/${setId}`),
+            fetch(`https://api.tcgdex.net/v2/es/sets/${setId}`)
         ]);
 
         if (!resPt.ok) throw new Error(`Set ${setId} não encontrado na TCGdex (PT)`);
         
         const dataPt = await resPt.json();
         const dataEn = resEn.ok ? await resEn.json() : null;
+        const dataEs = resEs.ok ? await resEs.json() : null;
 
         const cardsPt = dataPt.cards || [];
         const cardsEn = dataEn?.cards || [];
+        const cardsEs = dataEs?.cards || [];
 
-        // Build mapping for English names
-        const enMap = new Map<string, string>();
-        if (cardsEn) {
-            cardsEn.forEach((c: any) => enMap.set(c.id, c.name));
-        }
+        // Build mapping for names in each language
+        const mapLang = (cardsArr: any[]) => {
+            const m = new Map<string, string>();
+            if (cardsArr) cardsArr.forEach(c => m.set(c.id, c.name));
+            return m;
+        };
+
+        const enMap = mapLang(cardsEn);
+        const esMap = mapLang(cardsEs);
 
         const totalOfficial = dataPt.cardCount?.official || 0;
+
+        const normalizeName = (id: string, name: string) => {
+            if (id === 'sv09') return 'Parceiros Iniciais';
+            if (id === 'me03') return 'Equilíbrio Perfeito';
+            return name;
+        };
 
         const cardsToInsert = cardsPt.map((card: any) => ({
             id: card.id,
             local_id: totalOfficial > 0 ? `${card.localId}/${totalOfficial}` : card.localId,
             name: card.name,
-            name_en: enMap.get(card.id) || card.name, // Fallback to PT if EN not found
+            name_en: enMap.get(card.id) || card.name, // Fallback to PT if not found
+            name_es: esMap.get(card.id) || card.name,
             image_url: `${card.image}/high.png`,
             set_id: dataPt.id,
-            set_name: dataPt.name,
-            set_name_en: dataEn?.name || dataPt.name, // Fallback to PT if EN not found
+            set_name: normalizeName(dataPt.id, dataPt.name),
+            set_name_en: dataEn?.name || dataPt.name,
+            set_name_es: dataEs?.name || dataPt.name,
             rarity: card.rarity || 'Common',
             types: card.types || [],
             updated_at: new Date().toISOString()

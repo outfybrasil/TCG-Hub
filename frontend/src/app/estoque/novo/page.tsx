@@ -68,7 +68,7 @@ export default function NewAssetPage() {
         setSearching(true);
         try {
             let query = supabase.from('pokemon_cards').select('*');
-            if (name) query = query.ilike('name', `%${name}%`);
+            if (name) query = query.or(`name.ilike.%${name}%,name_en.ilike.%${name}%,name_es.ilike.%${name}%`);
             if (selectedSetSearch) query = query.eq('set_id', selectedSetSearch);
 
             const { data, error } = await query.limit(150);

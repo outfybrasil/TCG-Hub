@@ -88,7 +88,7 @@ export default function CreateAuctionPage() {
         setSearching(true);
         try {
             let query = supabase.from('pokemon_cards').select('*');
-            if (cardName) query = query.ilike('name', `%${cardName}%`);
+            if (cardName) query = query.or(`name.ilike.%${cardName}%,name_en.ilike.%${cardName}%,name_es.ilike.%${cardName}%`);
             if (selectedSet) query = query.eq('set_id', selectedSet);
 
             const { data, error } = await query.limit(150);

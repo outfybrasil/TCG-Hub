@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { requireAdmin } from '@/lib/server-auth';
+import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
-    const auth = await requireAdmin(req);
+    const auth = await requireAuthenticatedUser(req);
     if ('response' in auth) {
         return auth.response;
     }
@@ -11,6 +11,17 @@ export async function POST(req: Request) {
     try {
         const body = await req.json();
         const { liveId, winnerId, winnerName, amount, itemName, itemType, itemImage } = body;
+
+        // Check ownership
+        const { data: liveData } = await supabaseAdmin
+            .from('live_auctions')
+            .select('streamer_id')
+            .eq('id', liveId)
+            .single();
+            
+        if (!liveData || (liveData.streamer_id !== auth.user.id && !auth.isAdmin)) {
+            return NextResponse.json({ error: 'Acesso negado. Apenas o dono da live ou admin pode finalizá-la.' }, { status: 403 });
+        }
 
         if (!liveId || !winnerId || !amount || !itemName) {
             return NextResponse.json({ error: 'Dados obrigatórios ausentes' }, { status: 400 });

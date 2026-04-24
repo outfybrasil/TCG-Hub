@@ -56,7 +56,7 @@ export default function NewInventoryItemPage() {
         setSearching(true);
         try {
             let query = supabase.from('pokemon_cards').select('*');
-            if (searchTerm) query = query.ilike('name', `%${searchTerm}%`);
+            if (searchTerm) query = query.or(`name.ilike.%${searchTerm}%,name_en.ilike.%${searchTerm}%,name_es.ilike.%${searchTerm}%`);
             if (selectedSet) query = query.eq('set_id', selectedSet);
 
             const { data, error } = await query.limit(100);
