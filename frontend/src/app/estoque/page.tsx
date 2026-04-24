@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import CardGallery from '@/components/CardGallery';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-import AdminGuard from '@/components/AdminGuard';
+
 
 export default function InventoryPage() {
     const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
@@ -137,7 +137,7 @@ export default function InventoryPage() {
     }
 
     return (
-        <AdminGuard>
+        <>
             <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
                 <div className="max-w-7xl mx-auto px-6 py-20 animate-fade-up">
                     {/* Dashboard Header */}
@@ -280,6 +280,6 @@ export default function InventoryPage() {
                     </div>
                 </div>
             </div>
-        </AdminGuard>
+        </>
     );
 }

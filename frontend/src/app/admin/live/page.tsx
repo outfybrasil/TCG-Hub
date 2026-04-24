@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import LiveChat from '@/components/LiveChat';
-import AdminGuard from '@/components/AdminGuard';
+
 
 export default function AdminLiveDashboard() {
     const router = useRouter();
@@ -157,7 +157,7 @@ export default function AdminLiveDashboard() {
     const labelClass = "text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block";
 
     return (
-        <AdminGuard>
+        <>
             <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
                 {/* HEADER */}
                 <div className="px-8 py-5 flex items-center justify-between sticky top-0 z-40 bg-slate-900/95 backdrop-blur-xl border-b border-white/5">
@@ -388,6 +388,6 @@ export default function AdminLiveDashboard() {
                     .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
                 `}</style>
             </div>
-        </AdminGuard>
+        </>
     );
 }

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import AdminGuard from '@/components/AdminGuard';
+
 
 const durationOptions = [
     { label: '1 hora', hours: 1 },
@@ -143,7 +143,7 @@ export default function CreateAuctionPage() {
     };
 
     return (
-        <AdminGuard>
+        <>
             <div className="max-w-6xl mx-auto px-6 py-16 animate-fade-up">
                 <div className="mb-16 space-y-6 relative">
                     <div className="inline-flex items-center gap-2 bg-rose-50/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-rose-100 shadow-sm">
@@ -455,6 +455,6 @@ export default function CreateAuctionPage() {
                     </div>
                 </div>
             </div>
-        </AdminGuard>
+        </>
     );
 }

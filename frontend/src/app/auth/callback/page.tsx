@@ -13,7 +13,7 @@ export default function AuthCallbackPage() {
                 if (session.user?.email === 'admin@tcghub.com.br') {
                     router.push('/admin/vendas');
                 } else {
-                    router.push('/membro');
+                    router.push('/minha-conta');
                 }
             }
         });
@@ -33,7 +33,7 @@ export default function AuthCallbackPage() {
                     if (session.user?.email === 'admin@tcghub.com.br') {
                         router.push('/admin/vendas');
                     } else {
-                        router.push('/membro');
+                        router.push('/minha-conta');
                     }
                 }
             } catch (err) {

@@ -34,7 +34,7 @@ export default function LoginPage() {
       if (email === 'admin@tcghub.com.br') { // NOTE: Should I change this email too? User didn't ask.
         router.push('/admin/vendas');
       } else {
-        router.push('/membro');
+        router.push('/minha-conta');
       }
     } catch (err: unknown) {
       const message =

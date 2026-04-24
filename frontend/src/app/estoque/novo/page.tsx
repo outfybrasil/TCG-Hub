@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import AdminGuard from '@/components/AdminGuard';
+
 
 interface TcgSet { id: string; name: string; }
 interface PokemonCard { id: string; name: string; set_name: string; local_id: string; image_url: string; types?: string[]; }
@@ -169,7 +169,7 @@ export default function NewAssetPage() {
     };
 
     return (
-        <AdminGuard>
+        <>
             <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
                 <div className="max-w-7xl mx-auto px-6 py-20 animate-fade-up">
                     <div className="mb-16 flex flex-col md:flex-row md:items-center justify-between gap-8 border-b border-white/10 pb-12">
@@ -465,6 +465,6 @@ export default function NewAssetPage() {
                     )}
                 </div>
             </div>
-        </AdminGuard>
+        </>
     );
 }
