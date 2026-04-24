@@ -463,6 +463,7 @@ export default function NewAssetPage() {
                             </div>
                         </div>
                     )}
+                    </div>
                 </div>
             </div>
         </>
