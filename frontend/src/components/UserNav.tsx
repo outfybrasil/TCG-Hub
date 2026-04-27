@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import type { User } from '@supabase/supabase-js';
+import { ShoppingCart, Bell, Mail, User as UserIcon, LogOut, Settings } from 'lucide-react';
 
 import type { CartItem } from '@/context/CartContext';
 import { useCart } from '@/context/CartContext';
 import { supabase } from '@/lib/supabase';
+import { Link } from '@/i18n/routing';
 
 export default function UserNav() {
     const [user, setUser] = useState<User | null>(null);
@@ -35,9 +36,7 @@ export default function UserNav() {
             try {
                 const { data: { session }, error } = await supabase.auth.getSession();
                 
-                // If there's an error about invalid refresh token, we should sign out to clear local state
                 if (error && error.message.includes('Refresh Token Not Found')) {
-                    console.warn('[UserNav] Stale session detected, clearing...');
                     await supabase.auth.signOut();
                     setUser(null);
                     return;
@@ -79,71 +78,83 @@ export default function UserNav() {
     const isAdmin = user?.email === 'admin@tcghub.com.br';
 
     return (
-        <div className="flex items-center gap-2 sm:gap-3">
-            {isAdmin && (
-                <Link href="/estoque" className="hidden rounded-full border border-white/80 bg-white/80 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-slate-500 transition-all hover:border-rose-100 hover:text-rose-600 lg:block">
-                    Admin
-                </Link>
-            )}
-
+        <div className="flex items-center gap-3">
+            {/* Balances condensed */}
             {user && !isAdmin && (
-                <div className="hidden h-9 items-center rounded-xl border border-rose-100 bg-rose-50 px-2 sm:flex transition-all hover:bg-rose-100 group" title="Cashback acumulado (Clique para ver detalhes)">
-                    <div className="mr-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white shadow-lg shadow-rose-200">
-                        <span className="text-[12px] font-black relative">
-                            $
-                            <span className="absolute -inset-1 border border-white/30 rounded-full border-t-transparent animate-[spin_3s_linear_infinite]"></span>
-                        </span>
+                <div className="hidden lg:flex items-center gap-2 mr-2">
+                    <div className="h-10 px-3 flex flex-col justify-center rounded-xl bg-white/5 border border-white/10" title="Cashback">
+                        <span className="text-[9px] uppercase tracking-widest text-slate-400 leading-none">Cashback</span>
+                        <span className="text-xs font-black text-rose-500">R$ {walletBalance.toFixed(2).replace('.', ',')}</span>
                     </div>
-                    <span className="text-[11px] font-black text-slate-900">R$ {walletBalance.toFixed(2).replace('.', ',')}</span>
                 </div>
             )}
 
-            {user && !isAdmin && (
-                <Link href="/minha-conta/creditos" className="hidden h-9 items-center gap-1.5 rounded-xl border border-amber-100 bg-amber-50 px-2 transition-all hover:bg-amber-100 sm:flex" title="Créditos para Leilão">
-                    <div className="flex h-5 w-7 items-center justify-center rounded-md bg-amber-500 font-black text-[9px] text-white shadow-sm">
-                        CR
-                    </div>
-                    <span className="text-[11px] font-black text-slate-900">R$ {availableCredits.toFixed(2).replace('.', ',')}</span>
-                </Link>
-            )}
-
-            {user && !isAdmin && (
-                <Link href="/minha-conta/inventario" className="hidden h-9 items-center gap-2 rounded-xl border border-rose-100 bg-white px-3 transition-all hover:bg-rose-50 sm:flex" title="Seu Inventário Pessoal">
-                    <span className="text-[9px] font-black uppercase tracking-[0.15em] text-rose-600">Inventário</span>
-                </Link>
-            )}
-
-            {/* O botão "Criar Live" foi removido daqui para ficar dentro da área logada, reduzindo a poluição visual */}
-
-            <Link href={user ? (user.email === 'admin@tcghub.com.br' ? '/admin/vendas' : '/minha-conta') : '/auth/login'} className="flex h-9 items-center rounded-xl border border-white/80 bg-white/80 px-4 text-[10px] font-black uppercase tracking-[0.15em] text-slate-900 shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)] transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600">
-                {user ? (user.email === 'admin@tcghub.com.br' ? 'Pedidos' : 'Conta') : 'Entrar'}
-            </Link>
-
+            {/* Notifications & Messages */}
             {user && (
-                <button
-                    onClick={async () => {
-                        await supabase.auth.signOut();
-                        window.location.href = '/';
-                    }}
-                    className="flex h-9 items-center rounded-xl border border-transparent px-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 transition-all hover:border-rose-100 hover:bg-rose-50 hover:text-rose-600"
-                    title="Sair"
-                >
-                    Sair
-                </button>
+                <>
+                    <Link href="/mensagens" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 transition-colors hover:bg-white/10 hover:text-white" title="Mensagens">
+                        <Mail className="h-4 w-4" />
+                        <span className="absolute top-0 right-0 flex h-3 w-3 items-center justify-center rounded-full bg-blue-500 border-2 border-[#0c1324]"></span>
+                    </Link>
+                    <Link href="/notificacoes" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 transition-colors hover:bg-white/10 hover:text-white" title="Notificações">
+                        <Bell className="h-4 w-4" />
+                        <span className="absolute top-0 right-0 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 border-2 border-[#0c1324]"></span>
+                    </Link>
+                </>
             )}
 
+            {/* Cart */}
             <button
                 onClick={() => setIsOpen(true)}
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-950 text-white shadow-[0_10px_20px_-16px_rgba(15,23,42,0.55)] transition-colors hover:bg-rose-600"
+                className="relative flex h-10 w-10 items-center justify-center rounded-full bg-rose-600 text-white shadow-[0_4px_14px_rgba(225,29,72,0.4)] transition-transform hover:scale-105"
                 title="Sacola de Compras"
             >
-                <span className="text-sm">🛒</span>
+                <ShoppingCart className="h-4 w-4" />
                 {cartItemCount > 0 && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-amber-400 text-[10px] font-bold text-slate-950">
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-[#0c1324] bg-white text-[9px] font-black text-rose-600">
                         {cartItemCount}
                     </span>
                 )}
             </button>
+
+            {/* Profile Dropdown Trigger (Mocked as Link for now) */}
+            {user ? (
+                <div className="flex items-center gap-2 ml-2">
+                    {isAdmin ? (
+                        <Link href="/admin/vendas" className="flex h-10 items-center gap-2 rounded-full bg-rose-600 px-4 transition-all hover:bg-rose-700 shadow-[0_0_15px_rgba(225,29,72,0.3)]">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20 text-white">
+                                <Settings className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="text-[11px] font-black uppercase tracking-wider text-white">
+                                Painel Admin
+                            </span>
+                        </Link>
+                    ) : (
+                        <Link href="/minha-conta" className="flex h-10 items-center gap-2 rounded-full bg-white/5 border border-white/10 pl-2 pr-4 transition-colors hover:bg-white/10">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-rose-500/20 text-rose-500">
+                                <UserIcon className="h-4 w-4" />
+                            </div>
+                            <span className="text-[11px] font-black uppercase tracking-wider text-slate-200">
+                                Conta
+                            </span>
+                        </Link>
+                    )}
+                    <button
+                        onClick={async () => {
+                            await supabase.auth.signOut();
+                            window.location.href = '/';
+                        }}
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-400 transition-colors hover:bg-red-500/20 hover:text-red-400"
+                        title="Sair"
+                    >
+                        <LogOut className="h-4 w-4" />
+                    </button>
+                </div>
+            ) : (
+                <Link href="/auth/login" className="ml-2 flex h-10 items-center rounded-full bg-white text-slate-900 px-6 text-[11px] font-black uppercase tracking-wider transition-transform hover:scale-105">
+                    Entrar
+                </Link>
+            )}
         </div>
     );
 }

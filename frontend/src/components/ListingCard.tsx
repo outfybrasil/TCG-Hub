@@ -47,33 +47,33 @@ export default function ListingCard({ listing, onBuy }: ListingCardProps) {
     };
 
     return (
-        <div className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 px-4 border-b border-slate-100 hover:bg-slate-50/60 transition-colors">
+        <div className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-4 px-4 hover:bg-white/5 transition-colors">
             
             {/* 1. Loja/Vendedor */}
             <div className="flex-[2] min-w-0 pr-4">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center shrink-0 border border-slate-300">
-                        <span className="text-sm font-black text-slate-500 uppercase">
+                    <div className="w-10 h-10 rounded-full bg-brand-surface-top flex items-center justify-center shrink-0 border border-white/10">
+                        <span className="text-sm font-black text-brand-muted uppercase">
                             {seller?.display_name?.substring(0, 2) || 'VD'}
                         </span>
                     </div>
                     <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                            <p className="font-bold text-sm text-slate-900 truncate">
+                            <p className="font-bold text-sm text-brand-text truncate">
                                 {seller?.display_name || 'Vendedor Anônimo'}
                             </p>
                             {seller?.is_verified && (
-                                <svg className="w-3.5 h-3.5 text-blue-500 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                <svg className="w-3.5 h-3.5 text-blue-400 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
                             )}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                             <div className="flex items-center gap-0.5">
-                                <span className="text-[10px] font-black text-amber-500">★</span>
-                                <span className="text-[10px] font-bold text-slate-600">{Number(seller?.rating_avg || 0).toFixed(1)}</span>
-                                <span className="text-[9px] text-slate-400">({seller?.rating_count || 0})</span>
+                                <span className="text-[10px] font-black text-brand-amber">★</span>
+                                <span className="text-[10px] font-bold text-brand-muted">{Number(seller?.rating_avg || 0).toFixed(1)}</span>
+                                <span className="text-[9px] text-brand-muted/60">({seller?.rating_count || 0})</span>
                             </div>
-                            <span className="text-[10px] text-slate-300">|</span>
-                            <span className="text-[10px] text-slate-400 uppercase tracking-wider">{seller?.ships_from_state || 'BR'}</span>
+                            <span className="text-[10px] text-white/10">|</span>
+                            <span className="text-[10px] text-brand-muted uppercase tracking-wider">{seller?.ships_from_state || 'BR'}</span>
                         </div>
                     </div>
                 </div>
@@ -116,21 +116,21 @@ export default function ListingCard({ listing, onBuy }: ListingCardProps) {
 
             {/* 4. Preço */}
             <div className="flex-1 sm:text-right">
-                <p className="text-xl font-black tracking-tight text-rose-600">
+                <p className="text-xl font-black tracking-tight text-brand-rose">
                     {listing.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-brand-muted mt-0.5">
                     Unidade
                 </p>
             </div>
 
             {/* 5. Quantidade e Compra */}
-            <div className="flex-[1.5] flex items-center justify-between sm:justify-end gap-3 sm:pl-4 border-l border-slate-100">
+            <div className="flex-[1.5] flex items-center justify-between sm:justify-end gap-3 sm:pl-4 border-l border-white/5">
                 <div className="text-center">
-                    <div className="h-8 min-w-[3rem] px-2 rounded bg-slate-100 border border-slate-200 flex items-center justify-center text-xs font-black text-slate-700">
+                    <div className="h-8 min-w-[3rem] px-2 rounded bg-white/5 border border-white/10 flex items-center justify-center text-xs font-black text-brand-text">
                         1
                     </div>
-                    <p className="text-[9px] font-bold text-slate-400 mt-1">de {listing.quantity}</p>
+                    <p className="text-[9px] font-bold text-brand-muted mt-1">de {listing.quantity}</p>
                 </div>
                 <button
                     id={`buy-listing-${listing.id}`}

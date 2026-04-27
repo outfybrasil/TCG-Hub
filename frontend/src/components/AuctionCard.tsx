@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import CountdownTimer from '@/components/CountdownTimer';
 import { Auction } from '@/lib/auction.types';
 
@@ -25,12 +26,17 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
 
     return (
         <Link href={`/leilao/${auction.id}`} className="group block">
-            <div className={`bg-[#191f31]/60 backdrop-blur-xl border rounded-[30px] shadow-sm overflow-hidden transition-all duration-300 transform hover:-translate-y-2 hover:shadow-[0_20px_60px_rgba(0,0,0,0.4)] ${isEnded ? 'border-white/5 opacity-60' : 'border-white/5 hover:border-rose-500/40'}`}>
+            <motion.div 
+                whileHover={{ y: -8, scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className={`bg-[#191f31]/60 backdrop-blur-xl border rounded-[30px] shadow-sm overflow-hidden ${isEnded ? 'border-white/5 opacity-60' : 'border-white/5 hover:border-rose-500/40 hover:shadow-[0_20px_60px_rgba(225,29,72,0.15)]'}`}
+            >
                 {/* Card Image */}
                 <div className="relative aspect-square overflow-hidden bg-black/20 rounded-t-[24px] border-b border-white/5">
                     <img
                         src={currentImageUrl}
                         alt={auction.cardName}
+                        loading="lazy"
                         onError={() => {
                             if (!imageError && currentImageUrl) {
                                 setImageError(true);
@@ -79,7 +85,7 @@ export default function AuctionCard({ auction }: AuctionCardProps) {
                         {isEnded ? 'Encerrado' : 'Participar →'}
                     </div>
                 </div>
-            </div>
+            </motion.div>
         </Link>
     );
 }
