@@ -18,6 +18,7 @@ interface Purchase {
     carrier?: string;
     buyer_name: string;
     items: any[];
+    shipping_address?: Record<string, string>;
 }
 
 export default function VendasPage() {

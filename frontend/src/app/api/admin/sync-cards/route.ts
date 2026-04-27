@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
         for (const set of setsToSync) {
             const result = await syncSet(set.id);
-            if (result.success) totalSynced += result.count;
+            if (result.success) totalSynced += result.count ?? 0;
         }
 
         return NextResponse.json({
