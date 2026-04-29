@@ -1,0 +1,50 @@
+name: Missing Sets Sync (LigaPokemon)
+
+on:
+  schedule:
+    # Runs every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: |
+          npm install puppeteer-extra puppeteer-extra-plugin-stealth puppeteer @supabase/supabase-js
+
+      - name: Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Run Sync Script
+        working-directory: frontend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE: ${{ secrets.SUPABASE_SERVICE_ROLE }}
+        run: |
+          # Criar diretório tmp se não existir
+          mkdir -p ../tmp
+          node scripts/bulk-sync-liga.js
+
+      - name: Commit Progress
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add tmp/sync_progress.json
+          git commit -m "chore: update sync progress [skip ci]" || echo "No changes to commit"
+          git push
