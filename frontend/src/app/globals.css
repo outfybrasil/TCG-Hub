@@ -75,6 +75,32 @@ body {
   min-height: 100vh;
 }
 
+/* Live vertical: adapts to iPhone safe areas and short screens. */
+.live-mobile-chat {
+  bottom: calc(15.75rem + env(safe-area-inset-bottom));
+  height: clamp(10rem, 29dvh, 16rem);
+}
+
+@media (max-width: 390px) {
+  .live-mobile-auction { right: 3.5rem; padding-left: .65rem; padding-right: .35rem; }
+  .live-mobile-auction h2 { font-size: .95rem; line-height: 1.15rem; }
+  .live-mobile-auction button { padding-top: .55rem; padding-bottom: .55rem; font-size: .6rem; }
+  .live-mobile-actions { right: .35rem; transform: scale(.88); transform-origin: bottom right; }
+  .live-mobile-chat { left: .5rem; right: 4rem; bottom: calc(14.25rem + env(safe-area-inset-bottom)); height: clamp(9rem, 27dvh, 13rem); }
+}
+
+@media (max-height: 700px) and (max-width: 1023px) {
+  .live-mobile-chat { bottom: calc(13.5rem + env(safe-area-inset-bottom)); height: 9.75rem; }
+  .live-mobile-auction { padding-bottom: max(.45rem, env(safe-area-inset-bottom)); }
+  .live-mobile-auction .h-20 { height: 3.5rem; width: 2.75rem; }
+  .live-mobile-actions { bottom: .25rem; gap: .4rem; transform: scale(.78); transform-origin: bottom right; }
+}
+
+@media (display-mode: standalone) {
+  body { overscroll-behavior-y: none; }
+  .live-mobile-room { height: 100dvh; }
+}
+
 /* Selection */
 ::selection {
   background: #e11d4840;

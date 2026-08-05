@@ -9,6 +9,9 @@ import MobileNav from "@/components/MobileNav";
 import Navbar from "@/components/Navbar";
 import { CartProvider } from "@/context/CartContext";
 import AchievementToast from "@/components/AchievementToast";
+import InstallAppPrompt from "@/components/InstallAppPrompt";
+import ServiceWorkerRegistration from "@/components/ServiceWorkerRegistration";
+import type { Viewport } from "next";
 
 import "../globals.css";
 
@@ -22,7 +25,12 @@ export const metadata = {
   title: "TCG MEGASTORE — Marketplace Premium de Pokémon TCG",
   description:
     "Acesse o estoque mais exclusivo de Pokemon TCG do Brasil. Cartas raras, certificadas e prontas para envio imediato.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "TCG Megastore" },
+  icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-touch-icon.png" },
 };
+
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover", themeColor: "#e11d48" };
 
 export default async function RootLayout({
   children,
@@ -187,6 +195,8 @@ export default async function RootLayout({
 
             <CartDrawer />
             <AchievementToast />
+            <InstallAppPrompt />
+            <ServiceWorkerRegistration />
           </CartProvider>
         </NextIntlClientProvider>
       </body>

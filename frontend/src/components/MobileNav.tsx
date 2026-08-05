@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-
+import { Boxes, ChartNoAxesColumnIncreasing, Gavel, Package, Radio, ShoppingBag, User } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function MobileNav() {
@@ -11,83 +11,40 @@ export default function MobileNav() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error?.message.includes('Refresh Token Not Found')) {
-          await supabase.auth.signOut();
-          setIsAdmin(false);
-          return;
-        }
-        setIsAdmin(session?.user?.email === 'admin@tcghub.com.br');
-      } catch {
-        // silent
-      }
-    };
-
-    void checkUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAdmin(session?.user?.email === 'admin@tcghub.com.br');
-    });
-
-    return () => authListener.subscription.unsubscribe();
+    const sync = async () => { const { data } = await supabase.auth.getSession(); setIsAdmin(data.session?.user?.email === 'admin@tcghub.com.br'); };
+    void sync();
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => setIsAdmin(session?.user?.email === 'admin@tcghub.com.br'));
+    return () => data.subscription.unsubscribe();
   }, []);
 
   const navItems = isAdmin
     ? [
-        { label: 'Loja',     icon: '🃏', href: '/marketplace' },
-        { label: 'Leilões',  icon: '⚡', href: '/leilao' },
-        { label: 'Vendas',   icon: '📦', href: '/admin/vendas' },
-        { label: 'Estoque',  icon: '📋', href: '/estoque' },
+        { label: 'Loja', icon: ShoppingBag, href: '/marketplace' },
+        { label: 'Leilões', icon: Gavel, href: '/leilao' },
+        { label: 'Ao vivo', icon: Radio, href: '/lives', live: true },
+        { label: 'Vendas', icon: Package, href: '/admin/vendas' },
+        { label: 'Estoque', icon: Boxes, href: '/estoque' },
       ]
     : [
-        { label: 'Loja',     icon: '🃏', href: '/marketplace' },
-        { label: 'Leilões',  icon: '⚡', href: '/leilao' },
-        { label: 'Conta',    icon: '👤', href: '/minha-conta' },
-        { label: 'Preços',   icon: '📈', href: '/precos' },
+        { label: 'Loja', icon: ShoppingBag, href: '/marketplace' },
+        { label: 'Leilões', icon: Gavel, href: '/leilao' },
+        { label: 'Ao vivo', icon: Radio, href: '/lives', live: true },
+        { label: 'Preços', icon: ChartNoAxesColumnIncreasing, href: '/precos' },
+        { label: 'Conta', icon: User, href: '/minha-conta' },
       ];
 
-  return (
-    <nav
-      className="fixed bottom-4 left-4 right-4 z-[100] lg:hidden"
-      style={{
-        background: 'rgba(25,31,49,0.92)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: '1.5rem',
-        boxShadow: '0 24px 60px -20px rgba(0,0,0,0.6)',
-      }}
-    >
-      <div className="flex items-center justify-around px-3 py-2">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== '/' && pathname?.startsWith(item.href));
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="group flex min-w-[68px] flex-col items-center justify-center rounded-xl px-3 py-2 transition-all"
-              style={{
-                background: isActive ? 'rgba(225,29,72,0.15)' : 'transparent',
-                color: isActive ? '#ffb3b6' : '#8b95b5',
-              }}
-            >
-              <span
-                className={`text-lg transition-transform group-hover:scale-110 ${isActive ? 'scale-110' : ''}`}
-              >
-                {item.icon}
-              </span>
-              <span className="mt-0.5 text-[9px] font-black uppercase tracking-[0.15em]">
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
-  );
+  return <nav className="fixed inset-x-0 bottom-0 z-[100] border-t border-white/10 bg-[#0b1120]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden" aria-label="Navegação principal">
+    <div className="mx-auto grid h-16 max-w-lg grid-cols-5 px-1">
+      {navItems.map(item => {
+        const active = pathname === item.href || pathname?.startsWith(`${item.href}/`);
+        const Icon = item.icon;
+        return <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={`relative flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[10px] font-semibold transition-colors ${active ? 'text-white' : 'text-slate-500'}`}>
+          {item.live && <span className="absolute top-2 right-[calc(50%-13px)] h-1.5 w-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,.8)]" />}
+          <Icon className={`h-5 w-5 ${item.live && active ? 'text-rose-400' : ''}`} strokeWidth={active ? 2.4 : 1.8} />
+          <span className="truncate">{item.label}</span>
+          {active && <span className="absolute bottom-0 h-0.5 w-7 rounded-full bg-rose-500" />}
+        </Link>;
+      })}
+    </div>
+  </nav>;
 }

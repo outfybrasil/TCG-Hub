@@ -150,7 +150,7 @@ export default function LiveRoomPage() {
             <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400"><button onClick={() => setShowHistory(true)} className="flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-white/5"><History className="h-3.5 w-3.5" />Arremates</button><button onClick={shareLive} className="flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-white/5"><Share2 className="h-3.5 w-3.5" />Compartilhar</button><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{viewerCount}</span><span title={connected ? 'Tempo real conectado' : 'Reconectando'} className={connected ? 'text-emerald-400' : 'text-amber-400'}>{connected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}</span></div>
         </header>
 
-        <section className="relative h-dvh overflow-hidden bg-black lg:hidden">
+        <section className="live-mobile-room relative h-dvh overflow-hidden bg-black lg:hidden">
             {videoUrl ? <iframe key={`mobile-${videoReloadKey}`} src={videoUrl} onLoad={() => setVideoLoading(false)} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute left-1/2 top-1/2 h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d1f] text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/95" />
 
@@ -160,7 +160,7 @@ export default function LiveRoomPage() {
                 <button onClick={reloadVideo} title="Recarregar somente o vídeo" aria-label="Recarregar vídeo" className={`rounded-full bg-black/35 p-2.5 backdrop-blur-md ${videoLoading ? 'text-amber-400' : connected ? 'text-emerald-400' : 'text-amber-400'}`}><RefreshCw className={`h-5 w-5 ${videoLoading ? 'animate-spin' : ''}`} /></button>
             </div>
 
-            <div className="absolute bottom-0 left-0 right-16 z-10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <div className="live-mobile-auction absolute bottom-0 left-0 right-16 z-10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
                 {!waiting && !ended && <>
                     <div className="mb-3 flex items-end gap-3">
                         {live.current_item_image && <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xl border border-white/20 bg-black/40 backdrop-blur"><img src={live.current_item_image} alt={live.current_item_name || 'Lote'} className="h-full w-full object-contain" /></div>}
@@ -175,13 +175,13 @@ export default function LiveRoomPage() {
                 {(waiting || ended) && <div className="rounded-2xl bg-black/45 p-4 backdrop-blur-md"><p className="text-lg font-black">{ended ? 'Transmissão encerrada' : 'Próximo lote em preparação'}</p><p className="mt-1 text-xs text-white/60">{ended ? 'Obrigado por acompanhar.' : 'O apresentador iniciará a próxima disputa em breve.'}</p></div>}
             </div>
 
-            <div className="absolute bottom-6 right-3 z-20 flex w-14 flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]">
+            <div className="live-mobile-actions absolute bottom-6 right-3 z-20 flex w-14 flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]">
                 <div className="w-28 -translate-x-7 rounded-2xl bg-black/50 px-2 py-2 text-center backdrop-blur-md" title={live.winning_user_name || 'Sem líder'}><Crown className={`mx-auto h-4 w-4 ${live.winning_user_id ? 'text-amber-300' : 'text-white/35'}`} /><p className="mt-1 line-clamp-2 text-[8px] font-black leading-tight text-white">{live.winning_user_name || 'Sem líder'}</p></div>
                 <button onClick={shareLive} aria-label="Compartilhar live" className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur active:scale-95"><Share2 className="h-5 w-5" /></button>
                 <button onClick={() => setShowHistory(true)} aria-label="Histórico de arremates" className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur active:scale-95"><History className="h-5 w-5" /></button>
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/45 text-[9px] font-black backdrop-blur"><ChevronUp className="h-4 w-4 text-emerald-400" />{live.bid_count || bids.length}</div>
             </div>
-            {!isDesktop && <div className="pointer-events-auto absolute bottom-[270px] left-3 right-20 z-30 h-72">
+            {!isDesktop && <div className="live-mobile-chat pointer-events-auto absolute left-3 right-20 z-30">
                 <LiveChat liveId={id} currentUser={user} variant="overlay" />
             </div>}
         </section>
