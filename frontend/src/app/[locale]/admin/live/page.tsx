@@ -161,7 +161,7 @@ export default function AdminLiveDashboard() {
         <>
             <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
                 {/* HEADER */}
-                <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-40 flex flex-col gap-3 border-b border-white/5 bg-slate-900/95 px-4 py-3 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:top-0 lg:px-8 lg:py-5">
+                <div className="sticky top-0 z-40 flex flex-col gap-3 border-b border-white/5 bg-slate-900/95 px-4 py-3 pt-[max(.75rem,env(safe-area-inset-top))] backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8 lg:py-5">
                     <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                         {liveData?.status === 'LIVE' && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>}
                         <h1 className="shrink-0 text-sm font-black uppercase tracking-tighter text-white sm:text-lg">Cabine de Comando</h1>

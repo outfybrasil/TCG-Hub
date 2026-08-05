@@ -99,16 +99,13 @@ export default function AdminNav() {
         </div>
       </aside>
 
-      {/* Mobile Top Bar for Admin */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 bg-[#0c1324]/95 border-b border-white/10 z-[110] backdrop-blur-xl pt-[env(safe-area-inset-top)]">
-        <div className="flex h-14 items-center gap-3 px-4">
-        <Link href="/" className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl pr-2" aria-label="Voltar para a loja">
-          <div className="h-8 w-8 bg-rose-600 rounded-lg flex items-center justify-center">
-            <Home className="h-4 w-4 text-white" />
-          </div>
-          <span className="text-xs font-black uppercase text-white">Admin <span className="text-rose-600">Hub</span></span>
-        </Link>
-        <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Navegação administrativa">
+      {/* Mobile bottom navigation for Admin */}
+      <div className="fixed inset-x-0 bottom-0 z-[110] border-t border-white/10 bg-[#0c1324]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+        <nav className="mx-auto flex h-16 max-w-lg items-center gap-1 overflow-x-auto overscroll-x-contain px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Navegação administrativa">
+            <Link href="/" aria-label="Voltar para a loja" title="Loja" className="flex h-12 min-w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl text-slate-400 transition-colors hover:bg-white/5 hover:text-white">
+              <Home className="h-5 w-5" />
+              <span className="text-[8px] font-bold">Loja</span>
+            </Link>
             {navItems.map(item => {
                 const isActive = pathname.includes(item.href);
                 const Icon = item.icon;
@@ -116,13 +113,14 @@ export default function AdminNav() {
                   ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/20'
                   : 'text-slate-400 hover:bg-white/5 hover:text-white';
                 return (
-                    <Link key={item.id} href={item.href} aria-label={item.label} title={item.label} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${mobileItemClass}`}>
+                    <Link key={item.id} href={item.href} aria-label={item.label} title={item.label} aria-current={isActive ? 'page' : undefined} className={`relative flex h-12 min-w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl transition-colors ${mobileItemClass}`}>
                         <Icon className="h-5 w-5" />
+                        <span className="max-w-12 truncate px-0.5 text-[8px] font-bold">{item.label}</span>
+                        {isActive && <span className="absolute -top-2 h-0.5 w-7 rounded-full bg-rose-400" />}
                     </Link>
                 )
             })}
         </nav>
-        </div>
       </div>
     </>
   );

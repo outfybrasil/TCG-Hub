@@ -263,7 +263,7 @@ export default function AdminSalesPage() {
     return (
         <AdminGuard>
             <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
-                <div className="mx-auto max-w-7xl px-4 pb-28 pt-24 sm:px-6 lg:py-20 animate-fade-up">
+                <div className="mx-auto max-w-7xl px-4 pb-28 pt-8 sm:px-6 sm:pt-12 lg:py-20 animate-fade-up">
                     <div className="mb-8 space-y-4 sm:mb-12 sm:space-y-6 lg:mb-16">
                         <div className="inline-flex items-center gap-2 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
                             <span className="h-1.5 w-1.5 rounded-full bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.6)]"></span>
