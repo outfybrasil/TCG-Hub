@@ -16,7 +16,15 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const navItems = [
+interface NavItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  exact?: boolean;
+}
+
+const navItems: NavItem[] = [
   { id: 'vendas', label: 'Vendas', href: '/admin/vendas', icon: BarChart3 },
   { id: 'riscos', label: 'Antifraude', href: '/admin/riscos', icon: ShieldAlert },
   { id: 'denuncias', label: 'Denúncias', href: '/admin/denuncias', icon: Flag },
@@ -24,6 +32,11 @@ const navItems = [
   { id: 'estoque', label: 'Meu Estoque', href: '/minha-conta/inventario', icon: Package },
   { id: 'sync', label: 'Sincronização', href: '/admin/sync', icon: RefreshCcw },
   { id: 'configuracoes', label: 'Configurações', href: '/admin/configuracoes', icon: Settings },
+];
+
+const mobileNavItems: NavItem[] = [
+  { id: 'loja', label: 'Loja', href: '/', icon: Home, exact: true },
+  ...navItems,
 ];
 
 export default function AdminNav() {
@@ -101,25 +114,34 @@ export default function AdminNav() {
 
       {/* Mobile bottom navigation for Admin */}
       <div className="fixed inset-x-0 bottom-0 z-[110] border-t border-white/10 bg-[#0c1324]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
-        <nav className="mx-auto flex h-16 max-w-lg items-center gap-1 overflow-x-auto overscroll-x-contain px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Navegação administrativa">
-            <Link href="/" aria-label="Voltar para a loja" title="Loja" className="flex h-12 min-w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl text-slate-400 transition-colors hover:bg-white/5 hover:text-white">
-              <Home className="h-5 w-5" />
-              <span className="text-[8px] font-bold">Loja</span>
-            </Link>
-            {navItems.map(item => {
-                const isActive = pathname.includes(item.href);
-                const Icon = item.icon;
-                const mobileItemClass = isActive
-                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/20'
-                  : 'text-slate-400 hover:bg-white/5 hover:text-white';
-                return (
-                    <Link key={item.id} href={item.href} aria-label={item.label} title={item.label} aria-current={isActive ? 'page' : undefined} className={`relative flex h-12 min-w-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl transition-colors ${mobileItemClass}`}>
-                        <Icon className="h-5 w-5" />
-                        <span className="max-w-12 truncate px-0.5 text-[8px] font-bold">{item.label}</span>
-                        {isActive && <span className="absolute -top-2 h-0.5 w-7 rounded-full bg-rose-400" />}
-                    </Link>
-                )
-            })}
+        <nav className="mx-auto flex h-16 max-w-lg items-center justify-around gap-1 overflow-x-auto overscroll-x-contain px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Navegação administrativa">
+          {mobileNavItems.map(item => {
+            const isActive = item.exact ? pathname === item.href : pathname.includes(item.href);
+            const Icon = item.icon;
+
+            return (
+              <Link 
+                key={item.id} 
+                href={item.href} 
+                aria-label={item.label} 
+                title={item.label} 
+                aria-current={isActive ? 'page' : undefined} 
+                className={`relative flex h-13 min-w-[56px] flex-1 shrink-0 flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-1 transition-all ${
+                  isActive
+                    ? 'bg-rose-500/15 text-rose-400 font-semibold border border-rose-500/20 shadow-[0_0_12px_rgba(244,63,94,0.12)]'
+                    : 'text-slate-400 hover:bg-white/5 hover:text-slate-200 border border-transparent'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-b-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
+                )}
+                <Icon className={`h-4.5 w-4.5 transition-transform ${isActive ? 'scale-110 text-rose-400' : ''}`} />
+                <span className="w-full text-center truncate text-[9px] leading-none font-bold tracking-tight">
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </>

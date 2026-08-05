@@ -23,7 +23,7 @@ export default function MobileNav() {
         { label: 'Leilões', icon: Gavel, href: '/leilao' },
         { label: 'Ao vivo', icon: Radio, href: '/lives', live: true },
         { label: 'Vendas', icon: Package, href: '/admin/vendas' },
-        { label: 'Estoque', icon: Boxes, href: '/estoque' },
+        { label: 'Estoque', icon: Boxes, href: '/admin/estoque' },
       ]
     : [
         { label: 'Loja', icon: ShoppingBag, href: '/marketplace' },
