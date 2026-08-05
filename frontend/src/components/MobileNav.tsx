@@ -45,7 +45,7 @@ export default function MobileNav() {
         { label: 'Loja',     icon: '🃏', href: '/marketplace' },
         { label: 'Leilões',  icon: '⚡', href: '/leilao' },
         { label: 'Conta',    icon: '👤', href: '/minha-conta' },
-        { label: 'Suporte',  icon: '💬', href: '/suporte' },
+        { label: 'Preços',   icon: '📈', href: '/precos' },
       ];
 
   return (

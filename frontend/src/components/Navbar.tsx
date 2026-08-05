@@ -13,6 +13,7 @@ export default function Navbar() {
 
   const menuItems = [
     { id: 'cartas', label: 'Cartas', hasMegaMenu: true },
+    { id: 'precos', label: 'Preços', hasMegaMenu: false, href: '/precos' },
     { id: 'leilao', label: 'Leilões', hasMegaMenu: false, href: '/leilao' },
     { id: 'lives', label: 'Ao Vivo', hasMegaMenu: false, href: '/lives', isLive: true },
     { id: 'produtos', label: 'Produtos', hasMegaMenu: false, href: '/produtos' },
@@ -122,7 +123,7 @@ export default function Navbar() {
 
 
               {/* Column 2 */}
-              <Link href="/marketplace" className="group p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-rose-500/30 hover:bg-rose-500/5 transition-all">
+              <Link href="/precos" className="group p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-rose-500/30 hover:bg-rose-500/5 transition-all">
                 <div className="h-10 w-10 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <List className="h-5 w-5" />
                 </div>
