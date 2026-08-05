@@ -1,202 +1,268 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import {
+    ChevronRight,
+    CircleUserRound,
+    Gem,
+    Gavel,
+    Handshake,
+    LogOut,
+    MapPin,
+    Medal,
+    Package,
+    Radio,
+    Settings,
+    Trophy,
+    WalletCards,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-const E = {
-    bg: '#0c1324',
-    surface: 'rgba(25,31,49,0.8)',
-    surfaceHigh: '#23293c',
-    border: 'rgba(220,225,251,0.08)',
-    rose: '#e11d48',
-    amber: '#f59e0b',
-    green: '#6ee591',
-    text: '#dce1fb',
-    muted: 'rgba(220,225,251,0.5)',
-    faint: 'rgba(220,225,251,0.12)',
-};
+interface AccountStats {
+    orders: number;
+    arremates: number;
+    addresses: number;
+    balance: number;
+    credits: number;
+    creditsLocked: number;
+}
 
-const menuItems = [
-    { title: 'Meus Pedidos', desc: 'Histórico de compras, status de pagamento e acompanhamento de envio.', href: '/minha-conta/pedidos', icon: '📦' },
-    { title: 'Central de Live', desc: 'Gerencie suas transmissões ao vivo e configure lotes de leilão.', href: '/admin/live', icon: '📡' },
-    { title: 'Arremates', desc: 'Histórico de todos os itens conquistados nas lives do TCG MEGASTORE.', href: '/minha-conta/arremates', icon: '🔨' },
-    { title: 'Minhas Vendas', desc: 'Gerencie os itens que você vendeu durante suas lives (status, envios, rastreio).', href: '/minha-conta/vendas', icon: '🤝' },
-    { title: 'Créditos de Leilão', desc: 'Saldo disponível, bloqueado e movimentações para leilões.', href: '/minha-conta/creditos', icon: '💎' },
-    { title: 'Perfil Público', desc: 'Gerencie sua exibição de medalhas e títulos para outros usuários.', href: '/minha-conta/perfil', icon: '🏅' },
-    { title: 'Endereços', desc: 'Locais de entrega para checkout mais rápido e organizado.', href: '/minha-conta/enderecos', icon: '📍' },
-    { title: 'Dados da Conta', desc: 'Informações pessoais, segurança e manutenção da conta.', href: '/minha-conta/dados', icon: '⚙️' },
+interface Achievement {
+    id?: string;
+    name: string;
+    description?: string;
+    icon?: string;
+    unlockedAt: string;
+}
+
+interface MenuItem {
+    title: string;
+    description: string;
+    href: string;
+    icon: ComponentType<{ className?: string }>;
+}
+
+const sections: Array<{ title: string; items: MenuItem[] }> = [
+    {
+        title: 'Compras e leilões',
+        items: [
+            { title: 'Meus pedidos', description: 'Pagamento, envio e histórico de compras', href: '/minha-conta/pedidos', icon: Package },
+            { title: 'Arremates', description: 'Itens conquistados durante as lives', href: '/minha-conta/arremates', icon: Gavel },
+            { title: 'Créditos de leilão', description: 'Saldo, reservas e movimentações', href: '/minha-conta/creditos', icon: Gem },
+        ],
+    },
+    {
+        title: 'Vendas',
+        items: [
+            { title: 'Central de live', description: 'Transmissão e controle dos lotes', href: '/admin/live', icon: Radio },
+            { title: 'Minhas vendas', description: 'Pedidos vendidos, envios e rastreio', href: '/minha-conta/vendas', icon: Handshake },
+        ],
+    },
+    {
+        title: 'Perfil e segurança',
+        items: [
+            { title: 'Perfil público', description: 'Medalhas e informações visíveis', href: '/minha-conta/perfil', icon: CircleUserRound },
+            { title: 'Endereços', description: 'Locais usados nas suas entregas', href: '/minha-conta/enderecos', icon: MapPin },
+            { title: 'Dados da conta', description: 'Informações pessoais e segurança', href: '/minha-conta/dados', icon: Settings },
+        ],
+    },
 ];
+
+const initialStats: AccountStats = { orders: 0, arremates: 0, addresses: 0, balance: 0, credits: 0, creditsLocked: 0 };
+
+function money(value: number) {
+    return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
 
 export default function MinhaContaDashboard() {
     const [userName, setUserName] = useState('');
-    const [stats, setStats] = useState({ orders: 0, arremates: 0, addresses: 0, balance: 0, credits: 0, creditsLocked: 0 });
-    const [achievements, setAchievements] = useState<any[]>([]);
+    const [stats, setStats] = useState<AccountStats>(initialStats);
+    const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
+        let active = true;
+
         const load = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) { router.replace('/auth/login'); return; }
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) { router.replace('/auth/login'); return; }
 
-            setUserName(user.user_metadata?.name || user.email?.split('@')[0] || 'Membro');
+                if (active) setUserName(user.user_metadata?.name || user.email?.split('@')[0] || 'Membro');
 
-            const [ordersRes, arrematesRes, addressRes, walletRes, creditsRes, achievementsRes] = await Promise.all([
-                supabase.from('purchases').select('id', { count: 'exact' }).eq('user_id', user.id).neq('payment_method', 'live_credits'),
-                supabase.from('purchases').select('id', { count: 'exact' }).eq('user_id', user.id).eq('payment_method', 'live_credits'),
-                supabase.from('user_addresses').select('id', { count: 'exact' }).eq('user_id', user.id),
-                supabase.from('wallets').select('balance').eq('user_id', user.id).single(),
-                supabase.from('auction_credits').select('balance, locked').eq('user_id', user.id).single(),
-                supabase.from('user_achievements').select('unlocked_at, achievements(id, name, description, icon)').eq('user_id', user.id),
-            ]);
+                const [ordersRes, arrematesRes, addressRes, walletRes, creditsRes, achievementsRes] = await Promise.all([
+                    supabase.from('purchases').select('id', { count: 'exact', head: true }).eq('user_id', user.id).neq('payment_method', 'live_credits'),
+                    supabase.from('purchases').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('payment_method', 'live_credits'),
+                    supabase.from('user_addresses').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+                    supabase.from('wallets').select('balance').eq('user_id', user.id).maybeSingle(),
+                    supabase.from('auction_credits').select('balance, locked').eq('user_id', user.id).maybeSingle(),
+                    supabase.from('user_achievements').select('unlocked_at, achievements(id, name, description, icon)').eq('user_id', user.id),
+                ]);
 
-            setStats({
-                orders: ordersRes.count || 0,
-                arremates: arrematesRes.count || 0,
-                addresses: addressRes.count || 0,
-                balance: walletRes.data?.balance || 0,
-                credits: creditsRes.data?.balance || 0,
-                creditsLocked: creditsRes.data?.locked || 0,
-            });
+                const failed = [ordersRes, arrematesRes, addressRes, walletRes, creditsRes, achievementsRes].some(result => result.error);
+                if (!active) return;
 
-            if (achievementsRes.data) {
-                setAchievements(achievementsRes.data.map((ua: any) => ({ unlockedAt: ua.unlocked_at, ...ua.achievements })));
+                setLoadError(failed);
+                setStats({
+                    orders: ordersRes.count || 0,
+                    arremates: arrematesRes.count || 0,
+                    addresses: addressRes.count || 0,
+                    balance: Number(walletRes.data?.balance || 0),
+                    credits: Number(creditsRes.data?.balance || 0),
+                    creditsLocked: Number(creditsRes.data?.locked || 0),
+                });
+
+                const unlocked = (achievementsRes.data || []).flatMap(row => {
+                    const achievement = Array.isArray(row.achievements) ? row.achievements[0] : row.achievements;
+                    return achievement ? [{ ...achievement, unlockedAt: row.unlocked_at } as Achievement] : [];
+                });
+                setAchievements(unlocked);
+            } finally {
+                if (active) setLoading(false);
             }
-
-            setLoading(false);
         };
+
         void load();
+        return () => { active = false; };
     }, [router]);
 
     if (loading) return (
-        <div className="min-h-screen flex items-center justify-center" style={{ background: E.bg }}>
-            <div className="text-center">
-                <div className="w-12 h-12 border-4 border-t-rose-600 border-white/10 rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-xs font-black uppercase tracking-widest" style={{ color: E.muted }}>Carregando painel...</p>
+        <div className="flex min-h-[70vh] items-center justify-center bg-brand-bg px-6" role="status">
+            <div className="flex items-center gap-3 text-sm font-semibold text-brand-muted">
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-white/15 border-t-brand-rose" />
+                Preparando sua conta
             </div>
         </div>
     );
 
-    const statCards = [
-        { label: 'Pedidos', value: `${stats.orders}`, icon: '📦' },
-        { label: 'Arremates', value: `${stats.arremates}`, icon: '🔨' },
-        { label: 'Endereços', value: `${stats.addresses}`, icon: '📍' },
-        { label: 'Cashback', value: `R$ ${stats.balance.toFixed(2).replace('.', ',')}`, icon: '💸', amber: true },
-        { label: 'Créditos Livres', value: `R$ ${(stats.credits - stats.creditsLocked).toFixed(2).replace('.', ',')}`, icon: '💎', amber: true },
-    ];
+    const availableCredits = Math.max(0, stats.credits - stats.creditsLocked);
 
     return (
-        <div style={{ background: E.bg, minHeight: '100vh', fontFamily: 'Inter, sans-serif', color: E.text }}>
-            {/* Ambient glow top */}
-            <div className="fixed inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(225,29,72,0.06) 0%, transparent 60%)', zIndex: 0 }}></div>
-
-            <div className="relative z-10 max-w-7xl mx-auto px-6 pb-20 pt-10">
-
-                {/* HEADER */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-                    <div>
-                        <span className="text-xs font-black uppercase tracking-widest mb-3 block" style={{ color: E.rose }}>Área do Cliente</span>
-                        <h1 className="text-5xl font-black tracking-tighter leading-none" style={{ color: E.text }}>
-                            Olá, <span style={{ color: E.rose }}>{userName}</span>.
+        <div className="min-h-screen bg-brand-bg text-brand-text">
+            <div className="mx-auto max-w-6xl px-4 pb-28 pt-8 sm:px-6 sm:pt-12 lg:pb-20 lg:pt-16">
+                <header className="mb-10 flex flex-col gap-6 border-b border-white/10 pb-8 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="min-w-0">
+                        <h1 className="text-balance text-[clamp(2.25rem,8vw,4.5rem)] font-black leading-[0.95] tracking-[-0.04em] text-white">
+                            Olá, {userName}.
                         </h1>
-                        <p className="mt-3 text-sm leading-relaxed max-w-xl" style={{ color: E.muted }}>
-                            Bem-vindo ao seu painel. Gerencie pedidos, créditos, arremates e sua conta em um só lugar.
+                        <p className="mt-4 max-w-2xl text-sm leading-6 text-brand-muted sm:text-base">
+                            Pedidos, créditos, vendas e dados da conta reunidos em um só lugar.
                         </p>
                     </div>
                     <button
                         onClick={async () => { await supabase.auth.signOut(); window.location.href = '/'; }}
-                        className="shrink-0 px-6 py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all hover:scale-105"
-                        style={{ background: E.faint, color: E.muted, border: `1px solid ${E.border}` }}
+                        className="flex min-h-11 w-fit items-center gap-2 rounded-xl px-3 text-sm font-semibold text-brand-muted transition-colors hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-rose"
                     >
-                        Encerrar Sessão →
+                        <LogOut className="h-4 w-4" />
+                        Sair da conta
                     </button>
-                </div>
+                </header>
 
-                {/* STAT CARDS */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
-                    {statCards.map(({ label, value, icon, amber }) => (
-                        <div key={label} className="rounded-2xl p-5 transition-all hover:-translate-y-0.5" style={{ background: E.surface, border: `1px solid ${E.border}`, backdropFilter: 'blur(12px)' }}>
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className="text-lg">{icon}</span>
-                                <p className="text-xs font-black uppercase tracking-widest" style={{ color: E.muted }}>{label}</p>
-                            </div>
-                            <p className="text-2xl font-black tabular-nums tracking-tighter" style={{ color: amber ? E.amber : E.text }}>
-                                {value}
-                            </p>
-                        </div>
-                    ))}
-                </div>
-
-                {/* ACHIEVEMENTS */}
-                <div className="rounded-[24px] p-7 mb-10" style={{ background: E.surface, border: `1px solid ${E.border}`, backdropFilter: 'blur(12px)' }}>
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 className="text-xl font-black tracking-tighter" style={{ color: E.text }}>Quadro de Medalhas</h2>
-                            <p className="text-sm mt-1" style={{ color: E.muted }}>Conquistas desbloqueadas no TCG MEGASTORE.</p>
-                        </div>
-                        <span className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest" style={{ background: 'rgba(225,29,72,0.1)', color: E.rose, border: `1px solid rgba(225,29,72,0.2)` }}>
-                            {achievements.length} Desbloqueadas
-                        </span>
+                {loadError && (
+                    <div className="mb-6 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100" role="alert">
+                        Parte dos seus dados não pôde ser atualizada. Tente recarregar a página em alguns instantes.
                     </div>
+                )}
 
-                    {achievements.length > 0 ? (
-                        <div className="flex flex-wrap gap-4">
-                            {achievements.map((badge, idx) => (
-                                <div
-                                    key={idx}
-                                    className="group relative flex flex-col items-center p-4 w-28 rounded-2xl cursor-default transition-all hover:-translate-y-1"
-                                    style={{ background: E.faint, border: `1px solid ${E.border}` }}
-                                    title={badge.description}
-                                >
-                                    <div className="text-4xl mb-2 group-hover:scale-110 transition-transform">{badge.icon}</div>
-                                    <h3 className="text-center text-xs font-black uppercase tracking-wider leading-tight" style={{ color: E.text }}>{badge.name}</h3>
-
-                                    {/* Tooltip */}
-                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all rounded-xl p-3 shadow-2xl z-20 pointer-events-none text-center" style={{ background: '#191f31', border: `1px solid ${E.border}` }}>
-                                        <p className="text-xs font-black mb-1" style={{ color: E.text }}>{badge.name}</p>
-                                        <p className="text-xs" style={{ color: E.muted }}>{badge.description}</p>
-                                        <p className="text-xs mt-2 font-black uppercase tracking-widest" style={{ color: E.amber }}>
-                                            {new Date(badge.unlockedAt).toLocaleDateString('pt-BR')}
-                                        </p>
+                <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+                    <main className="min-w-0 space-y-10">
+                        <section aria-labelledby="wallet-title" className="overflow-hidden rounded-2xl bg-brand-surface shadow-[0_18px_45px_rgba(0,0,0,.18)]">
+                            <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+                                <div>
+                                    <div className="flex items-center gap-2 text-brand-muted">
+                                        <WalletCards className="h-4 w-4" />
+                                        <h2 id="wallet-title" className="text-sm font-semibold">Disponível para leilões</h2>
                                     </div>
+                                    <p className="mt-2 text-3xl font-black tabular-nums tracking-[-0.03em] text-white sm:text-4xl">{money(availableCredits)}</p>
+                                    {stats.creditsLocked > 0 && <p className="mt-1 text-xs text-brand-muted">{money(stats.creditsLocked)} reservado em lances ativos</p>}
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="py-12 rounded-2xl flex flex-col items-center justify-center text-center" style={{ border: `2px dashed ${E.border}` }}>
-                            <span className="text-4xl mb-3 opacity-30 grayscale">🏆</span>
-                            <h3 className="text-sm font-black uppercase tracking-widest mb-1" style={{ color: E.muted }}>Quadro Vazio</h3>
-                            <p className="text-xs max-w-sm" style={{ color: E.muted }}>Realize ações no TCG MEGASTORE para ganhar suas primeiras medalhas!</p>
-                        </div>
-                    )}
-                </div>
+                                <Link href="/minha-conta/creditos" className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-brand-rose px-5 text-sm font-bold text-white transition-colors hover:bg-brand-rose-dim focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                                    Adicionar créditos
+                                    <ChevronRight className="h-4 w-4" />
+                                </Link>
+                            </div>
+                            <dl className="grid grid-cols-2 divide-x divide-white/10 border-t border-white/10 sm:grid-cols-4">
+                                {[
+                                    ['Pedidos', stats.orders],
+                                    ['Arremates', stats.arremates],
+                                    ['Endereços', stats.addresses],
+                                    ['Cashback', money(stats.balance)],
+                                ].map(([label, value]) => (
+                                    <div key={label} className="px-4 py-4 sm:px-5">
+                                        <dt className="text-xs text-brand-muted">{label}</dt>
+                                        <dd className="mt-1 truncate text-lg font-bold tabular-nums text-white">{value}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        </section>
 
-                {/* MENU GRID */}
-                <div className="grid gap-4 md:grid-cols-2">
-                    {menuItems.map((item) => (
-                        <Link
-                            key={item.href}
-                            href={item.href}
-                            className="group rounded-[20px] p-7 flex items-start gap-5 transition-all hover:-translate-y-1"
-                            style={{ background: E.surface, border: `1px solid ${E.border}`, backdropFilter: 'blur(12px)', textDecoration: 'none' }}
-                        >
-                            <div className="w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-xl transition-all group-hover:scale-110" style={{ background: 'rgba(225,29,72,0.1)', border: `1px solid rgba(225,29,72,0.15)` }}>
-                                {item.icon}
+                        <section aria-labelledby="access-title">
+                            <h2 id="access-title" className="text-xl font-bold tracking-[-0.02em] text-white">Acessos da conta</h2>
+                            <div className="mt-4 overflow-hidden rounded-2xl bg-brand-surface">
+                                {sections.map((section, sectionIndex) => (
+                                    <div key={section.title} className={sectionIndex > 0 ? 'border-t border-white/10' : ''}>
+                                        <h3 className="px-5 pb-2 pt-5 text-xs font-semibold text-brand-muted">{section.title}</h3>
+                                        <div className="grid sm:grid-cols-2">
+                                            {section.items.map(item => {
+                                                const Icon = item.icon;
+                                                return (
+                                                    <Link key={item.href} href={item.href} className="group flex min-h-20 items-center gap-3 px-5 py-3 transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:outline-none">
+                                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-brand-muted transition-colors group-hover:text-white">
+                                                            <Icon className="h-5 w-5" />
+                                                        </span>
+                                                        <span className="min-w-0 flex-1">
+                                                            <span className="block text-sm font-bold text-white">{item.title}</span>
+                                                            <span className="mt-0.5 block truncate text-xs text-brand-muted">{item.description}</span>
+                                                        </span>
+                                                        <ChevronRight className="h-4 w-4 shrink-0 text-brand-muted transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
+                                                    </Link>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: E.muted }}>Atalho</p>
-                                <h2 className="text-xl font-black tracking-tighter transition-colors" style={{ color: E.text }}>
-                                    <span className="group-hover:text-rose-400 transition-colors">{item.title}</span>
-                                </h2>
-                                <p className="text-sm mt-1 leading-relaxed" style={{ color: E.muted }}>{item.desc}</p>
+                        </section>
+                    </main>
+
+                    <aside aria-labelledby="achievements-title" className="rounded-2xl bg-brand-surface p-5 lg:sticky lg:top-36">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2">
+                                <Medal className="h-5 w-5 text-brand-amber" />
+                                <h2 id="achievements-title" className="font-bold text-white">Medalhas</h2>
                             </div>
-                            <div className="shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all group-hover:bg-rose-600/20" style={{ background: E.faint, color: E.muted }}>
-                                →
+                            <span className="text-sm font-bold tabular-nums text-brand-muted">{achievements.length}</span>
+                        </div>
+
+                        {achievements.length > 0 ? (
+                            <ul className="mt-5 space-y-1">
+                                {achievements.slice(0, 6).map((badge, index) => (
+                                    <li key={badge.id || `${badge.name}-${index}`} className="flex items-center gap-3 rounded-xl px-2 py-3">
+                                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-amber/10 text-lg" aria-hidden="true">{badge.icon || <Trophy className="h-4 w-4 text-brand-amber" />}</span>
+                                        <span className="min-w-0">
+                                            <span className="block truncate text-sm font-semibold text-white">{badge.name}</span>
+                                            <span className="block text-xs text-brand-muted">{new Date(badge.unlockedAt).toLocaleDateString('pt-BR')}</span>
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <div className="mt-5 border-t border-white/10 py-8 text-center">
+                                <Trophy className="mx-auto h-7 w-7 text-brand-muted" />
+                                <p className="mt-3 text-sm font-semibold text-white">Sua primeira medalha está a caminho</p>
+                                <p className="mt-1 text-xs leading-5 text-brand-muted">Participe de compras e leilões para desbloquear conquistas.</p>
                             </div>
+                        )}
+
+                        <Link href="/minha-conta/perfil" className="mt-3 flex min-h-11 items-center justify-between border-t border-white/10 pt-4 text-sm font-semibold text-brand-muted transition-colors hover:text-white">
+                            Ver perfil público
+                            <ChevronRight className="h-4 w-4" />
                         </Link>
-                    ))}
+                    </aside>
                 </div>
             </div>
         </div>
