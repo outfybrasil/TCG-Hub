@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import AdminGuard from '@/components/AdminGuard';
-import Link from 'next/link';
+import { PackageOpen, Trash2 } from 'lucide-react';
 
 interface Purchase {
     id: string;
@@ -226,6 +226,8 @@ export default function AdminSalesPage() {
     const getStatusStyle = (status: string) => {
         switch (status) {
             case 'approved': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+            case 'shipped': return 'bg-sky-500/10 text-sky-400 border-sky-500/20';
+            case 'delivered': return 'bg-violet-500/10 text-violet-400 border-violet-500/20';
             case 'refunded': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
             case 'canceled': return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
             case 'rejected': return 'bg-rose-500/10 text-rose-500 border-rose-500/20';
@@ -236,6 +238,8 @@ export default function AdminSalesPage() {
     const getStatusLabel = (status: string) => {
         switch (status) {
             case 'approved': return 'Aprovado';
+            case 'shipped': return 'Enviado';
+            case 'delivered': return 'Entregue';
             case 'refunded': return 'Reembolsado';
             case 'canceled': return 'Cancelado';
             case 'rejected': return 'Recusado';
@@ -243,6 +247,10 @@ export default function AdminSalesPage() {
             default: return status;
         }
     };
+
+    const filteredPurchases = purchases.filter(p => activeTab === 'ativas'
+        ? !['canceled', 'refunded', 'rejected'].includes(p.status)
+        : ['canceled', 'refunded', 'rejected'].includes(p.status));
 
     if (loading) {
         return (
@@ -255,29 +263,29 @@ export default function AdminSalesPage() {
     return (
         <AdminGuard>
             <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
-                <div className="max-w-7xl mx-auto px-6 py-20 animate-fade-up">
-                    <div className="mb-16 space-y-6">
+                <div className="mx-auto max-w-7xl px-4 pb-28 pt-24 sm:px-6 lg:py-20 animate-fade-up">
+                    <div className="mb-8 space-y-4 sm:mb-12 sm:space-y-6 lg:mb-16">
                         <div className="inline-flex items-center gap-2 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20">
                             <span className="h-1.5 w-1.5 rounded-full bg-rose-600 shadow-[0_0_8px_rgba(225,29,72,0.6)]"></span>
                             <span className="text-[9px] font-black text-rose-500 uppercase tracking-widest">Controle Financeiro</span>
                         </div>
-                        <h1 className="text-6xl font-black tracking-tighter text-white uppercase leading-none">
+                        <h1 className="text-[clamp(2.25rem,12vw,3.75rem)] font-black tracking-tighter text-white uppercase leading-[0.92]">
                             Gestão de <span className="text-rose-600">Vendas.</span>
                         </h1>
                         <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Painel Administrativo Hub</p>
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex items-center gap-6 mb-12 border-b border-white/10">
+                    <div className="mb-8 grid grid-cols-2 border-b border-white/10 sm:mb-12 sm:flex sm:items-center sm:gap-6">
                         <button
                             onClick={() => setActiveTab('ativas')}
-                            className={`pb-6 px-2 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'ativas' ? 'border-rose-600 text-rose-500' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+                            className={`min-h-12 px-2 pb-4 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all sm:pb-6 ${activeTab === 'ativas' ? 'border-rose-600 text-rose-500' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
                         >
                             Vendas Ativas
                         </button>
                         <button
                             onClick={() => setActiveTab('canceladas')}
-                            className={`pb-6 px-2 text-[10px] font-black uppercase tracking-widest border-b-2 transition-all ${activeTab === 'canceladas' ? 'border-amber-600 text-amber-500' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
+                            className={`min-h-12 px-2 pb-4 text-[10px] font-black uppercase leading-tight tracking-widest border-b-2 transition-all sm:pb-6 ${activeTab === 'canceladas' ? 'border-amber-600 text-amber-500' : 'border-transparent text-slate-500 hover:text-slate-300'}`}
                         >
                             Canceladas / Reembolsadas
                         </button>
@@ -285,25 +293,85 @@ export default function AdminSalesPage() {
 
                     {/* Summary Metrics */}
                     {activeTab === 'ativas' && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
-                            <div className="bg-white/5 p-8 rounded-[32px] border border-white/10 shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all">
+                        <div className="mb-8 grid grid-cols-2 gap-3 sm:mb-12 sm:gap-6">
+                            <div className="bg-white/5 p-5 sm:p-8 rounded-3xl sm:rounded-[32px] border border-white/10 shadow-2xl relative overflow-hidden group hover:border-white/20 transition-all">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-[60px] -z-10"></div>
                                 <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-3">Total de Vendas (Ativas)</h3>
-                                <p className="text-4xl font-black text-white tracking-tighter tabular-nums">
+                                <p className="text-3xl sm:text-4xl font-black text-white tracking-tighter tabular-nums">
                                     {purchases.filter(p => !['canceled', 'refunded', 'rejected'].includes(p.status)).length}
                                 </p>
                             </div>
-                            <div className="bg-white/5 p-8 rounded-[32px] border border-emerald-500/10 shadow-2xl relative overflow-hidden group hover:border-emerald-500/20 transition-all">
+                            <div className="bg-white/5 p-5 sm:p-8 rounded-3xl sm:rounded-[32px] border border-emerald-500/10 shadow-2xl relative overflow-hidden group hover:border-emerald-500/20 transition-all">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-600/5 blur-[60px] -z-10"></div>
                                 <h3 className="text-[9px] font-black uppercase tracking-widest text-emerald-500/60 mb-3">Receita Bruta (Ativas)</h3>
-                                <p className="text-4xl font-black text-emerald-500 tracking-tighter tabular-nums">
+                                <p className="text-xl min-[380px]:text-2xl sm:text-4xl font-black text-emerald-500 tracking-tighter tabular-nums break-words">
                                     R$ {purchases.filter(p => !['canceled', 'refunded', 'rejected'].includes(p.status)).reduce((acc, p) => acc + (p.total_amount - p.discount_amount), 0).toFixed(2).replace('.', ',')}
                                 </p>
                             </div>
                         </div>
                     )}
 
-                    <div className="bg-white/5 border border-white/10 rounded-[40px] shadow-2xl overflow-hidden">
+                    <div className="space-y-3 md:hidden">
+                        {filteredPurchases.length === 0 ? (
+                            <div className="flex min-h-56 flex-col items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] px-6 text-center">
+                                <PackageOpen className="mb-4 h-8 w-8 text-slate-600" />
+                                <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhuma venda encontrada</p>
+                            </div>
+                        ) : filteredPurchases.map((p) => (
+                            <article key={p.id} className="rounded-3xl border border-white/10 bg-white/[0.04] p-4 shadow-xl">
+                                <header className="flex items-start justify-between gap-3 border-b border-white/10 pb-4">
+                                    <div>
+                                        <p className="text-sm font-black tabular-nums text-white">{new Date(p.created_at).toLocaleDateString('pt-BR')}</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pedido #{p.id.split('-')[0]}</p>
+                                    </div>
+                                    <span className={`shrink-0 rounded-full border px-3 py-1 text-[9px] font-black uppercase tracking-wider ${getStatusStyle(p.status)}`}>
+                                        {getStatusLabel(p.status)}
+                                    </span>
+                                </header>
+
+                                <div className="flex items-end justify-between gap-4 py-4">
+                                    <div className="min-w-0">
+                                        <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-rose-500">{p.items?.length || 0} itens</p>
+                                        <div className="flex max-w-[58vw] gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                            {p.items?.map((item: any, idx: number) => (
+                                                <div key={item.id || idx} className="relative h-16 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-slate-800">
+                                                    <img src={item.imageUrl || item.image_url || 'https://placehold.co/400x600/eeeeee/999999?text=Sem+Foto'} alt={item.name || item.title || 'Carta do pedido'} className="absolute inset-0 h-full w-full object-cover" />
+                                                    <span className="absolute inset-x-0 bottom-0 bg-black/80 py-0.5 text-center text-[8px] font-black">x{item.quantity}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="shrink-0 text-right">
+                                        <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Total</p>
+                                        <p className="text-lg font-black tabular-nums text-white">R$ {(p.total_amount - p.discount_amount).toFixed(2).replace('.', ',')}</p>
+                                    </div>
+                                </div>
+
+                                {editingTracking === p.id ? (
+                                    <div className="space-y-3 rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Código de rastreio</label>
+                                        <input type="text" value={trackCode} onChange={e => setTrackCode(e.target.value)} className="h-12 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-base font-bold text-white outline-none focus:border-rose-600" />
+                                        <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400">Status do pedido</label>
+                                        <select value={trackStatus} onChange={e => setTrackStatus(e.target.value)} className="h-12 w-full rounded-xl border border-white/10 bg-slate-900 px-3 text-sm font-bold text-white outline-none">
+                                            <option value="approved">Aprovado (Preparando)</option><option value="shipped">Enviado</option><option value="delivered">Entregue</option><option value="refunded">Reembolsado</option><option value="canceled">Cancelado</option>
+                                        </select>
+                                        <div className="grid grid-cols-2 gap-2 pt-1">
+                                            <button onClick={() => setEditingTracking(null)} className="min-h-11 rounded-xl bg-white/5 text-[10px] font-black uppercase text-slate-300">Cancelar</button>
+                                            <button onClick={() => handleUpdateTracking(p.id)} disabled={updatingTrack} className="min-h-11 rounded-xl bg-rose-600 text-[10px] font-black uppercase text-white disabled:opacity-50">Salvar</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-[1fr_48px] gap-2">
+                                        <button onClick={() => { setEditingTracking(p.id); setTrackCode(p.tracking_code || ''); setTrackStatus(p.status); }} className="min-h-12 rounded-xl border border-white/10 bg-white/5 px-3 text-[10px] font-black uppercase tracking-wider text-white">Status e rastreio</button>
+                                        <button onClick={() => setDeleteModal({ isOpen: true, purchaseId: p.id })} className="flex min-h-12 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/10 text-rose-500" aria-label="Excluir registro"><Trash2 className="h-5 w-5" /></button>
+                                        {p.status === 'approved' && p.mp_payment_id && <button onClick={() => confirmRefund(p.id, p.mp_payment_id)} disabled={refundingId === p.id} className="col-span-2 min-h-12 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 text-[10px] font-black uppercase tracking-wider text-amber-400 disabled:opacity-50">{refundingId === p.id ? 'Processando...' : 'Reembolsar venda'}</button>}
+                                    </div>
+                                )}
+                            </article>
+                        ))}
+                    </div>
+
+                    <div className="hidden bg-white/5 border border-white/10 rounded-[40px] shadow-2xl overflow-hidden md:block">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
@@ -424,7 +492,7 @@ export default function AdminSalesPage() {
                 {/* Modals */}
                 {refundModal.isOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xl px-4 animate-fade-in">
-                        <div className="bg-slate-900 border border-white/10 rounded-[40px] p-12 max-w-sm w-full shadow-2xl">
+                        <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 sm:rounded-[40px] sm:p-12 max-w-sm w-full shadow-2xl">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-2xl border border-amber-500/20">⚠️</div>
                                 <div>
@@ -455,7 +523,7 @@ export default function AdminSalesPage() {
 
                 {alertModal.isOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xl px-4 animate-fade-in">
-                        <div className="bg-slate-900 border border-white/10 rounded-[40px] p-12 max-w-sm w-full shadow-2xl text-center">
+                        <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 sm:rounded-[40px] sm:p-12 max-w-sm w-full shadow-2xl text-center">
                             <div className={`h-20 w-20 rounded-full mx-auto flex items-center justify-center text-4xl mb-6 ${alertModal.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'}`}>
                                 {alertModal.type === 'success' ? '✓' : '✕'}
                             </div>
@@ -475,7 +543,7 @@ export default function AdminSalesPage() {
 
                 {deleteModal.isOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-xl px-4 animate-fade-in">
-                        <div className="bg-slate-900 border border-white/10 rounded-[40px] p-12 max-w-sm w-full shadow-2xl">
+                        <div className="bg-slate-900 border border-white/10 rounded-3xl p-6 sm:rounded-[40px] sm:p-12 max-w-sm w-full shadow-2xl">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="h-12 w-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-2xl border border-rose-500/20">🗑️</div>
                                 <div>

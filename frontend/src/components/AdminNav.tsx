@@ -100,23 +100,28 @@ export default function AdminNav() {
       </aside>
 
       {/* Mobile Top Bar for Admin */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-[#0c1324] border-b border-white/5 flex items-center justify-between px-6 z-[110]">
-        <Link href="/" className="flex items-center gap-2">
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-[#0c1324]/95 border-b border-white/10 z-[110] backdrop-blur-xl pt-[env(safe-area-inset-top)]">
+        <div className="flex h-14 items-center gap-3 px-4">
+        <Link href="/" className="flex min-h-11 shrink-0 items-center gap-2 rounded-xl pr-2" aria-label="Voltar para a loja">
           <div className="h-8 w-8 bg-rose-600 rounded-lg flex items-center justify-center">
             <Home className="h-4 w-4 text-white" />
           </div>
           <span className="text-xs font-black uppercase text-white">Admin <span className="text-rose-600">Hub</span></span>
         </Link>
-        <div className="flex gap-2">
+        <nav className="flex min-w-0 flex-1 gap-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Navegação administrativa">
             {navItems.map(item => {
                 const isActive = pathname.includes(item.href);
                 const Icon = item.icon;
+                const mobileItemClass = isActive
+                  ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/20'
+                  : 'text-slate-400 hover:bg-white/5 hover:text-white';
                 return (
-                    <Link key={item.id} href={item.href} className={`p-2 rounded-lg ${isActive ? 'bg-rose-600 text-white' : 'text-slate-500'}`}>
-                        <Icon className="h-4 w-4" />
+                    <Link key={item.id} href={item.href} aria-label={item.label} title={item.label} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${mobileItemClass}`}>
+                        <Icon className="h-5 w-5" />
                     </Link>
                 )
             })}
+        </nav>
         </div>
       </div>
     </>
