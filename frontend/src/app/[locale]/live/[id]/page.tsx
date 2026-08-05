@@ -100,12 +100,42 @@ export default function LiveRoomPage() {
     if (!live) return null;
 
     return <div className="min-h-dvh bg-[#070d1f] text-white lg:h-dvh lg:overflow-hidden">
-        <header className="flex h-14 items-center justify-between border-b border-white/10 bg-[#0c1324]/95 px-3 sm:px-5">
+        <header className="hidden h-14 items-center justify-between border-b border-white/10 bg-[#0c1324]/95 px-3 sm:px-5 lg:flex">
             <div className="flex min-w-0 items-center gap-3"><button onClick={() => router.push('/lives')} aria-label="Voltar" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white"><ArrowLeft className="h-4 w-4" /></button><span className="flex items-center gap-2 rounded-md bg-rose-600 px-2 py-1 text-[9px] font-black uppercase tracking-widest"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Ao vivo</span><h1 className="truncate text-xs font-black sm:text-sm">{live.title}</h1></div>
             <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400"><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{viewerCount}</span><span title={connected ? 'Tempo real conectado' : 'Reconectando'} className={connected ? 'text-emerald-400' : 'text-amber-400'}>{connected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}</span></div>
         </header>
 
-        <main className="grid lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(320px,1.15fr)_minmax(360px,.85fr)_320px]">
+        <section className="relative h-dvh overflow-hidden bg-black lg:hidden">
+            {videoUrl ? <iframe src={videoUrl} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute inset-0 h-full w-full scale-[1.01] border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d1f] text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/95" />
+
+            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+                <button onClick={() => router.push('/lives')} aria-label="Voltar" className="rounded-full bg-black/35 p-2.5 backdrop-blur-md"><ArrowLeft className="h-5 w-5" /></button>
+                <div className="flex items-center gap-2"><span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${live.is_demo ? 'bg-blue-600' : 'bg-rose-600'}`}><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />{live.is_demo ? 'Demo' : 'Ao vivo'}</span><span className="flex items-center gap-1 rounded-full bg-black/35 px-3 py-1.5 text-[10px] font-bold backdrop-blur-md"><Users className="h-3.5 w-3.5" />{viewerCount}</span></div>
+                <span className={`rounded-full bg-black/35 p-2.5 backdrop-blur-md ${connected ? 'text-emerald-400' : 'text-amber-400'}`}>{connected ? <Wifi className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}</span>
+            </div>
+
+            <div className="absolute bottom-0 left-0 right-16 z-10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                {!waiting && !ended && <>
+                    <div className="mb-3 flex items-end gap-3">
+                        {live.current_item_image && <div className="h-20 w-16 shrink-0 overflow-hidden rounded-xl border border-white/20 bg-black/40 backdrop-blur"><img src={live.current_item_image} alt={live.current_item_name || 'Lote'} className="h-full w-full object-contain" /></div>}
+                        <div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-widest text-rose-300">{live.current_item_type || 'Lote em disputa'}</p><h2 className="line-clamp-2 text-lg font-black leading-tight drop-shadow-lg">{live.current_item_name}</h2>{live.current_item_description && <p className="mt-1 line-clamp-1 text-[10px] text-white/65">{live.current_item_description}</p>}</div>
+                    </div>
+                    <div className="mb-2 flex items-center gap-2"><div className="rounded-xl bg-black/45 px-3 py-2 backdrop-blur-md"><p className="text-[8px] font-black uppercase tracking-widest text-white/55">Maior lance</p><p className="text-xl font-black text-amber-300">{money(Number(live.current_bid))}</p></div><div className={`rounded-xl px-3 py-2 backdrop-blur-md ${secondsLeft <= 10 ? 'bg-rose-600/80' : 'bg-black/45'}`}><p className="text-[8px] font-black uppercase tracking-widest text-white/55">Termina em</p><p className="font-mono text-xl font-black">{formatTime(secondsLeft)}</p></div>{winning && <span className="rounded-xl bg-emerald-500/80 px-3 py-3 text-[9px] font-black uppercase">Você lidera</span>}</div>
+                    {live.is_demo && <p className="mb-2 inline-flex rounded-full bg-blue-600/80 px-3 py-1 text-[9px] font-bold">Teste sem cobrança</p>}
+                    <div className="grid grid-cols-3 gap-2">{[1, 2, 5].map((multiplier) => { const value = Number(live.current_bid || 0) + increment * multiplier; return <button key={multiplier} disabled={secondsLeft <= 0 || submitting} onClick={() => requestBid(value)} className="pointer-events-auto rounded-xl border border-white/20 bg-rose-600/90 py-3 text-[11px] font-black shadow-lg backdrop-blur active:scale-95 disabled:opacity-40">{money(value)}</button>; })}</div>
+                    {notice && <p className="mt-2 rounded-lg bg-black/55 px-3 py-2 text-center text-[10px] text-amber-200 backdrop-blur">{notice}</p>}
+                </>}
+                {(waiting || ended) && <div className="rounded-2xl bg-black/45 p-4 backdrop-blur-md"><p className="text-lg font-black">{ended ? 'Transmissão encerrada' : 'Próximo lote em preparação'}</p><p className="mt-1 text-xs text-white/60">{ended ? 'Obrigado por acompanhar.' : 'O apresentador iniciará a próxima disputa em breve.'}</p></div>}
+            </div>
+
+            <div className="absolute bottom-6 right-3 z-20 flex flex-col items-center gap-4 pb-[env(safe-area-inset-bottom)]">
+                <button onClick={() => setChatOpen(true)} className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-xl shadow-lg backdrop-blur">💬</button>
+                <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/45 text-[9px] font-black backdrop-blur"><ChevronUp className="h-4 w-4 text-emerald-400" />{live.bid_count || bids.length}</div>
+            </div>
+        </section>
+
+        <main className="hidden lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(320px,1.15fr)_minmax(360px,.85fr)_320px] lg:grid">
             <section className="relative min-h-[32vh] overflow-hidden border-b border-white/10 bg-black lg:min-h-0 lg:border-b-0 lg:border-r">
                 {videoUrl ? <iframe src={videoUrl} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute inset-0 h-full w-full border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
                 <div className="absolute bottom-3 left-3 flex gap-2"><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">{connected ? 'Sincronizado' : 'Reconectando...'}</span><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">Anti-sniper +15s</span></div>
@@ -127,7 +157,7 @@ export default function LiveRoomPage() {
             <aside className={`${chatOpen ? 'fixed inset-0 z-40 flex' : 'hidden'} min-h-0 flex-col border-l border-white/10 bg-[#070d1f] lg:static lg:flex`}><div className="flex h-12 items-center justify-between border-b border-white/10 px-4"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chat da live</span><button onClick={() => setChatOpen(false)} className="lg:hidden"><X className="h-5 w-5" /></button></div><div className="min-h-0 flex-1 p-2"><LiveChat liveId={id} currentUser={user} /></div></aside>
         </main>
 
-        <button onClick={() => setChatOpen(true)} className="fixed bottom-4 right-4 z-30 rounded-full bg-rose-600 px-5 py-3 text-xs font-black shadow-xl lg:hidden">Abrir chat</button>
+        {chatOpen && <div className="fixed inset-0 z-40 flex flex-col bg-[#070d1f] lg:hidden"><div className="flex h-14 items-center justify-between border-b border-white/10 px-4"><span className="text-xs font-black uppercase tracking-widest">Chat ao vivo</span><button onClick={() => setChatOpen(false)} className="rounded-full bg-white/5 p-2"><X className="h-5 w-5" /></button></div><div className="min-h-0 flex-1 p-2 pb-[env(safe-area-inset-bottom)]"><LiveChat liveId={id} currentUser={user} /></div></div>}
         {pendingBid !== null && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"><div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#191f31] p-6"><div className="flex items-center gap-3 text-emerald-400"><ShieldCheck className="h-6 w-6" /><h3 className="text-lg font-black text-white">Confirmar lance</h3></div><p className="mt-4 text-sm leading-6 text-slate-400">Você está oferecendo <b className="text-xl text-white">{money(pendingBid)}</b>. Esse valor ficará reservado até você ser superado ou o lote ser concluído.</p><div className="mt-4 rounded-xl bg-amber-400/10 p-3 text-[10px] text-amber-200">Lances são compromissos de compra e não podem ser desfeitos durante a disputa.</div><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={() => setPendingBid(null)} disabled={submitting} className="rounded-xl bg-white/5 py-3 text-xs font-black text-slate-400">Cancelar</button><button onClick={confirmBid} disabled={submitting} className="rounded-xl bg-rose-600 py-3 text-xs font-black text-white disabled:opacity-50">{submitting ? 'Registrando...' : 'Confirmar lance'}</button></div></div></div>}
         <style jsx global>{`nav, footer { display:none!important } body { overflow-x:hidden!important; background:#070d1f!important; padding-bottom:0!important }`}</style>
     </div>;
