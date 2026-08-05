@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
 import random
 import asyncio
 
@@ -10,6 +10,13 @@ async def root():
 
 @app.post("/scan")
 async def scan_card(file: UploadFile = File(...)):
+    if file.content_type not in {"image/jpeg", "image/png", "image/webp"}:
+        raise HTTPException(status_code=415, detail="Unsupported image type")
+    contents = await file.read(10 * 1024 * 1024 + 1)
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image is too large")
+    if len(contents) < 100:
+        raise HTTPException(status_code=400, detail="Invalid image")
     # Simulate processing time
     await asyncio.sleep(2)
     

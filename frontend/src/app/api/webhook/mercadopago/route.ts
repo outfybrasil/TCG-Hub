@@ -1,19 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { markPurchaseApproved, markPurchaseCanceled } from '@/lib/purchase-status';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
-
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!serviceRoleKey) {
-    const msg = 'ERROR: SUPABASE_SERVICE_ROLE_KEY is missing! Webhook cannot bypass RLS.';
-    console.error(msg);
-}
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    serviceRoleKey || 'missing-key'
-);
 
 function extractPaymentIdFromResource(resource: string | null | undefined) {
     if (!resource) {
@@ -59,6 +49,25 @@ async function parseNotification(req: Request) {
 async function handleWebhook(req: Request) {
     try {
         const { topic, paymentId } = await parseNotification(req);
+
+        const signature = req.headers.get('x-signature');
+        const requestId = req.headers.get('x-request-id');
+        const webhookSecret = process.env.MP_WEBHOOK_SECRET;
+        const parts = Object.fromEntries((signature || '').split(',').map((part) => part.trim().split('=', 2)));
+        const timestamp = parts.ts;
+        const receivedHash = parts.v1;
+        if (!webhookSecret || !requestId || !timestamp || !receivedHash || !paymentId) {
+            return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+        }
+        const manifest = `id:${paymentId};request-id:${requestId};ts:${timestamp};`;
+        const expectedHash = createHmac('sha256', webhookSecret).update(manifest).digest('hex');
+        const validSignature = receivedHash.length === expectedHash.length && timingSafeEqual(
+            Buffer.from(receivedHash, 'utf8'),
+            Buffer.from(expectedHash, 'utf8'),
+        );
+        if (!validSignature) {
+            return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+        }
 
         if (topic !== 'payment' || !paymentId) {
             return NextResponse.json({ received: true });
@@ -200,5 +209,6 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-    return handleWebhook(req);
+    void req;
+    return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers: { Allow: 'POST' } });
 }

@@ -1,16 +1,13 @@
 import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
-import { createClient } from '@supabase/supabase-js';
 import { requireAuthenticatedUser } from '@/lib/server-auth';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getSiteUrl } from '@/lib/site-url';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
 const PLATFORM_FEE_PCT = 8.0;
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
-);
 
 const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 const mpPreference = new Preference(mpClient);
@@ -30,6 +27,8 @@ interface CheckoutBody {
 export async function POST(req: Request) {
     const auth = await requireAuthenticatedUser(req);
     if ('response' in auth) return auth.response;
+    const rate = checkRateLimit(`market-checkout:${auth.user.id}`, 10, 10 * 60 * 1000);
+    if (!rate.allowed) return rateLimitResponse(rate.retryAfter);
 
     const userId = auth.user.id;
     const email = auth.user.email || 'comprador@tcg-megastore.com.br';
@@ -59,24 +58,24 @@ export async function POST(req: Request) {
     }
 
     // Validar quantidade
-    const validQty = Math.min(parseInt(String(quantity)), listing.quantity);
-    if (validQty < 1) {
+    const requestedQty = Number(quantity);
+    const availableQty = Number(listing.quantity);
+    if (!Number.isInteger(requestedQty) || requestedQty < 1 || !Number.isInteger(availableQty) || availableQty < 1) {
         return NextResponse.json({ error: 'Quantidade inválida ou esgotada.' }, { status: 400 });
     }
+    const validQty = Math.min(requestedQty, availableQty);
 
     // Calcular valores server-side (nunca confiamos no cliente)
     const unitPrice = Number(listing.price);
+    if (!Number.isFinite(unitPrice) || unitPrice < 0.5) {
+        return NextResponse.json({ error: 'Preço da listagem inválido.' }, { status: 409 });
+    }
     const totalAmount = unitPrice * validQty;
     const platformFeeAmount = Number((totalAmount * (PLATFORM_FEE_PCT / 100)).toFixed(2));
     const sellerNetAmount = Number((totalAmount - platformFeeAmount).toFixed(2));
 
     // URL base
-    const host = req.headers.get('host') || 'localhost:3000';
-    const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
-    let baseUrl = `${protocol}://${host}`;
-    if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
-        baseUrl = 'https://tcg-hub.tonicoimbra.com';
-    }
+    const baseUrl = getSiteUrl();
 
     // Criar registro de pedido (pending)
     const { data: orderData, error: orderErr } = await supabaseAdmin

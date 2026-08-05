@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';
 
 import { ADMIN_EMAILS } from '@/lib/auth-constants';
-import { supabase, supabaseAdmin } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 type AuthSuccess = {
     isAdmin: boolean;
@@ -34,8 +35,8 @@ function hasAdminEmail(email?: string | null) {
 
 async function resolveIsAdmin(user: User) {
     const email = user.email || '';
-    const metadataRole = typeof user.user_metadata?.role === 'string'
-        ? user.user_metadata.role.toLowerCase()
+    const metadataRole = typeof user.app_metadata?.role === 'string'
+        ? user.app_metadata.role.toLowerCase()
         : null;
 
     if (metadataRole === 'admin' || hasAdminEmail(email)) {
@@ -67,12 +68,12 @@ export async function requireAuthenticatedUser(request: Request): Promise<AuthRe
 
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (error || !user) {
-        console.error('[Auth] getUser failed:', error);
+        console.warn('[Auth] Rejected invalid session.');
         return {
-            response: NextResponse.json({ 
-                error: 'Nao autorizado. Sessao invalida.',
-                details: error?.message 
-            }, { status: 401 }),
+            response: NextResponse.json(
+                { error: 'Nao autorizado. Sessao invalida.' },
+                { status: 401 }
+            ),
         };
     }
 

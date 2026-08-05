@@ -2,19 +2,10 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 import { MercadoPagoConfig, Preference } from 'mercadopago';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 import { requireAuthenticatedUser } from '@/lib/server-auth';
-
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!serviceRoleKey) {
-    console.warn('WARNING: SUPABASE_SERVICE_ROLE_KEY is missing in the environment. RLS bypass will fail.');
-}
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost',
-    serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'dummy'
-);
+import { getSiteUrl } from '@/lib/site-url';
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 const preference = new Preference(client);
@@ -63,27 +54,39 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json() as PreferenceRequestBody;
-        const { useCashback, discountAmount, payer, items = [], totalAmount, shippingAddress, shippingCost } = body;
+        const { useCashback, discountAmount, payer, items = [], shippingAddress, shippingCost } = body;
         const userId = auth.user.id;
 
-        const numericDiscountAmount = Number(discountAmount) || 0;
+        if (!items.length || items.some((item) => !item.id || item.is_auction)) {
+            return NextResponse.json({ error: 'Itens invalidos para checkout.' }, { status: 400 });
+        }
+        const requestedQuantities = new Map(items.map((item) => [String(item.id), Math.min(Math.max(Number(item.quantity) || 1, 1), 100)]));
+        const { data: inventoryItems, error: inventoryError } = await supabaseAdmin
+            .from('inventory')
+            .select('id, name, price, quantity, image_url')
+            .in('id', [...requestedQuantities.keys()]);
+        if (inventoryError || !inventoryItems || inventoryItems.length !== requestedQuantities.size) {
+            return NextResponse.json({ error: 'Um ou mais itens nao estao disponiveis.' }, { status: 409 });
+        }
+        const serverItems = inventoryItems.map((item) => {
+            const quantity = requestedQuantities.get(String(item.id)) || 1;
+            if (quantity > Number(item.quantity) || Number(item.price) <= 0) throw new Error('Quantidade ou preco indisponivel.');
+            return { id: item.id, title: item.name, card_name: item.name, imageUrl: item.image_url, quantity, unit_price: Number(item.price), price: Number(item.price) };
+        });
+        const safeShippingCost = Number(shippingCost);
+        if (!Number.isFinite(safeShippingCost) || safeShippingCost < 0 || safeShippingCost > 1000) {
+            return NextResponse.json({ error: 'Frete invalido.' }, { status: 400 });
+        }
+        const itemsTotal = serverItems.reduce((total, item) => total + item.unit_price * item.quantity, 0);
+        const totalWithShipping = Number((itemsTotal + safeShippingCost).toFixed(2));
+        const numericDiscountAmount = Math.min(Math.max(Number(discountAmount) || 0, 0), totalWithShipping);
         let email = payer?.email || auth.user.email;
 
         if (!email) {
             email = 'guest@tcg-megastore.com.br';
         }
 
-        const host = req.headers.get('host') || 'localhost:3000';
-        const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
-
-        let baseUrl = `${protocol}://${host}`;
-        if (baseUrl.includes('null')) baseUrl = 'http://localhost:3000';
-
-        if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
-            baseUrl = 'https://tcg-hub.tonicoimbra.com';
-        }
-
-        const totalWithShipping = Number(totalAmount) + (Number(shippingCost) || 0);
+        const baseUrl = getSiteUrl();
         const mpPaymentId = `cashback-${Date.now()}`;
         const isCashbackOnly = totalWithShipping === 0 || (useCashback && numericDiscountAmount >= totalWithShipping);
 
@@ -99,8 +102,8 @@ export async function POST(req: Request) {
 
         const { data: purchaseData, error: purchaseError } = await supabaseAdmin.from('purchases').insert({
             user_id: userId,
-            items: items || [],
-            total_amount: totalAmount,
+            items: serverItems,
+            total_amount: totalWithShipping,
             discount_amount: numericDiscountAmount,
             cashback_earned: 0,
             payment_method: isCashbackOnly ? 'wallet' : 'mercadopago_checkout',
@@ -117,8 +120,8 @@ export async function POST(req: Request) {
         const purchaseId = purchaseData?.id || null;
 
         if (isCashbackOnly) {
-            for (const item of items || []) {
-                if (item.id && !item.is_auction) {
+            for (const item of serverItems) {
+                if (item.id) {
                     const { error: rpcError } = await supabaseAdmin.rpc('decrement_inventory', {
                         p_item_id: item.id,
                         p_quantity: item.quantity || 1,
@@ -136,7 +139,7 @@ export async function POST(req: Request) {
             });
         }
 
-        const mpItems = items.map((item: PreferenceItemInput) => ({
+        const mpItems = serverItems.map((item) => ({
             id: item.id || `item-${Date.now()}`,
             title: item.title || item.card_name || 'Produto TCG MEGASTORE',
             quantity: Number(item.quantity) || 1,
@@ -144,12 +147,12 @@ export async function POST(req: Request) {
             currency_id: 'BRL',
         }));
 
-        if (Number(shippingCost) > 0) {
+        if (safeShippingCost > 0) {
             mpItems.push({
                 id: 'shipping-cost',
                 title: 'Custo de Envio (Frete)',
                 quantity: 1,
-                unit_price: Number(shippingCost),
+                unit_price: safeShippingCost,
                 currency_id: 'BRL',
             });
         }

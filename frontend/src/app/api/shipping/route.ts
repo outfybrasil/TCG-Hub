@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 const MELHOR_ENVIO_API = 'https://melhorenvio.com.br/api/v2/me';

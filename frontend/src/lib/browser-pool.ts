@@ -23,7 +23,7 @@ function findExecutable(): string {
     const fs = require('fs') as typeof import('fs');
     for (const p of CHROME_PATHS) {
         try {
-            if (fs.existsSync(p)) return p;
+            if (fs.existsSync(/* turbopackIgnore: true */ p)) return p;
         } catch {
             continue;
         }

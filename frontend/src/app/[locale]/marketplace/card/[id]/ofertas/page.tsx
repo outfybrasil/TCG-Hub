@@ -77,6 +77,12 @@ export default function CardOfertasPage({ params }: { params: Promise<{ id: stri
                         total_sales,
                         is_verified,
                         ships_from_state
+                    ),
+                    pokemon_cards (
+                        sold_price_min,
+                        sold_price_max,
+                        prices_updated_at,
+                        rarity
                     )
                 `)
                 .eq('status', 'active')
@@ -244,6 +250,24 @@ export default function CardOfertasPage({ params }: { params: Promise<{ id: stri
                                 </div>
                             ))}
                         </div>
+
+                        {/* Referência de vendas internas */}
+                        {listings[0]?.pokemon_cards && (
+                            <div className="flex flex-wrap gap-4 pt-4 border-t border-slate-100 mt-4">
+                                <div className="flex flex-col">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Menor vendido no TCG Hub</p>
+                                    <p className="text-sm font-black text-emerald-600">
+                                        {listings[0].pokemon_cards.sold_price_min?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) || '—'}
+                                    </p>
+                                </div>
+                                <div className="flex flex-col">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Última Atualização</p>
+                                    <p className="text-[10px] font-bold text-slate-400">
+                                        {listings[0].pokemon_cards.prices_updated_at ? new Date(listings[0].pokemon_cards.prices_updated_at).toLocaleDateString('pt-BR') : '—'}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </section>

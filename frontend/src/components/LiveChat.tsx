@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
 interface Message {
@@ -15,7 +16,7 @@ export default function LiveChat({ liveId, currentUser }: { liveId: string, curr
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
-    const [channel, setChannel] = useState<any>(null);
+    const [channel, setChannel] = useState<RealtimeChannel | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const processedIds = useRef<Set<string>>(new Set());
 
@@ -46,7 +47,6 @@ export default function LiveChat({ liveId, currentUser }: { liveId: string, curr
                         if (newArray.length > 100) return newArray.slice(newArray.length - 100);
                         return newArray;
                     });
-                    scrollToBottom();
                     return prevBanned;
                 });
             })
@@ -81,11 +81,12 @@ export default function LiveChat({ liveId, currentUser }: { liveId: string, curr
         };
     }, [liveId, isAdmin]);
 
-    const scrollToBottom = () => {
-        setTimeout(() => {
+    useEffect(() => {
+        const timeout = setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }, 100);
-    };
+        return () => clearTimeout(timeout);
+    }, [messages]);
 
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();

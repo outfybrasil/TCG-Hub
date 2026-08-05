@@ -2,6 +2,11 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { load } from 'cheerio';
 import { fetchWithBrowser } from '@/lib/browser-pool';
+import {
+    calculateTcgHubPriceIndex,
+    type PriceObservation,
+    type TcgHubPriceIndex,
+} from '@/lib/tcg-hub-price-index';
 
 const execFileAsync = promisify(execFile);
 
@@ -91,6 +96,7 @@ interface SitePriceResult {
 }
 
 export interface MarketLookupResult {
+    hubIndex: TcgHubPriceIndex;
     bestMatched: {
         store: string | null;
         price: number | null;
@@ -122,10 +128,21 @@ export interface MarketLookupResult {
 
 export async function lookupBrazilianMarketPrices(input: MarketLookupInput): Promise<MarketLookupResult> {
     const filters = normalizeFilters(input);
-    const [mypCards, ligaPokemon] = await Promise.all([
+    const [mypResult, ligaResult] = await Promise.allSettled([
         lookupMypCards(input, filters),
         lookupLigaPokemon(input),
     ]);
+    const mypCards = mypResult.status === 'fulfilled'
+        ? mypResult.value
+        : unavailableSite('MYP Cards', buildMypSearchUrl(input.cardNumber || input.cardName), mypResult.reason);
+    const ligaPokemon = ligaResult.status === 'fulfilled'
+        ? ligaResult.value
+        : {
+            ...unavailableSite('Liga Pokemon', buildLigaUrl(buildLigaSearchQuery(input), input.condition, input.finish), ligaResult.reason),
+            minPrice: null,
+            avgPrice: null,
+            maxPrice: null,
+        };
 
     const matchedOptions = [mypCards, ligaPokemon]
         .filter((site) => site.matchedPrice !== null)
@@ -134,7 +151,24 @@ export async function lookupBrazilianMarketPrices(input: MarketLookupInput): Pro
         .filter((site) => site.selectedPrice !== null)
         .sort((left, right) => (left.selectedPrice ?? Infinity) - (right.selectedPrice ?? Infinity));
 
+    const observations: PriceObservation[] = [];
+    if (mypCards.selectedPrice !== null) {
+        observations.push({ price: mypCards.selectedPrice, kind: 'trusted_listing', source: 'MYP Cards' });
+    }
+    // Liga publishes a market range. Each point is kept as an announcement,
+    // never as a verified sale, so confidence remains deliberately conservative.
+    if (ligaPokemon.minPrice !== null) {
+        observations.push({ price: ligaPokemon.minPrice, kind: 'listing', source: 'Liga Pokemon - menor' });
+    }
+    if (ligaPokemon.avgPrice !== null) {
+        observations.push({ price: ligaPokemon.avgPrice, kind: 'trusted_listing', source: 'Liga Pokemon - medio' });
+    }
+    if (ligaPokemon.maxPrice !== null) {
+        observations.push({ price: ligaPokemon.maxPrice, kind: 'listing', source: 'Liga Pokemon - maior' });
+    }
+
     return {
+        hubIndex: calculateTcgHubPriceIndex(observations),
         bestMatched: {
             store: matchedOptions[0]?.site ?? null,
             price: matchedOptions[0]?.matchedPrice ?? null,
@@ -154,6 +188,22 @@ export async function lookupBrazilianMarketPrices(input: MarketLookupInput): Pro
         },
         criteria: filters,
         fetchedAt: new Date().toISOString(),
+    };
+}
+
+function unavailableSite(site: string, url: string, error: unknown): SitePriceResult {
+    const message = error instanceof Error ? error.message : String(error || 'falha desconhecida');
+    console.warn(`[market-pricing] ${site} indisponivel: ${message}`);
+    return {
+        site,
+        url,
+        matchedPrice: null,
+        fallbackPrice: null,
+        selectedPrice: null,
+        selectedMatchType: 'unavailable',
+        selectedVariantLabel: null,
+        note: 'Loja temporariamente indisponivel. Use o link para consultar diretamente.',
+        offersCount: 0,
     };
 }
 

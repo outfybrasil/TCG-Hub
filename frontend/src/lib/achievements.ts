@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export type ConditionType = 'ACCOUNT_CREATE' | 'PURCHASE' | 'AUCTION_WIN' | 'SPEND_AMOUNT' | 'COLLECTION_SIZE';
 

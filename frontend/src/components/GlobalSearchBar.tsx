@@ -27,6 +27,7 @@ export default function GlobalSearchBar() {
     const [open, setOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const requestSequence = useRef(0);
 
     // Close on outside click
     useEffect(() => {
@@ -42,11 +43,10 @@ export default function GlobalSearchBar() {
     // Debounced search against Supabase
     useEffect(() => {
         if (query.trim().length < 2) {
-            setResults([]);
-            setOpen(false);
             return;
         }
 
+        const sequence = ++requestSequence.current;
         const timeout = setTimeout(async () => {
             setLoading(true);
             const term = `%${query.trim()}%`;
@@ -57,9 +57,11 @@ export default function GlobalSearchBar() {
                 .or(`name.ilike.${term},official_name.ilike.${term},set.ilike.${term},official_set_name.ilike.${term},number.ilike.${term},local_id.ilike.${term}`)
                 .limit(8);
 
-            setResults(data ?? []);
-            setOpen(true);
-            setLoading(false);
+            if (sequence === requestSequence.current) {
+                setResults(data ?? []);
+                setOpen(true);
+                setLoading(false);
+            }
         }, 280);
 
         return () => clearTimeout(timeout);
@@ -92,10 +94,15 @@ export default function GlobalSearchBar() {
     const displayImg = (r: SearchResult) => r.official_image_url ?? r.image_url ?? '';
     const formatBRL = (v?: number) => v != null ? `R$ ${v.toFixed(2).replace('.', ',')}` : '';
 
-    const highlight = (text: string) => {
-        if (!query.trim()) return text;
-        const regex = new RegExp(`(${query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        return text.replace(regex, `<mark class="bg-rose-500/30 text-rose-300 rounded px-0.5 not-italic">$1</mark>`);
+    const highlight = (value: string) => {
+        const needle = query.trim();
+        if (!needle) return value;
+        const regex = new RegExp(`(${needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return value.split(regex).map((part, index) =>
+            part.toLocaleLowerCase() === needle.toLocaleLowerCase()
+                ? <mark key={index} className="bg-rose-500/30 text-rose-300 rounded px-0.5 not-italic">{part}</mark>
+                : <React.Fragment key={index}>{part}</React.Fragment>
+        );
     };
 
     return (
@@ -110,7 +117,16 @@ export default function GlobalSearchBar() {
                     autoComplete="off"
                     placeholder="Busque por cartas, coleções, produtos..."
                     value={query}
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                        const value = e.target.value;
+                        setQuery(value);
+                        if (value.trim().length < 2) {
+                            requestSequence.current += 1;
+                            setResults([]);
+                            setOpen(false);
+                            setLoading(false);
+                        }
+                    }}
                     onFocus={() => results.length > 0 && setOpen(true)}
                     className="w-full h-12 bg-white/5 border border-white/10 rounded-full pl-12 pr-32 text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/50 focus:border-rose-500/50 transition-all"
                 />
@@ -145,7 +161,7 @@ export default function GlobalSearchBar() {
                             </div>
                         )}
 
-                        {results.map((r, i) => (
+                        {results.map((r) => (
                             <button
                                 key={r.id}
                                 onMouseDown={(e) => { e.preventDefault(); goToCard(r.id); }}
@@ -162,14 +178,11 @@ export default function GlobalSearchBar() {
 
                                 {/* Info */}
                                 <div className="flex-1 min-w-0">
-                                    <p
-                                        className="text-sm font-black text-white leading-tight truncate"
-                                        dangerouslySetInnerHTML={{ __html: highlight(displayName(r)) }}
-                                    />
+                                    <p className="text-sm font-black text-white leading-tight truncate">{highlight(displayName(r))}</p>
                                     <p className="text-[11px] mt-0.5" style={{ color: '#8b95b5' }}>
-                                        <span dangerouslySetInnerHTML={{ __html: highlight(displaySet(r)) }} />
+                                        <span>{highlight(displaySet(r))}</span>
                                         {displayNum(r) && (
-                                            <> · <span className="text-rose-400 font-bold" dangerouslySetInnerHTML={{ __html: highlight(displayNum(r)) }} /></>
+                                            <> · <span className="text-rose-400 font-bold">{highlight(displayNum(r))}</span></>
                                         )}
                                     </p>
                                 </div>

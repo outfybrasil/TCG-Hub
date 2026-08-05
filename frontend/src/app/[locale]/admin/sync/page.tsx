@@ -11,23 +11,6 @@ interface TcgSet {
     cards?: number;
 }
 
-interface MarketSyncStats {
-    activeInventory: number;
-    cachedItems: number;
-    uncachedItems: number;
-    cachedKeys: number;
-    refreshed24h: number;
-    historySnapshots: number;
-    lastFetchedAt: string | null;
-}
-
-interface MarketSyncResponse {
-    processed: number;
-    synced: number;
-    failed: number;
-    errors?: string[];
-}
-
 function normalizeSetName(set: Pick<TcgSet, 'id' | 'name'>) {
     if (set.id === 'me01') {
         return 'Megaevolucao - Equilibrio Perfeito'; // legacy
@@ -69,11 +52,7 @@ async function getAuthHeaders(headers: HeadersInit = {}) {
 
 export default function SyncAdminPage() {
     const [loading, setLoading] = useState(false);
-    const [marketSyncing, setMarketSyncing] = useState(false);
     const [status, setStatus] = useState<string | null>(null);
-    const [marketStatus, setMarketStatus] = useState<string | null>(null);
-    const [marketErrors, setMarketErrors] = useState<string[]>([]);
-    const [marketStats, setMarketStats] = useState<MarketSyncStats | null>(null);
     const [sets, setSets] = useState<TcgSet[]>([]);
     const [syncedSets, setSyncedSets] = useState<Set<string>>(new Set());
     const [selectedSets, setSelectedSets] = useState<Set<string>>(new Set());
@@ -91,19 +70,6 @@ export default function SyncAdminPage() {
             if (data.count !== undefined) setCardCount(data.count);
         } catch (err) {
             console.error('Erro ao buscar estatisticas:', err);
-        }
-    };
-
-    const fetchMarketStats = async () => {
-        try {
-            const res = await fetch('/api/admin/sync-market-prices/stats', {
-                headers: await getAuthHeaders(),
-            });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
-            setMarketStats(data);
-        } catch (err) {
-            console.error('Erro ao buscar estatisticas do mercado:', err);
         }
     };
 
@@ -166,7 +132,6 @@ export default function SyncAdminPage() {
 
         void fetchSets();
         void fetchStats();
-        void fetchMarketStats();
         void fetchSyncedSets();
     }, []);
 
@@ -256,7 +221,7 @@ export default function SyncAdminPage() {
     const handleSyncAll = async () => {
         setLoading(true);
         setStatus(null);
-        
+
         try {
             const targetSets = sets; // Sync everything
             setSyncProgress({ current: 'Iniciando sincronização total...', total: targetSets.length, done: 0 });
@@ -295,63 +260,50 @@ export default function SyncAdminPage() {
     };
 
 
-    const handleMarketSync = async () => {
-        setMarketSyncing(true);
-        setMarketStatus(null);
-        setMarketErrors([]);
-        try {
-            const res = await fetch('/api/admin/sync-market-prices', {
-                method: 'POST',
-                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ limit: 24 }),
-            });
-
-            const data = await res.json() as MarketSyncResponse & { error?: string };
-            if (!res.ok) {
-                throw new Error(data.error || `HTTP ${res.status}`);
-            }
-
-            setMarketStatus(
-                `Mercado atualizado: ${data.synced}/${data.processed} itens processados.` +
-                (data.failed > 0 ? ` ${data.failed} falharam.` : '')
-            );
-            setMarketErrors(data.errors || []);
-            await fetchMarketStats();
-        } catch (err) {
-            setMarketStatus(`Erro: ${err instanceof Error ? err.message : 'Erro desconhecido'}`);
-        } finally {
-            setMarketSyncing(false);
-        }
-    };
-
     const [manualId, setManualId] = useState('');
     const [manualSyncing, setManualSyncing] = useState(false);
     const [manualStatus, setManualStatus] = useState<{ ok: boolean; msg: string } | null>(null);
 
     const handleManualSync = async () => {
-        const id = manualId.trim().toLowerCase();
-        if (!id) return;
+        const ids = manualId.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+        if (ids.length === 0) return;
+
         setManualSyncing(true);
         setManualStatus(null);
-        try {
-            const res = await fetch('/api/admin/sync-cards', {
-                method: 'POST',
-                headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ setId: id }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                setManualStatus({ ok: true, msg: `✓ ${data.count} cards sincronizados (ID: ${id})` });
-                setSyncedSets(prev => new Set(prev).add(id));
-                await fetchStats();
-            } else {
-                setManualStatus({ ok: false, msg: data.error || 'Erro desconhecido' });
+        let successCount = 0;
+        let totalCards = 0;
+        let errors: string[] = [];
+
+        for (const id of ids) {
+            try {
+                setManualStatus({ ok: true, msg: `Sincronizando ${id}...` });
+                const res = await fetch('/api/admin/sync-cards', {
+                    method: 'POST',
+                    headers: await getAuthHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ setId: id }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    successCount++;
+                    totalCards += data.count;
+                    setSyncedSets(prev => new Set(prev).add(id));
+                } else {
+                    errors.push(`${id}: ${data.error}`);
+                }
+            } catch (err) {
+                errors.push(`${id}: ${err instanceof Error ? err.message : 'Erro'}`);
             }
-        } catch (err) {
-            setManualStatus({ ok: false, msg: err instanceof Error ? err.message : 'Erro' });
-        } finally {
-            setManualSyncing(false);
         }
+
+        await fetchStats();
+
+        if (errors.length === 0) {
+            setManualStatus({ ok: true, msg: `✓ ${successCount} set(s) (${totalCards} cards) sincronizados!` });
+            setManualId(''); // Limpa o campo após sucesso total
+        } else {
+            setManualStatus({ ok: false, msg: `Concluído com erros: ${errors.join(' | ')}` });
+        }
+        setManualSyncing(false);
     };
 
     const [confirmingSetId, setConfirmingSetId] = useState<string | null>(null);
@@ -503,16 +455,26 @@ export default function SyncAdminPage() {
                                 <div className="space-y-2">
                                     <p className="text-[8px] font-black uppercase tracking-widest text-slate-600">Sugestões 2025/2026</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {['me01','me02','me03','sv09','sv10','sv10a','sv11','sv11a','sv12'].map(id => (
-                                            <button key={id} onClick={() => setManualId(id)}
-                                                className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
-                                                    syncedSets.has(id)
-                                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500'
-                                                        : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/30'
-                                                }`}>
-                                                {id} {syncedSets.has(id) ? '✓' : ''}
-                                            </button>
-                                        ))}
+                                        {['me01','me02','me03','sv09','sv10'].map(id => {
+                                            const isSelected = manualId.toLowerCase().includes(id);
+                                            return (
+                                                <button key={id} onClick={() => {
+                                                    const currentIds = manualId.split(',').map(i => i.trim().toLowerCase()).filter(Boolean);
+                                                    if (currentIds.includes(id)) {
+                                                        setManualId(currentIds.filter(i => i !== id).join(', '));
+                                                    } else {
+                                                        setManualId([...currentIds, id].join(', '));
+                                                    }
+                                                }}
+                                                    className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                                                        syncedSets.has(id)
+                                                            ? (isSelected ? 'bg-emerald-500/30 border-emerald-500 text-white' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500')
+                                                            : (isSelected ? 'bg-white/20 border-white/40 text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/30')
+                                                    }`}>
+                                                    {id} {syncedSets.has(id) ? '✓' : ''}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -546,59 +508,6 @@ export default function SyncAdminPage() {
                                 )}
                             </div>
 
-                            {/* Market Sync Card */}
-                            <div className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6 shadow-2xl relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-600/5 blur-[60px] -z-10"></div>
-                                <h2 className="text-xl font-black text-white tracking-tighter uppercase">Mercado Background</h2>
-                                <p className="text-slate-400 text-xs font-bold uppercase tracking-tight leading-relaxed">
-                                    Atualiza o cache de preços global para comparação instantânea na vitrine.
-                                </p>
-
-                                {marketStats && (
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Com Cache</p>
-                                            <p className="text-2xl font-black tracking-tighter text-white tabular-nums">{marketStats.cachedItems}</p>
-                                            <p className="text-[8px] font-bold uppercase tracking-widest text-slate-600 mt-1">de {marketStats.activeInventory} ativos</p>
-                                        </div>
-                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Sem Cache</p>
-                                            <p className="text-2xl font-black tracking-tighter text-rose-500 tabular-nums">{marketStats.uncachedItems}</p>
-                                            <p className="text-[8px] font-bold uppercase tracking-widest text-rose-500/60 mt-1">pendentes</p>
-                                        </div>
-                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Update 24h</p>
-                                            <p className="text-2xl font-black tracking-tighter text-emerald-500 tabular-nums">{marketStats.refreshed24h}</p>
-                                            <p className="text-[8px] font-bold uppercase tracking-widest text-emerald-500/60 mt-1">snapshot ok</p>
-                                        </div>
-                                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                            <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">Histórico</p>
-                                            <p className="text-2xl font-black tracking-tighter text-slate-300 tabular-nums">{marketStats.historySnapshots}</p>
-                                            <p className="text-[8px] font-bold uppercase tracking-widest text-slate-600 mt-1">registros</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <button
-                                    onClick={() => void handleMarketSync()}
-                                    disabled={marketSyncing}
-                                    className="w-full h-14 bg-white text-slate-900 font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-slate-200 transition-all disabled:opacity-50"
-                                >
-                                    {marketSyncing ? 'Sincronizando...' : 'Update Preços Mercado'}
-                                </button>
-
-                                {marketStatus && (
-                                    <div className={`p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest animate-fade-in border ${marketStatus.startsWith('Erro') ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'}`}>
-                                        {marketStatus}
-                                    </div>
-                                )}
-
-                                {marketStats?.lastFetchedAt && (
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-600 text-center">
-                                        Última Sincronização: {new Date(marketStats.lastFetchedAt).toLocaleString('pt-BR')}
-                                    </p>
-                                )}
-                            </div>
                         </div>
 
                         <div className="lg:col-span-2 bg-white/5 border border-white/10 p-10 rounded-[48px] shadow-2xl flex flex-col h-[750px]">

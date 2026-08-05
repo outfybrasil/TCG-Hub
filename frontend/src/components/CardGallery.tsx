@@ -165,6 +165,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                     </div>
 
                     <PriceComparison
+                        cardId={id}
                         cardName={name}
                         cardSet={set}
                         cardNumber={cardNumber}

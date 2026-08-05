@@ -1,13 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { requireAuthenticatedUser } from '@/lib/server-auth';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { assessListingPrice } from '@/lib/tcg-hub-price-index';
+import { getTcgHubReference } from '@/lib/tcg-hub-price-server';
 
 export const dynamic = 'force-dynamic';
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
-);
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const auth = await requireAuthenticatedUser(req);
@@ -19,7 +16,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // Verificar propriedade
     const { data: existing, error: fetchErr } = await supabaseAdmin
         .from('seller_listings')
-        .select('id, seller_id, status')
+        .select('id, seller_id, status, card_id, card_name, card_number, condition, finish, language, price')
         .eq('id', listingId)
         .single();
 
@@ -50,12 +47,52 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         updates['price'] = p;
     }
 
-    const { data, error } = await supabaseAdmin
+    if ('quantity' in updates) {
+        const quantity = Number(updates.quantity);
+        if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1000) {
+            return NextResponse.json({ error: 'Quantidade invalida.' }, { status: 400 });
+        }
+        updates.quantity = quantity;
+    }
+    if ('status' in updates && !['active', 'paused'].includes(String(updates.status))) {
+        return NextResponse.json({ error: 'Status invalido.' }, { status: 400 });
+    }
+    if ('notes' in updates) updates.notes = String(updates.notes || '').slice(0, 500);
+
+    if (['price', 'condition', 'finish', 'language'].some((field) => field in updates)) {
+        const reference = await getTcgHubReference({
+            cardId: existing.card_id,
+            cardName: existing.card_name,
+            cardNumber: existing.card_number,
+            condition: String(updates.condition ?? existing.condition),
+            finish: String(updates.finish ?? existing.finish),
+            language: String(updates.language ?? existing.language),
+        });
+        const risk = assessListingPrice(Number(updates.price ?? existing.price), reference);
+        updates.price_risk_level = risk.level;
+        updates.price_risk_reason = risk.reason;
+        updates.reference_price = reference.price;
+        updates.index_eligible = risk.level === 'normal';
+        updates.risk_assessed_at = new Date().toISOString();
+    }
+
+    let { data, error } = await supabaseAdmin
         .from('seller_listings')
         .update(updates)
         .eq('id', listingId)
         .select()
         .single();
+
+    if (error?.code === 'PGRST204' || error?.message?.includes('price_risk_level')) {
+        delete updates.price_risk_level;
+        delete updates.price_risk_reason;
+        delete updates.reference_price;
+        delete updates.index_eligible;
+        delete updates.risk_assessed_at;
+        const fallback = await supabaseAdmin.from('seller_listings').update(updates).eq('id', listingId).select().single();
+        data = fallback.data;
+        error = fallback.error;
+    }
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });

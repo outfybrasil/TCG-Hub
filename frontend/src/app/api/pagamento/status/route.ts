@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { createClient } from '@supabase/supabase-js';
 import { markPurchaseApproved, type PurchaseStatusRow } from '@/lib/purchase-status';
-import { supabaseAdmin as sharedSupabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin as sharedSupabaseAdmin } from '@/lib/supabase-admin';
 import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 export const runtime = 'nodejs';

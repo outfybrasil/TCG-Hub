@@ -16,6 +16,11 @@ export interface MarketCardLike {
 }
 
 export interface MarketPriceSummary {
+    hubIndexPrice: number | null;
+    hubIndexFairLow: number | null;
+    hubIndexFairHigh: number | null;
+    hubIndexConfidence: string;
+    hubIndexSampleSize: number;
     bestComparablePrice: number | null;
     bestComparableStore: string | null;
     bestAvailablePrice: number | null;
@@ -68,6 +73,11 @@ export function buildMarketSearchKeysFromCard(card: MarketCardLike): string[] {
 export function summarizeMarketResult(result: MarketLookupResult | null | undefined): MarketPriceSummary {
     if (!result) {
         return {
+            hubIndexPrice: null,
+            hubIndexFairLow: null,
+            hubIndexFairHigh: null,
+            hubIndexConfidence: 'insufficient',
+            hubIndexSampleSize: 0,
             bestComparablePrice: null,
             bestComparableStore: null,
             bestAvailablePrice: null,
@@ -97,6 +107,11 @@ export function summarizeMarketResult(result: MarketLookupResult | null | undefi
     }
 
     return {
+        hubIndexPrice: result.hubIndex?.price ?? null,
+        hubIndexFairLow: result.hubIndex?.fairLow ?? null,
+        hubIndexFairHigh: result.hubIndex?.fairHigh ?? null,
+        hubIndexConfidence: result.hubIndex?.confidence ?? 'insufficient',
+        hubIndexSampleSize: result.hubIndex?.sampleSize ?? 0,
         bestComparablePrice: result.bestMatched.price,
         bestComparableStore: result.bestMatched.store,
         bestAvailablePrice: result.bestAvailable.price,

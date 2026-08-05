@@ -9,6 +9,8 @@ router = APIRouter()
 
 @router.get("/", response_model=List[schemas.Card])
 def read_cards(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    skip = max(skip, 0)
+    limit = min(max(limit, 1), 100)
     cards = db.query(card_models.Card).offset(skip).limit(limit).all()
     return cards
 

@@ -92,30 +92,48 @@ export default function EditionDetailPage() {
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState('number-asc');
 
-    // Find current set info and siblings
-    const allSets = useMemo(() => 
-        EDITIONS.flatMap(y => y.sets.map(s => ({ ...s, year: y.year })))
+    // Build flat set list with named fields for clarity
+    const allSets = useMemo(() =>
+        EDITIONS.flatMap(y => y.sets.map(([name, code, alias]) => ({ name, code, alias, year: y.year })))
     , []);
 
-    const currentIndex = allSets.findIndex(s => s[1] === id);
-    const currentSet = allSets[currentIndex];
+    // Try to find by primary code first, then by alias (backward compat)
+    const currentIndex = useMemo(() => {
+        let idx = allSets.findIndex(s => s.code === id);
+        if (idx === -1) idx = allSets.findIndex(s => s.alias === id);
+        return idx;
+    }, [allSets, id]);
+    const currentSet = allSets[currentIndex] ?? null;
+    const primaryCode = currentSet ? currentSet.code : id; // resolved TCGdex ID
     const prevSet = currentIndex > 0 ? allSets[currentIndex - 1] : null;
     const nextSet = currentIndex < allSets.length - 1 ? allSets[currentIndex + 1] : null;
 
+    // If the URL is using an alias, redirect to the canonical primary code
+    useEffect(() => {
+        if (currentSet && currentSet.code !== id) {
+            router.replace(`/edicoes/${currentSet.code}`);
+        }
+    }, [currentSet, id, router]);
+
     const CACHE_TTL = 24 * 60 * 60 * 1000;
-    const cacheKey = `tcg_cards_${id}`;
+    const cacheKey = `tcg_cards_${primaryCode}`;
 
     const fetchCards = async (forceRefresh = false) => {
+        // If URL is an alias, wait for redirect — don't fetch with wrong key
+        if (currentSet && currentSet.code !== id) return;
+
         if (forceRefresh) {
             setRefreshing(true);
-            setCards([]); // Limpa estado imediatamente para não mostrar dados velhos
+            setCards([]);
+            // Clear both old alias key and current key to avoid stale data
             localStorage.removeItem(cacheKey);
+            localStorage.removeItem(`tcg_cards_${id}`);
         } else {
             setLoading(true);
         }
 
         try {
-            // Só verifica cache em carregamento normal (não force refresh)
+            // Check cache with the canonical key
             if (!forceRefresh) {
                 const cached = localStorage.getItem(cacheKey);
                 if (cached) {
@@ -127,16 +145,30 @@ export default function EditionDetailPage() {
                             return;
                         }
                     } catch {
-                        localStorage.removeItem(cacheKey); // Cache corrompido, remove
+                        localStorage.removeItem(cacheKey);
                     }
                 }
             }
 
-            const { data, error } = await supabase
+            // Query by primary TCGdex code
+            let { data, error } = await supabase
                 .from('pokemon_cards')
                 .select('id, name, name_en, set_id, set_name, local_id, image_url, rarity, types')
-                .eq('set_id', id)
+                .eq('set_id', primaryCode)
                 .order('local_id', { ascending: true });
+
+            // Fallback: if primary returns nothing, try the alias (old code)
+            if (!error && (!data || data.length === 0) && currentSet?.alias && currentSet.alias !== primaryCode) {
+                const fallback = await supabase
+                    .from('pokemon_cards')
+                    .select('id, name, name_en, set_id, set_name, local_id, image_url, rarity, types')
+                    .eq('set_id', currentSet.alias)
+                    .order('local_id', { ascending: true });
+                if (!fallback.error && fallback.data && fallback.data.length > 0) {
+                    data = fallback.data;
+                    error = null;
+                }
+            }
 
             if (error) {
                 console.error('Supabase error:', error);
@@ -246,13 +278,13 @@ export default function EditionDetailPage() {
                         {/* Nav Left */}
                         <div className="hidden lg:block w-72">
                             {prevSet && (
-                                <Link href={`/edicoes/${prevSet[1]}`} className="group flex items-center gap-4 p-3 bg-white/5 rounded-3xl border border-white/5 hover:bg-white/10 transition-all">
+                                <Link href={`/edicoes/${prevSet.code}`} className="group flex items-center gap-4 p-3 bg-white/5 rounded-3xl border border-white/5 hover:bg-white/10 transition-all">
                                     <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center group-hover:bg-rose-600 transition-colors shadow-xl">
                                         <ChevronLeft className="w-6 h-6" />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[9px] font-black uppercase text-slate-500 tracking-[0.2em] mb-1">Anterior</p>
-                                        <p className="text-xs font-black text-slate-200 truncate">{prevSet[0]}</p>
+                                        <p className="text-xs font-black text-slate-200 truncate">{prevSet.name}</p>
                                     </div>
                                 </Link>
                             )}
@@ -265,7 +297,7 @@ export default function EditionDetailPage() {
                                 <span className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em]">{currentSet?.year}</span>
                                 <div className="h-px w-8 bg-rose-600/30" />
                             </div>
-                            <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase leading-none">{currentSet?.[0]}</h1>
+                            <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase leading-none">{currentSet?.name}</h1>
                             <div className="flex items-center justify-center gap-6">
                                 <div className="flex flex-col items-center">
                                     <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Total Cards</p>
@@ -287,10 +319,10 @@ export default function EditionDetailPage() {
                         {/* Nav Right */}
                         <div className="hidden lg:block w-72 text-right">
                             {nextSet && (
-                                <Link href={`/edicoes/${nextSet[1]}`} className="group flex items-center gap-4 p-3 bg-white/5 rounded-3xl border border-white/5 hover:bg-white/10 transition-all">
+                                <Link href={`/edicoes/${nextSet.code}`} className="group flex items-center gap-4 p-3 bg-white/5 rounded-3xl border border-white/5 hover:bg-white/10 transition-all">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[9px] font-black uppercase text-slate-500 tracking-[0.2em] mb-1">Próxima</p>
-                                        <p className="text-xs font-black text-slate-200 truncate">{nextSet[0]}</p>
+                                        <p className="text-xs font-black text-slate-200 truncate">{nextSet.name}</p>
                                     </div>
                                     <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center group-hover:bg-rose-600 transition-colors shadow-xl">
                                         <ChevronRight className="w-6 h-6" />

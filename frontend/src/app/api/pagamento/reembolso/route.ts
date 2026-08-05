@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { markPurchaseCanceled } from '@/lib/purchase-status';
 import { requireAdmin } from '@/lib/server-auth';
 

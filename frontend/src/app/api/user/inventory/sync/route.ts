@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { buildMarketInputFromCard, buildMarketSearchKeyFromCard, summarizeMarketResult } from '@/lib/market-cache';
 import { lookupBrazilianMarketPrices } from '@/lib/market-pricing';
 import { requireAuthenticatedUser } from '@/lib/server-auth';

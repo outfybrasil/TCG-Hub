@@ -3,6 +3,7 @@
 import React, { useCallback, useState } from 'react';
 
 interface PriceComparisonProps {
+    cardId?: string;
     cardName: string;
     cardSet?: string;
     cardNumber?: string;
@@ -28,6 +29,16 @@ interface SitePrice {
 }
 
 interface PriceData {
+    hubIndex: {
+        price: number | null;
+        fairLow: number | null;
+        fairHigh: number | null;
+        confidence: 'insufficient' | 'low' | 'medium' | 'high';
+        sampleSize: number;
+        verifiedSales: number;
+        excludedOutliers: number;
+        methodology: 'weighted_median_v1';
+    };
     bestMatched: {
         store: string | null;
         price: number | null;
@@ -81,6 +92,7 @@ function matchTypeLabel(matchType: SitePrice['selectedMatchType']) {
 }
 
 export default function PriceComparison({
+    cardId,
     cardName,
     cardSet,
     cardNumber,
@@ -109,6 +121,7 @@ export default function PriceComparison({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    cardId,
                     cardName,
                     cardSet,
                     cardNumber,
@@ -132,7 +145,7 @@ export default function PriceComparison({
         } finally {
             setLoading(false);
         }
-    }, [cardName, cardSet, cardNumber, condition, finish, language, loading, priceData]);
+    }, [cardId, cardName, cardSet, cardNumber, condition, finish, language, loading, priceData]);
 
     if (size === 'sm') {
         return (
@@ -227,6 +240,28 @@ export default function PriceComparison({
 
                     {priceData && !loading && (
                         <div className="space-y-4">
+                            <div className="rounded-[24px] border border-emerald-400/20 bg-emerald-400/10 p-5">
+                                <div className="flex flex-wrap items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-emerald-300">
+                                            Índice TCG Hub
+                                        </p>
+                                        <p className="mt-2 text-3xl font-black text-white">
+                                            {formatBRL(priceData.hubIndex?.price)}
+                                        </p>
+                                        <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-emerald-100/70">
+                                            Faixa justa: {formatBRL(priceData.hubIndex?.fairLow)} — {formatBRL(priceData.hubIndex?.fairHigh)}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-full border border-emerald-300/20 bg-black/20 px-3 py-2 text-[8px] font-black uppercase tracking-widest text-emerald-200">
+                                        Confiança: {confidenceLabel(priceData.hubIndex?.confidence)}
+                                    </div>
+                                </div>
+                                <p className="mt-4 text-[9px] leading-5 text-emerald-50/65">
+                                    Mediana ponderada de {priceData.hubIndex?.sampleSize || 0} referências. Valores anormais não controlam o índice.
+                                    {(priceData.hubIndex?.verifiedSales || 0) === 0 && ' Ainda sem vendas verificadas suficientes; use como estimativa inicial.'}
+                                </p>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <SummaryCard label="Preco TCG MEGASTORE" value={formatBRL(currentPrice)} tone="slate" />
                                 <SummaryCard
@@ -317,6 +352,13 @@ export default function PriceComparison({
             )}
         </div>
     );
+}
+
+function confidenceLabel(value: PriceData['hubIndex']['confidence'] | undefined) {
+    if (value === 'high') return 'Alta';
+    if (value === 'medium') return 'Média';
+    if (value === 'low') return 'Baixa';
+    return 'Dados insuficientes';
 }
 
 function buildStoreFallbackUrl(store: keyof typeof STORE_LABELS, cardName: string, cardNumber?: string) {

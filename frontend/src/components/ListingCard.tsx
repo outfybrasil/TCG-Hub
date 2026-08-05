@@ -31,10 +31,10 @@ const LANG_FLAGS: Record<string, string> = {
 export default function ListingCard({ listing, onBuy }: ListingCardProps) {
     const [buying, setBuying] = useState(false);
     const seller = listing.seller_profiles;
-    // Remapear LP para SP temporariamente se for o padrão Liga (onde SP > MP) ou manter o original
     const condKey = listing.condition;
     const cond = CONDITION_INFO[condKey] || { label: condKey, bg: 'bg-slate-100', text: 'text-slate-600', full: condKey };
     const flag = LANG_FLAGS[listing.language] || '🌐';
+    const market = listing.pokemon_cards;
 
     const handleBuy = async () => {
         if (buying || !onBuy) return;
@@ -114,14 +114,46 @@ export default function ListingCard({ listing, onBuy }: ListingCardProps) {
                 )}
             </div>
 
-            {/* 4. Preço */}
-            <div className="flex-1 sm:text-right">
+            {/* 4. Preço e Comparação */}
+            <div className="flex-1 sm:text-right min-w-[120px]">
                 <p className="text-xl font-black tracking-tight text-brand-rose">
                     {listing.price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </p>
                 <p className="text-[9px] font-bold uppercase tracking-widest text-brand-muted mt-0.5">
                     Unidade
                 </p>
+                {listing.price_risk_level && listing.price_risk_level !== 'normal' && (
+                    <div
+                        title={listing.price_risk_reason || 'Preço fora da faixa usual.'}
+                        className={`mt-2 inline-flex rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-wider ${
+                            listing.price_risk_level === 'high'
+                                ? 'border-rose-400/30 bg-rose-500/10 text-rose-300'
+                                : 'border-amber-400/30 bg-amber-500/10 text-amber-300'
+                        }`}
+                    >
+                        Preço fora do padrão · não influencia o índice
+                    </div>
+                )}
+
+                {/* Referência de vendas internas */}
+                {market && (
+                    <div className="mt-2 space-y-1">
+                        <div className="flex flex-col sm:items-end gap-1">
+                                {market.sold_price_min && (
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                        <span className="text-[8px] font-black text-emerald-400 uppercase tracking-tighter">Menor vendido no Hub</span>
+                                        <span className="text-[10px] font-black text-emerald-300">{market.sold_price_min.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                    </div>
+                                )}
+                                {market.sold_price_max && (
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
+                                        <span className="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Maior vendido no Hub</span>
+                                        <span className="text-[10px] font-black text-rose-300">{market.sold_price_max.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+                                    </div>
+                                )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 5. Quantidade e Compra */}

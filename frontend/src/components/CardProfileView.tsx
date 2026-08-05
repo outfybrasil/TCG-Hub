@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import CardMarketOverview from '@/components/CardMarketOverview';
 import {
     ArrowLeft, ShoppingCart, AlertCircle, ShieldCheck,
     Star, MapPin, Package, Zap
@@ -412,6 +413,8 @@ export default function CardProfileView({ pokemonCardId, backLabel = 'Voltar', o
 
                     </div>
                 </div>
+
+                <CardMarketOverview cardId={card.id} />
             </div>
         </div>
     );

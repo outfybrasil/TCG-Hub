@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { ShoppingCart, Bell, Mail, User as UserIcon, LogOut, Settings } from 'lucide-react';
+import { ShoppingCart, Bell, User as UserIcon, LogOut, Settings } from 'lucide-react';
 
 import type { CartItem } from '@/context/CartContext';
 import { useCart } from '@/context/CartContext';
@@ -12,23 +12,26 @@ import { Link } from '@/i18n/routing';
 export default function UserNav() {
     const [user, setUser] = useState<User | null>(null);
     const [walletBalance, setWalletBalance] = useState(0);
-    const [creditBalance, setCreditBalance] = useState(0);
-    const [creditLocked, setCreditLocked] = useState(0);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
     const { items, setIsOpen } = useCart();
 
     const cartItemCount = items.reduce((acc: number, item: CartItem) => acc + item.quantity, 0);
 
-    const fetchBalances = async (userId: string) => {
-        const [walletRes, creditRes] = await Promise.all([
-            supabase.from('wallets').select('balance').eq('user_id', userId).single(),
-            supabase.from('auction_credits').select('balance, locked').eq('user_id', userId).single(),
-        ]);
+    const fetchUnreadCount = async (userId: string) => {
+        const { count } = await supabase
+            .from('notifications')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId)
+            .eq('read', false);
+        setUnreadCount(count ?? 0);
+    };
 
+    const fetchBalances = async (userId: string) => {
+        const [walletRes] = await Promise.all([
+            supabase.from('wallets').select('balance').eq('user_id', userId).single(),
+        ]);
         if (walletRes.data) setWalletBalance(walletRes.data.balance);
-        if (creditRes.data) {
-            setCreditBalance(creditRes.data.balance);
-            setCreditLocked(creditRes.data.locked);
-        }
     };
 
     useEffect(() => {
@@ -46,6 +49,18 @@ export default function UserNav() {
                     setUser(session.user);
                     if (session.user.email !== 'admin@tcghub.com.br') {
                         await fetchBalances(session.user.id);
+                        await fetchUnreadCount(session.user.id);
+
+                        // Realtime: atualiza badge quando chega notificação nova
+                        channelRef.current = supabase
+                            .channel('user-nav-notifications')
+                            .on('postgres_changes', {
+                                event: '*',
+                                schema: 'public',
+                                table: 'notifications',
+                                filter: `user_id=eq.${session.user.id}`,
+                            }, () => { void fetchUnreadCount(session.user.id); })
+                            .subscribe();
                     }
                 }
             } catch (err) {
@@ -60,26 +75,27 @@ export default function UserNav() {
                 setUser(session.user);
                 if (session.user.email !== 'admin@tcghub.com.br') {
                     void fetchBalances(session.user.id);
+                    void fetchUnreadCount(session.user.id);
                 }
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
                 setWalletBalance(0);
-                setCreditBalance(0);
-                setCreditLocked(0);
+                setUnreadCount(0);
+                channelRef.current?.unsubscribe();
             }
         });
 
         return () => {
             authListener.subscription.unsubscribe();
+            channelRef.current?.unsubscribe();
         };
     }, []);
 
-    const availableCredits = creditBalance - creditLocked;
     const isAdmin = user?.email === 'admin@tcghub.com.br';
 
     return (
         <div className="flex items-center gap-3">
-            {/* Balances condensed */}
+            {/* Saldo cashback */}
             {user && !isAdmin && (
                 <div className="hidden lg:flex items-center gap-2 mr-2">
                     <div className="h-10 px-3 flex flex-col justify-center rounded-xl bg-white/5 border border-white/10" title="Cashback">
@@ -89,18 +105,20 @@ export default function UserNav() {
                 </div>
             )}
 
-            {/* Notifications & Messages */}
-            {user && (
-                <>
-                    <Link href="/mensagens" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 transition-colors hover:bg-white/10 hover:text-white" title="Mensagens">
-                        <Mail className="h-4 w-4" />
-                        <span className="absolute top-0 right-0 flex h-3 w-3 items-center justify-center rounded-full bg-blue-500 border-2 border-[#0c1324]"></span>
-                    </Link>
-                    <Link href="/notificacoes" className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 transition-colors hover:bg-white/10 hover:text-white" title="Notificações">
-                        <Bell className="h-4 w-4" />
-                        <span className="absolute top-0 right-0 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 border-2 border-[#0c1324]"></span>
-                    </Link>
-                </>
+            {/* Notificações com badge real */}
+            {user && !isAdmin && (
+                <Link
+                    href="/notificacoes"
+                    className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white/5 border border-white/10 text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
+                    title="Notificações"
+                >
+                    <Bell className="h-4 w-4" />
+                    {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-600 border-2 border-[#0c1324] text-[9px] font-black text-white">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                    )}
+                </Link>
             )}
 
             {/* Cart */}

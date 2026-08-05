@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { lookupBrazilianMarketPrices } from '@/lib/market-pricing';
 import {
     buildMarketInputFromCard,
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
     const secret = process.env.CRON_SECRET;
     
-    if (secret && authHeader !== `Bearer ${secret}`) {
+    if (!secret || authHeader !== `Bearer ${secret}`) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 

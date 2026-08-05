@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
 import { requireAuthenticatedUser } from '@/lib/server-auth';
+import { getSiteUrl } from '@/lib/site-url';
 
 const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || '' });
 const preference = new Preference(client);
@@ -29,25 +30,19 @@ export async function POST(req: Request) {
         const body = await req.json() as CreditsPreferenceBody;
         const { amount, payerFirstName, payerLastName } = body;
 
-        if (!amount) {
+        const depositAmount = Number(amount);
+        if (!Number.isFinite(depositAmount)) {
             return NextResponse.json({ error: 'Dados obrigatÃ³rios ausentes.' }, { status: 400 });
         }
 
-        if (amount < 0.01) {
-            return NextResponse.json({ error: 'Valor minimo para deposito e R$ 0,01.' }, { status: 400 });
+        if (depositAmount < 10 || depositAmount > 50000) {
+            return NextResponse.json({ error: 'O deposito deve ficar entre R$ 10,00 e R$ 50.000,00.' }, { status: 400 });
         }
 
         const userId = auth.user.id;
         const email = auth.user.email || 'guest@tcg-megastore.com.br';
 
-        const host = req.headers.get('host') || 'localhost:3000';
-        const protocol = req.headers.get('x-forwarded-proto') || (host.includes('localhost') ? 'http' : 'https');
-        let baseUrl = `${protocol}://${host}`;
-        if (baseUrl.includes('null')) baseUrl = 'http://localhost:3000';
-
-        if (baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')) {
-            baseUrl = 'https://tcg-hub.tonicoimbra.com';
-        }
+        const baseUrl = getSiteUrl();
 
         const preferenceRequest = {
             body: {
@@ -60,7 +55,7 @@ export async function POST(req: Request) {
                     id: 'creditos-tcg-megastore',
                     title: 'Depósito de Créditos TCG MEGASTORE',
                     quantity: 1,
-                    unit_price: Number(amount),
+                    unit_price: depositAmount,
                     currency_id: 'BRL',
                 }],
                 payer: {

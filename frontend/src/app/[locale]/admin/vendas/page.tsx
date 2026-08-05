@@ -160,6 +160,7 @@ export default function AdminSalesPage() {
     const handleUpdateTracking = async (id: string) => {
         setUpdatingTrack(true);
         try {
+            const purchase = purchases.find(p => p.id === id);
             const { error } = await supabase.from('purchases').update({
                 tracking_code: trackCode || null,
                 status: trackStatus,
@@ -168,6 +169,27 @@ export default function AdminSalesPage() {
             }).eq('id', id);
 
             if (error) throw error;
+
+            // Dispara notificação ao comprador quando pedido é enviado ou confirmado
+            if (purchase && (trackStatus === 'shipped' || trackStatus === 'approved')) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    await fetch('/api/notifications/admin', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify({
+                            userId: purchase.user_id,
+                            type: trackStatus === 'shipped' ? 'pedido_enviado' : 'pedido_confirmado',
+                            purchaseId: id,
+                            trackingCode: trackCode || null,
+                        })
+                    });
+                }
+            }
+
             setEditingTracking(null);
             fetchPurchases();
         } catch (error) {
@@ -177,6 +199,7 @@ export default function AdminSalesPage() {
             setUpdatingTrack(false);
         }
     };
+
 
     const handleDelete = async () => {
         if (!deleteModal.purchaseId) return;

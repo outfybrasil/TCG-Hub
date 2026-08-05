@@ -2,14 +2,17 @@ import { NextResponse } from 'next/server';
 
 import { calculateCreditRefundFee, calculateCreditRefundNet } from '@/lib/business-rules';
 import { getBusinessRules } from '@/lib/business-rules-server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAuthenticatedUser } from '@/lib/server-auth';
+import { checkRateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export async function POST(req: Request) {
     const auth = await requireAuthenticatedUser(req);
     if ('response' in auth) {
         return auth.response;
     }
+    const rate = checkRateLimit(`credit-refund:${auth.user.id}`, 3, 60 * 60 * 1000);
+    if (!rate.allowed) return rateLimitResponse(rate.retryAfter);
 
     try {
         const { userId, amount, mpPaymentId } = await req.json();
@@ -46,6 +49,19 @@ export async function POST(req: Request) {
         const availableBalance = Number(creditRow.balance) - Number(creditRow.locked || 0);
         if (availableBalance < requestedAmount) {
             return NextResponse.json({ error: 'Saldo disponivel insuficiente para estorno.' }, { status: 400 });
+        }
+
+        const paymentLookup = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(String(mpPaymentId))}`, {
+            headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` },
+        });
+        if (!paymentLookup.ok) {
+            return NextResponse.json({ error: 'Pagamento original nao encontrado.' }, { status: 404 });
+        }
+        const originalPayment = await paymentLookup.json();
+        const paymentOwner = originalPayment.metadata?.user_id || originalPayment.metadata?.userId || originalPayment.external_reference;
+        const belongsToUser = paymentOwner === userId || paymentOwner === `user_${userId}`;
+        if (!belongsToUser || originalPayment.status !== 'approved' || Number(originalPayment.transaction_amount) < refundAmount) {
+            return NextResponse.json({ error: 'Pagamento nao pertence ao usuario ou nao pode ser reembolsado.' }, { status: 403 });
         }
 
         const response = await fetch(`https://api.mercadopago.com/v1/payments/${mpPaymentId}/refunds`, {

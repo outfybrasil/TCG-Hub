@@ -1,11 +1,15 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 // POST /api/leilao/notificacoes
 export async function POST(req: Request) {
+    const auth = await requireAuthenticatedUser(req);
+    if ('response' in auth) return auth.response;
+
     try {
         const body = await req.json();
-        const { email, userId } = body;
+        const email = auth.user.email;
 
         if (!email) {
             return NextResponse.json({ error: 'E-mail é obrigatório para notificações.' }, { status: 400 });
@@ -13,7 +17,7 @@ export async function POST(req: Request) {
 
         const { error } = await supabaseAdmin.from('auction_subscribers').insert({
             email,
-            user_id: userId || null
+            user_id: auth.user.id
         });
 
         if (error) {

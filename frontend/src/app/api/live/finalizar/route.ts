@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
@@ -10,12 +10,12 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { liveId, winnerId, winnerName, amount, itemName, itemType, itemImage } = body;
+        const { liveId, winnerId, winnerName, itemName, itemType, itemImage } = body;
 
         // Check ownership
         const { data: liveData } = await supabaseAdmin
             .from('live_auctions')
-            .select('streamer_id')
+            .select('streamer_id, current_bid, winning_user_id, winning_user_name, status')
             .eq('id', liveId)
             .single();
             
@@ -23,19 +23,30 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Acesso negado. Apenas o dono da live ou admin pode finalizá-la.' }, { status: 403 });
         }
 
-        if (!liveId || !winnerId || !amount || !itemName) {
+        if (!liveId || !winnerId || !itemName) {
             return NextResponse.json({ error: 'Dados obrigatórios ausentes' }, { status: 400 });
         }
 
         // 1. Efetivar cobrança (debitar créditos do vencedor)
+        if (!liveData.winning_user_id || liveData.winning_user_id !== winnerId) {
+            return NextResponse.json({ error: 'O vencedor informado nao corresponde ao lance registrado.' }, { status: 409 });
+        }
+        const authoritativeWinnerId = liveData.winning_user_id;
+        const authoritativeWinnerName = liveData.winning_user_name || winnerName || 'Vencedor';
+        const finalAmount = Number(liveData.current_bid);
+        if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+            return NextResponse.json({ error: 'Valor final invalido.' }, { status: 400 });
+        }
+
         const { error: rpcError } = await supabaseAdmin.rpc('finalize_live_item_sale', {
             p_live_id: liveId,
-            p_winner_id: winnerId,
-            p_amount: amount
+            p_winner_id: authoritativeWinnerId,
+            p_amount: finalAmount
         });
 
         if (rpcError) {
             console.error('Erro no finalize_live_item_sale:', rpcError);
+            return NextResponse.json({ error: 'Nao foi possivel debitar os creditos do vencedor.' }, { status: 409 });
             // Continua mesmo com erro pra não perder o pedido
         }
 
@@ -45,9 +56,9 @@ export async function POST(req: Request) {
             item_name: itemName,
             item_type: itemType || 'Carta',
             item_image: itemImage,
-            winner_id: winnerId,
-            winner_name: winnerName,
-            final_bid: amount
+            winner_id: authoritativeWinnerId,
+            winner_name: authoritativeWinnerName,
+            final_bid: finalAmount
         });
 
         if (historyError) {
@@ -56,10 +67,10 @@ export async function POST(req: Request) {
 
         // 2. Criar pedido na tabela purchases (usando supabaseAdmin para bypass RLS)
         const { data: purchase, error: purchaseError } = await supabaseAdmin.from('purchases').insert({
-            user_id: winnerId,
+            user_id: authoritativeWinnerId,
             items: [{
                 name: itemName,
-                price: Number(amount),
+                price: finalAmount,
                 quantity: 1,
                 image_url: itemImage || '',
                 is_auction: true,
@@ -68,9 +79,9 @@ export async function POST(req: Request) {
                 item_type: itemType || 'Carta',
                 seller_id: liveData.streamer_id
             }],
-            total_amount: Number(amount),
+            total_amount: finalAmount,
             discount_amount: 0,
-            cashback_earned: Number(amount) * 0.05,
+            cashback_earned: finalAmount * 0.05,
             payment_method: 'live_credits',
             mp_payment_id: `live-${liveId}-${Date.now()}`,
             status: 'approved'
@@ -84,14 +95,14 @@ export async function POST(req: Request) {
         // 3. Dar cashback ao vencedor (5%)
         try {
             await supabaseAdmin.rpc('add_cashback', {
-                p_user_id: winnerId,
-                p_amount: Number(amount) * 0.05
+                p_user_id: authoritativeWinnerId,
+                p_amount: finalAmount * 0.05
             });
         } catch (cashbackErr) {
             console.error('Cashback error (non-blocking):', cashbackErr);
         }
 
-        console.log(`✅ Arremate processado: ${itemName} → ${winnerName} por R$${amount}`);
+        console.log(`[live-sale] ${itemName} -> ${authoritativeWinnerId} por R$${finalAmount}`);
 
         return NextResponse.json({ 
             success: true, 

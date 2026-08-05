@@ -8,7 +8,7 @@ O projeto é dividido em 3 módulos principais:
 
 1.  **Backend Core (`/backend`)**: API FastAPI responsável pelo gerenciamento de usuários, estoque, leilões e integração com APIs de mercado (TCGPlayer/CardMarket).
 2.  **AI Service (`/ai_service`)**: Microserviço dedicado ao processamento de imagens, identificação de cartas e análise de condição (Grading).
-3.  **Frontend (`/frontend`)**: Aplicação Next.js 14 com design premium, dark mode, glassmorphism e scanner IA integrado.
+3.  **Frontend (`/frontend`)**: Aplicação Next.js 16 com design premium, dark mode, glassmorphism e scanner IA integrado.
 
 ## 🚀 Como Rodar (Local)
 
@@ -44,7 +44,7 @@ Como o ambiente local não possui Docker configurado, utilize o script de inicia
 
 ## 🛠️ Tecnologias
 
-- **Frontend**: Next.js 14, TailwindCSS, Lucide React.
+- **Frontend**: Next.js 16, React 19, Tailwind CSS 4 e Lucide React.
 - **Backend**: FastAPI, SQLAlchemy, Pydantic v2.
 - **IA**: PyTorch, Vision Transformer (identificação), YOLOv8 (segmentação).
 - **Banco de Dados**: PostgreSQL (estruturado) + Redis (cache/socket).
@@ -56,3 +56,16 @@ Como o ambiente local não possui Docker configurado, utilize o script de inicia
 - [ ] Autenticação JWT completa
 - [ ] Integração real com TCGPlayer API
 - [ ] Leilões via WebSockets
+
+## Índice TCG Hub
+
+O preço de referência do TCG Hub não é o menor anúncio. A versão `weighted_median_v1`:
+
+- separa vendas verificadas de anúncios;
+- atribui maior peso a vendas pagas dentro do Hub;
+- reduz gradualmente o peso de dados antigos;
+- remove outliers pelo intervalo interquartil quando há amostra suficiente;
+- publica faixa justa, tamanho da amostra e nível de confiança;
+- mantém ofertas suspeitas compráveis, mas fora do índice até uma venda real confirmá-las.
+
+Antes de ativar os metadados de integridade em produção, aplique as migrations de `supabase/migrations`.

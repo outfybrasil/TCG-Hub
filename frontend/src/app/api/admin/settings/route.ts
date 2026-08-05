@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { DEFAULT_BUSINESS_RULES, type BusinessRules } from '@/lib/business-rules';
 import { upsertBusinessRules } from '@/lib/business-rules-server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAdmin } from '@/lib/server-auth';
 
 interface AdminSettingsPayload {

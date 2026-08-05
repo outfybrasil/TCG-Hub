@@ -1,180 +1,146 @@
 import { NextResponse } from 'next/server';
 import TCGdex from '@tcgdex/sdk';
-import { supabaseAdmin } from '@/lib/supabase';
+import pLimit from 'p-limit';
+
 import { requireAdmin } from '@/lib/server-auth';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const maxDuration = 300;
+export const runtime = 'nodejs';
 
-// Instâncias SDK por idioma
-const sdks: Record<string, TCGdex> = {
-    pt: new TCGdex('pt'),
-    en: new TCGdex('en'),
-    es: new TCGdex('es'),
-    it: new TCGdex('it'),
-    de: new TCGdex('de'),
-    fr: new TCGdex('fr'),
-};
+const LANGUAGES = ['pt-br', 'pt', 'en', 'es', 'it', 'de', 'fr'] as const;
+type Language = typeof LANGUAGES[number];
+const sdks = Object.fromEntries(LANGUAGES.map((lang) => [lang, new TCGdex(lang)])) as Record<Language, TCGdex>;
+const detailLimit = pLimit(8);
 
-const LANG_ORDER = ['pt', 'en', 'es', 'it', 'de', 'fr'] as const;
+const sleep = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-const SET_NAME_OVERRIDES: Record<string, string> = {
-    sv09: 'Parceiros Iniciais',
-    me03: 'Equilíbrio Perfeito',
-};
+async function retry<T>(operation: () => Promise<T>, attempts = 3): Promise<T> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error;
+            await sleep(300 * 2 ** attempt);
+        }
+    }
+    throw lastError;
+}
+
+function validSetId(value: unknown): value is string {
+    return typeof value === 'string' && /^[a-z0-9._-]{1,32}$/i.test(value);
+}
 
 export async function POST(request: Request) {
     const auth = await requireAdmin(request);
     if ('response' in auth) return auth.response;
 
     try {
-        const { setId } = await request.json();
-
-        if (setId) {
-            const result = await syncSet(setId);
-            return NextResponse.json(result);
+        const body = await request.json().catch(() => ({}));
+        if (body.setId !== undefined && !validSetId(body.setId)) {
+            return NextResponse.json({ success: false, error: 'ID de conjunto invalido.' }, { status: 400 });
         }
 
-        // Sync últimos 5 sets se nenhum ID fornecido
-        const sets = await sdks['pt'].set.list();
-        if (!sets) throw new Error('Não foi possível obter a lista de sets da TCGdex.');
-
-        let totalSynced = 0;
-        const setsToSync = sets.slice(-5);
-
-        for (const set of setsToSync) {
-            const result = await syncSet(set.id);
-            if (result.success) totalSynced += result.count ?? 0;
+        if (body.setId) {
+            const result = await syncSet(body.setId);
+            return NextResponse.json(result, { status: result.success ? 200 : 502 });
         }
+
+        const resumes = await retry(() => sdks.pt.set.list());
+        const candidates = await Promise.all((resumes || []).slice(-12).map((set) => detailLimit(async () => {
+            const detail = await sdks.pt.set.get(set.id).catch(() => sdks.en.set.get(set.id));
+            return { id: set.id, name: set.name, releaseDate: detail?.releaseDate || '' };
+        })));
+        const latest = candidates.sort((a, b) => b.releaseDate.localeCompare(a.releaseDate)).slice(0, 5);
+        const results = [];
+        for (const set of latest) results.push(await syncSet(set.id));
 
         return NextResponse.json({
-            success: true,
-            message: `Sincronizados ${totalSynced} cards dos últimos 5 sets.`,
-            setsSynced: setsToSync.map(s => s.name),
+            success: results.every((result) => result.success),
+            sets: latest,
+            results,
+            count: results.reduce((total, result) => total + (result.count || 0), 0),
         });
-    } catch (error: any) {
-        const msg = error?.message ?? String(error) ?? 'Erro desconhecido';
-        return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    } catch (error) {
+        console.error('[cards-sync] fatal:', error);
+        return NextResponse.json({ success: false, error: 'Falha ao consultar a TCGdex.' }, { status: 502 });
     }
 }
 
 async function syncSet(setId: string) {
     try {
-        // Busca o set em todos os idiomas em paralelo
-        const setResults = await Promise.all(
-            LANG_ORDER.map(lang => sdks[lang].set.get(setId).catch(() => null))
-        );
+        const setEntries = await Promise.all(LANGUAGES.map(async (lang) => [
+            lang,
+            await retry(() => sdks[lang].set.get(setId), 2).catch(() => undefined),
+        ] as const));
+        const setByLanguage = Object.fromEntries(setEntries) as Record<Language, Awaited<ReturnType<TCGdex['set']['get']>>>;
+        const primarySet = setByLanguage.pt || setByLanguage['pt-br'] || setByLanguage.en || setEntries.find(([, value]) => value)?.[1];
+        if (!primarySet) throw new Error(`Conjunto ${setId} nao encontrado.`);
 
-        // Monta um map de idioma → dados do set
-        const setByLang: Record<string, Awaited<ReturnType<TCGdex['set']['get']>>> = {};
-        LANG_ORDER.forEach((lang, i) => { setByLang[lang] = setResults[i]; });
+        const namesByLanguage = new Map<Language, Map<string, string>>();
+        for (const lang of LANGUAGES) {
+            namesByLanguage.set(lang, new Map((setByLanguage[lang]?.cards || []).map((card) => [card.id, card.name])));
+        }
 
-        // Fallback PT → EN → qualquer um disponível
-        const primarySet = setByLang['pt'] ?? setByLang['en'] ?? setResults.find(s => s !== null);
-        if (!primarySet) throw new Error(`Set "${setId}" não encontrado em nenhum idioma na TCGdex.`);
-
-        const totalOfficial = primarySet.cardCount?.official ?? 0;
-        const cardList = primarySet.cards ?? [];
-
-        console.log(`[sync] ${setId}: ${cardList.length} cards encontrados.`);
-
-        const batchSize = 10;
-        let withRarity = 0;
-        let withoutRarity = 0;
-        let savedCount = 0;
-        const sampleFailures: string[] = [];
-        const upsertErrors: string[] = [];
-
-        for (let i = 0; i < cardList.length; i += batchSize) {
-            const batch = cardList.slice(i, i + batchSize);
-
-            // Busca detalhes de cada carta com fallback por idioma
-            const detailedCards = await Promise.all(
-                batch.map(async (cardBrief) => {
-                    for (const lang of ['pt', 'en', 'fr'] as const) {
-                        try {
-                            const detail = await sdks[lang].card.get(cardBrief.id);
-                            if (detail) return { detail, lang };
-                        } catch { /* tenta próximo idioma */ }
-                    }
-                    return null;
-                })
-            );
-
-            const batchToSave: any[] = [];
-
-            for (let j = 0; j < batch.length; j++) {
-                const cardBrief = batch[j];
-                const result = detailedCards[j];
-                const detail = result?.detail;
-
-                if (detail?.rarity) {
-                    withRarity++;
-                } else {
-                    withoutRarity++;
-                    if (sampleFailures.length < 5) {
-                        sampleFailures.push(`${cardBrief.id}: sem rarity`);
-                    }
+        const rows = await Promise.all(primarySet.cards.map((brief) => detailLimit(async () => {
+            let detail: Awaited<ReturnType<TCGdex['card']['get']>> | undefined;
+            let imageUrl: string | null = null;
+            for (const lang of ['pt', 'pt-br', 'en'] as const) {
+                const candidate = await retry(() => sdks[lang].card.get(brief.id), 2).catch(() => undefined);
+                if (!detail && candidate) detail = candidate;
+                if (candidate?.image) {
+                    imageUrl = candidate.getImageURL('high', 'webp');
+                    break;
                 }
-
-                // Nomes por idioma a partir dos sets multilíngue
-                const nameByLang = (lang: string) =>
-                    (setByLang[lang]?.cards?.find(c => c.id === cardBrief.id) as any)?.name ?? cardBrief.name;
-
-                batchToSave.push({
-                    id: cardBrief.id,
-                    local_id: totalOfficial > 0
-                        ? `${cardBrief.localId}/${totalOfficial}`
-                        : cardBrief.localId,
-                    name: cardBrief.name,
-                    name_en: nameByLang('en'),
-                    name_es: nameByLang('es'),
-                    name_it: nameByLang('it'),
-                    name_de: nameByLang('de'),
-                    name_fr: nameByLang('fr'),
-                    image_url: detail?.getImageURL('high', 'png')
-                        ?? `${(cardBrief as any).image}/high.png`,
-                    set_id: primarySet.id,
-                    set_name: SET_NAME_OVERRIDES[primarySet.id] ?? primarySet.name,
-                    set_name_en: setByLang['en']?.name ?? primarySet.name,
-                    set_name_es: setByLang['es']?.name ?? primarySet.name,
-                    set_name_it: setByLang['it']?.name ?? primarySet.name,
-                    set_name_de: setByLang['de']?.name ?? primarySet.name,
-                    set_name_fr: setByLang['fr']?.name ?? primarySet.name,
-                    rarity: detail?.rarity ?? 'Comum',
-                    types: detail?.types ?? [],
-                    updated_at: new Date().toISOString(),
-                });
             }
 
-            // Upsert por batch — falha parcial não perde tudo
-            const { error: batchError } = await supabaseAdmin
-                .from('pokemon_cards')
-                .upsert(batchToSave, { onConflict: 'id' });
+            if (!imageUrl && brief.image) imageUrl = brief.getImageURL('high', 'webp');
+            return {
+                id: brief.id,
+                local_id: primarySet.cardCount.official > 0 ? `${brief.localId}/${primarySet.cardCount.official}` : brief.localId,
+                name: namesByLanguage.get('pt-br')?.get(brief.id) || namesByLanguage.get('pt')?.get(brief.id) || brief.name,
+                name_en: namesByLanguage.get('en')?.get(brief.id) || brief.name,
+                name_es: namesByLanguage.get('es')?.get(brief.id) || null,
+                name_it: namesByLanguage.get('it')?.get(brief.id) || null,
+                name_de: namesByLanguage.get('de')?.get(brief.id) || null,
+                name_fr: namesByLanguage.get('fr')?.get(brief.id) || null,
+                image_url: imageUrl,
+                set_id: primarySet.id,
+                set_name: setByLanguage.pt?.name || setByLanguage['pt-br']?.name || primarySet.name,
+                set_name_en: setByLanguage.en?.name || primarySet.name,
+                set_name_es: setByLanguage.es?.name || null,
+                set_name_it: setByLanguage.it?.name || null,
+                set_name_de: setByLanguage.de?.name || null,
+                set_name_fr: setByLanguage.fr?.name || null,
+                rarity: detail?.rarity || null,
+                types: detail?.types || [],
+                updated_at: new Date().toISOString(),
+            };
+        })));
 
-            if (batchError) {
-                upsertErrors.push(`Batch ${i}–${i + batchSize}: ${batchError.message}`);
-                console.error('[sync] Upsert error:', batchError);
-            } else {
-                savedCount += batchToSave.length;
-            }
-
-            // Pausa entre batches para não sobrecarregar a TCGdex
-            if (i + batchSize < cardList.length) {
-                await new Promise(r => setTimeout(r, 300));
-            }
+        const errors: string[] = [];
+        let saved = 0;
+        for (let index = 0; index < rows.length; index += 100) {
+            const batch = rows.slice(index, index + 100);
+            const { error } = await supabaseAdmin.from('pokemon_cards').upsert(batch, { onConflict: 'id' });
+            if (error) errors.push(`cards ${index + 1}-${index + batch.length}: ${error.message}`);
+            else saved += batch.length;
         }
 
         return {
-            success: true,
-            count: savedCount,
-            withRarity,
-            withoutRarity,
-            sampleFailures,
-            upsertErrors,
+            success: errors.length === 0,
+            setId,
+            setName: primarySet.name,
+            releaseDate: primarySet.releaseDate,
+            officialCount: primarySet.cardCount.official,
+            totalCount: primarySet.cardCount.total,
+            count: saved,
+            missingRarity: rows.filter((row) => !row.rarity).length,
+            errors,
         };
-    } catch (err: any) {
-        const msg = err?.message ?? String(err) ?? 'Erro desconhecido';
-        console.error(`[sync] Erro ao sincronizar set ${setId}:`, err);
-        return { success: false, error: msg };
+    } catch (error) {
+        console.error(`[cards-sync] ${setId}:`, error);
+        return { success: false, setId, count: 0, error: error instanceof Error ? error.message : 'Erro desconhecido' };
     }
 }

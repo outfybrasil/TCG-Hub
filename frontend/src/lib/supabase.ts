@@ -18,18 +18,9 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
 
 const globalForSupabase = globalThis as unknown as {
     supabaseClient?: SupabaseClient;
-    supabaseAdminClient?: SupabaseClient;
 };
 
 export const supabase =
     globalForSupabase.supabaseClient ??
     (globalForSupabase.supabaseClient = createClient(supabaseUrl, supabaseKey));
-
-// Admin client that bypasses RLS (Server-side only)
-export const supabaseAdmin =
-    globalForSupabase.supabaseAdminClient ??
-    (globalForSupabase.supabaseAdminClient = createClient(
-        supabaseUrl,
-        process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseKey
-    ));
 

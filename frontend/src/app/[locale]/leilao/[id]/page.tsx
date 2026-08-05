@@ -77,18 +77,22 @@ export default function AuctionDetailPage() {
             })
             .catch(() => setUser(null));
 
+    }, []);
+
+    useEffect(() => {
+        if (!user || !preferenceId) return;
+
         const interval = setInterval(() => {
-            if (user && preferenceId) { // Check periodically if credits updated while modal is open
+            // Check periodically if credits updated while modal is open
                 supabase.from('auction_credits')
                     .select('balance, locked')
                     .eq('user_id', user.id)
                     .single()
                     .then(({ data }) => setUserCredits(data || { balance: 0, locked: 0 }));
-            }
         }, 5000);
 
         return () => clearInterval(interval);
-    }, [user?.id, preferenceId]);
+    }, [user, preferenceId]);
 
     const getAuthHeaders = async (headers: HeadersInit = {}) => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -198,36 +202,29 @@ export default function AuctionDetailPage() {
                 return;
             }
 
-            const { error: bidEr } = await supabase.from('bids').insert({
-                auction_id: id,
-                user_id: user.id,
-                user_name: user.name,
-                amount,
-                credit_locked: amount
-            });
-            if (bidEr) throw bidEr;
+            // O RPC registra o lance, movimenta os créditos e atualiza o leilão
+            // na mesma transação. O navegador nunca define o vencedor anterior.
 
-            // --- ANTI-SNIPER LOGIC (+3 MIN) ---
-            const now = new Date();
-            const endsAtDate = new Date(auction.endsAt);
-            const timeDiff = endsAtDate.getTime() - now.getTime();
-            let newEndsAt = auction.endsAt;
-            let extended = false;
-
-            // Se faltar 3 minutos (180000ms) ou menos, prorroga para daqui a 3 minutos
-            if (timeDiff > 0 && timeDiff <= 3 * 60 * 1000) {
-                newEndsAt = new Date(now.getTime() + 3 * 60 * 1000).toISOString();
-                extended = true;
+            // Notifica o lance anterior que foi superado
+            if (auction.highestBidderId && auction.highestBidderId !== user.id) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    fetch('/api/notifications/admin', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`
+                        },
+                        body: JSON.stringify({
+                            type: 'lance_superado',
+                            prevBidderId: auction.highestBidderId,
+                            cardName: auction.cardName,
+                            newBid: amount,
+                            auctionId: id,
+                        })
+                    }).catch(() => {}); // fire-and-forget
+                }
             }
-
-            const { error: auctionError } = await supabase.from('auctions').update({
-                current_bid: amount,
-                bid_count: auction.bidCount + 1,
-                highest_bidder_id: user.id,
-                highest_bidder_name: user.name,
-                ...(extended ? { ends_at: newEndsAt } : {})
-            }).eq('id', id);
-            if (auctionError) throw auctionError;
 
             setUserCredits(prev => prev ? { ...prev, locked: (prev.locked || 0) + amount } : prev);
             setBidSuccess(true);

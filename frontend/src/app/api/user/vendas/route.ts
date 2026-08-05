@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 export async function GET(req: Request) {
@@ -70,12 +70,12 @@ export async function POST(req: Request) {
 
     try {
         const userId = auth.user.id;
-        const { purchaseId, trackingCode, status } = await req.json();
+        const { purchaseId, trackingCode } = await req.json();
 
         // Verify this user is the seller of this purchase
         const { data: purchase, error: purchaseError } = await supabaseAdmin
             .from('purchases')
-            .select('id, items')
+            .select('id, items, status')
             .eq('id', purchaseId)
             .single();
 
@@ -88,12 +88,21 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Acesso negado' }, { status: 403 });
         }
 
+        if (!['approved', 'paid', 'processing'].includes(String(purchase.status))) {
+            return NextResponse.json({ error: 'Esta venda nao pode ser marcada como enviada.' }, { status: 409 });
+        }
+
+        const normalizedTrackingCode = String(trackingCode || '').trim().toUpperCase();
+        if (!/^[A-Z0-9-]{3,40}$/.test(normalizedTrackingCode)) {
+            return NextResponse.json({ error: 'Codigo de rastreio invalido.' }, { status: 400 });
+        }
+
         const { error: updateError } = await supabaseAdmin.from('purchases').update({
-            tracking_code: trackingCode || null,
-            status: status,
-            carrier: trackingCode ? 'Correios' : null,
+            tracking_code: normalizedTrackingCode,
+            status: 'shipped',
+            carrier: 'Correios',
             updated_at: new Date().toISOString()
-        }).eq('id', purchaseId);
+        }).eq('id', purchaseId).eq('status', purchase.status);
 
         if (updateError) throw updateError;
 

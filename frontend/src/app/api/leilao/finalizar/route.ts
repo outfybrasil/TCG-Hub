@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 import { requireAuthenticatedUser } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
@@ -11,10 +11,10 @@ export async function POST(req: Request) {
 
     try {
         const body = await req.json();
-        const { auctionId, amount, shippingAddress, shippingCost, paymentMethod, mpPaymentId } = body;
+        const { auctionId, shippingAddress } = body;
         const userId = auth.user.id;
 
-        if (!auctionId || !amount) {
+        if (!auctionId) {
             return NextResponse.json({ error: 'Dados obrigatÃ³rios ausentes' }, { status: 400 });
         }
 
@@ -32,10 +32,19 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Somente o vencedor pode finalizar este leilao.' }, { status: 403 });
         }
 
+        if (!['active', 'ended', 'awaiting_payment'].includes(String(auction.status))) {
+            return NextResponse.json({ error: 'Este leilao ja foi finalizado ou cancelado.' }, { status: 409 });
+        }
+
+        const finalAmount = Number(auction.current_bid ?? auction.highest_bid);
+        if (!Number.isFinite(finalAmount) || finalAmount <= 0) {
+            return NextResponse.json({ error: 'Valor final do leilao invalido.' }, { status: 409 });
+        }
+
         const { data: creditRes, error: creditError } = await supabaseAdmin.rpc('finalize_auction_purchase', {
             p_user_id: userId,
             p_auction_id: auctionId,
-            p_amount: amount,
+            p_amount: finalAmount,
         });
 
         if (creditError || !creditRes) {
@@ -48,17 +57,17 @@ export async function POST(req: Request) {
             items: [{
                 id: auction.card_id || auctionId,
                 name: auction.card_name,
-                price: amount,
+                price: finalAmount,
                 quantity: 1,
                 image_url: auction.image_url,
                 is_auction: true,
                 auction_id: auctionId,
             }],
-            total_amount: amount + (shippingCost || 0),
+            total_amount: finalAmount,
             discount_amount: 0,
-            cashback_earned: amount * 0.05,
-            payment_method: paymentMethod || 'credits',
-            mp_payment_id: mpPaymentId || `auction-${auctionId}-${Date.now()}`,
+            cashback_earned: finalAmount * 0.05,
+            payment_method: 'credits',
+            mp_payment_id: `auction-${auctionId}`,
             shipping_address: shippingAddress,
             status: 'approved',
         });
@@ -74,7 +83,7 @@ export async function POST(req: Request) {
 
         await supabaseAdmin.rpc('add_cashback', {
             p_user_id: userId,
-            p_amount: amount * 0.05,
+            p_amount: finalAmount * 0.05,
         });
 
         return NextResponse.json({ success: true, status: 'approved' });

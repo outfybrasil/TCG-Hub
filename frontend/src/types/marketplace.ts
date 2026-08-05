@@ -28,7 +28,17 @@ export interface Listing {
     notes?: string;
     ships_from_state?: string;
     status?: string;
+    price_risk_level?: 'normal' | 'attention' | 'high';
+    price_risk_reason?: string;
+    reference_price?: number;
+    index_eligible?: boolean;
     views?: number;
     created_at?: string;
     seller_profiles?: SellerProfile;
+    pokemon_cards?: {
+        sold_price_min?: number;
+        sold_price_max?: number;
+        prices_updated_at?: string;
+        rarity?: string;
+    };
 }

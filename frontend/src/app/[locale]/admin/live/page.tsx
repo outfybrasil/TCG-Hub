@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import LiveChat from '@/components/LiveChat';
@@ -69,6 +69,16 @@ export default function AdminLiveDashboard() {
         return () => clearInterval(timer);
     }, [liveData?.ends_at]);
 
+    const checkActiveLive = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            router.push('/auth/login');
+            return;
+        }
+        const { data } = await supabase.from('live_auctions').select('*').eq('streamer_id', user.id).in('status', ['SCHEDULED', 'LIVE']).order('created_at', { ascending: false }).limit(1).single();
+        if (data) setLiveData(data);
+    }, [router]);
+
     useEffect(() => {
         checkActiveLive();
         const channel = supabase.channel('admin_bids')
@@ -77,14 +87,7 @@ export default function AdminLiveDashboard() {
                 else setLiveData(payload.new);
             }).subscribe();
         return () => { supabase.removeChannel(channel); };
-    }, []);
-
-    const checkActiveLive = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return router.push('/auth/login');
-        const { data } = await supabase.from('live_auctions').select('*').eq('streamer_id', user.id).in('status', ['SCHEDULED', 'LIVE']).order('created_at', { ascending: false }).limit(1).single();
-        if (data) setLiveData(data);
-    };
+    }, [checkActiveLive]);
 
     const createLive = async (e: React.FormEvent) => {
         e.preventDefault();
