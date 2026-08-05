@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, BellRing, ChevronUp, Clock3, Radio, ShieldCheck, Users, Wallet, Wifi, WifiOff } from 'lucide-react';
 import LiveChat from '@/components/LiveChat';
@@ -30,6 +30,7 @@ export default function LiveRoomPage() {
     const [submitting, setSubmitting] = useState(false);
     const [notice, setNotice] = useState('');
     const [isDesktop, setIsDesktop] = useState(false);
+    const settlementRequested = useRef(false);
 
     const load = useCallback(async () => {
         const [{ data: auth }, liveResult, bidResult] = await Promise.all([
@@ -80,6 +81,13 @@ export default function LiveRoomPage() {
     const winning = !!user && live?.winning_user_id === user.id;
     const videoUrl = useMemo(() => normalizeVideoUrl(live?.video_url), [live?.video_url]);
 
+    useEffect(() => {
+        if (!live?.ends_at || live.is_demo || secondsLeft > 0 || settlementRequested.current) return;
+        settlementRequested.current = true;
+        fetch('/api/live/settle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ liveId: id }) })
+            .finally(() => window.setTimeout(() => { settlementRequested.current = false; }, 10_000));
+    }, [id, live?.ends_at, live?.is_demo, secondsLeft]);
+
     async function confirmBid() {
         if (!pendingBid || !live) return;
         if (!user) { router.push('/auth/login'); return; }
@@ -113,7 +121,7 @@ export default function LiveRoomPage() {
         </header>
 
         <section className="relative h-dvh overflow-hidden bg-black lg:hidden">
-            {videoUrl ? <iframe src={videoUrl} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute inset-0 h-full w-full scale-[1.01] border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d1f] text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
+            {videoUrl ? <iframe src={videoUrl} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute left-1/2 top-1/2 h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d1f] text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/95" />
 
             <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))]">
@@ -139,7 +147,7 @@ export default function LiveRoomPage() {
             <div className="absolute bottom-6 right-3 z-20 flex flex-col items-center gap-4 pb-[env(safe-area-inset-bottom)]">
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/45 text-[9px] font-black backdrop-blur"><ChevronUp className="h-4 w-4 text-emerald-400" />{live.bid_count || bids.length}</div>
             </div>
-            {!isDesktop && <div className="pointer-events-auto absolute bottom-[235px] left-3 right-20 z-30 h-80">
+            {!isDesktop && <div className="pointer-events-auto absolute bottom-[270px] left-3 right-20 z-30 h-72">
                 <LiveChat liveId={id} currentUser={user} variant="overlay" />
             </div>}
         </section>
@@ -179,8 +187,8 @@ function normalizeVideoUrl(value?: string | null) {
     try {
         const url = new URL(value);
         if (url.hostname === 'twitch.tv' || url.hostname === 'www.twitch.tv') return `https://player.twitch.tv/?channel=${url.pathname.split('/').filter(Boolean)[0]}&parent=${window.location.hostname}`;
-        if (url.hostname === 'youtu.be') return `https://www.youtube.com/embed/${url.pathname.slice(1)}?autoplay=1`;
-        if (url.hostname.includes('youtube.com')) { const id = url.searchParams.get('v'); return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : value; }
+        if (url.hostname === 'youtu.be') return `https://www.youtube.com/embed/${url.pathname.slice(1)}?autoplay=1&mute=1&playsinline=1`;
+        if (url.hostname.includes('youtube.com')) { const id = url.searchParams.get('v'); return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&playsinline=1` : value; }
         return value;
     } catch { return null; }
 }
