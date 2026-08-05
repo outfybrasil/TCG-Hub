@@ -11,9 +11,9 @@ type LiveAuction = {
     id: string; title: string; status: string; video_url?: string | null; ends_at?: string | null;
     current_item_name?: string | null; current_item_type?: string | null; current_item_image?: string | null;
     current_item_description?: string | null; current_bid: number; starting_bid: number; min_bid_increment?: number;
-    bid_count?: number; winning_user_id?: string | null; winning_user_name?: string | null; is_demo?: boolean;
+    bid_count?: number; lot_number?: number | null; winning_user_id?: string | null; winning_user_name?: string | null; is_demo?: boolean;
 };
-type Bid = { id: string; user_id: string; user_name?: string | null; amount: number; created_at: string };
+type Bid = { id: string; lot_number?: number | null; user_id: string; user_name?: string | null; amount: number; created_at: string };
 
 export default function LiveRoomPage() {
     const { id } = useParams<{ id: string }>();
@@ -33,14 +33,16 @@ export default function LiveRoomPage() {
     const [isDesktop, setIsDesktop] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
     const settlementRequested = useRef(false);
+    const currentLot = useRef<number | null>(null);
 
     const load = useCallback(async () => {
-        const [{ data: auth }, liveResult, bidResult] = await Promise.all([
+        const [{ data: auth }, liveResult] = await Promise.all([
             supabase.auth.getSession(),
             supabase.from('live_auctions').select('*').eq('id', id).single(),
-            supabase.from('live_bids').select('id,user_id,user_name,amount,created_at').eq('live_id', id).order('created_at', { ascending: false }).limit(12),
         ]);
         if (liveResult.error || !liveResult.data) { router.replace('/lives'); return; }
+        currentLot.current = Number(liveResult.data.lot_number || 0);
+        const bidResult = await supabase.from('live_bids').select('id,lot_number,user_id,user_name,amount,created_at').eq('live_id', id).eq('lot_number', currentLot.current).order('created_at', { ascending: false }).limit(12);
         setLive(liveResult.data as LiveAuction);
         setBids((bidResult.data || []) as Bid[]);
         const sessionUser = auth.session?.user;
@@ -63,8 +65,8 @@ export default function LiveRoomPage() {
     useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer); }, []);
     useEffect(() => {
         const room = supabase.channel(`live-room-${id}`)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_auctions', filter: `id=eq.${id}` }, ({ new: next }) => setLive(next as LiveAuction))
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_bids', filter: `live_id=eq.${id}` }, ({ new: bid }) => setBids((old) => [bid as Bid, ...old.filter((item) => item.id !== bid.id)].slice(0, 12)))
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_auctions', filter: `id=eq.${id}` }, ({ new: next }) => { const nextLot = Number(next.lot_number || 0); if (currentLot.current !== nextLot) setBids([]); currentLot.current = nextLot; setLive(next as LiveAuction); })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_bids', filter: `live_id=eq.${id}` }, ({ new: bid }) => { if (Number(bid.lot_number || 0) === currentLot.current) setBids((old) => [bid as Bid, ...old.filter((item) => item.id !== bid.id)].slice(0, 12)); })
             .subscribe((status) => setConnected(status === 'SUBSCRIBED'));
         return () => { void supabase.removeChannel(room); };
     }, [id]);
