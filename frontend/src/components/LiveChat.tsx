@@ -9,7 +9,8 @@ interface Message {
     user_id: string;
     user_name: string;
     message: string;
-    timestamp: number;
+    timestamp?: number;
+    created_at?: string;
 }
 
 export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { liveId: string, currentUser?: { id: string | null, name: string } | null, variant?: 'panel' | 'overlay' }) {
@@ -24,7 +25,10 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
     const isBanned = currentUser?.id ? bannedUsers.has(currentUser.id) : false;
 
     useEffect(() => {
-        // Chat é apenas Transiente (Broadcast), não salva em DB!
+        fetch(`/api/live/chat?liveId=${encodeURIComponent(liveId)}`, { cache: 'no-store' })
+            .then(response => response.ok ? response.json() : { messages: [] })
+            .then(result => setMessages((result.messages || []).map((message: Message) => ({ ...message, timestamp: new Date(message.created_at || Date.now()).getTime() }))));
+
         const chatChannel = supabase.channel(`live_chat_${liveId}`, {
             config: {
                 broadcast: { self: true },
@@ -32,23 +36,11 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
         });
 
         chatChannel
-            .on('broadcast', { event: 'new_message' }, (payload) => {
-                const msg = payload.payload;
-                setBannedUsers(prevBanned => {
-                    // Se o usuário já está banido, ignora
-                    if (prevBanned.has(msg.user_id)) return prevBanned;
-                    
-                    // Anti-duplicação absoluta por memória persistente do React
-                    if (processedIds.current.has(msg.id)) return prevBanned;
-                    processedIds.current.add(msg.id);
-
-                    setMessages(prev => {
-                        const newArray = [...prev, msg];
-                        if (newArray.length > 100) return newArray.slice(newArray.length - 100);
-                        return newArray;
-                    });
-                    return prevBanned;
-                });
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_chat_messages', filter: `live_id=eq.${liveId}` }, ({ new: row }) => {
+                const msg = { ...(row as unknown as Message), timestamp: new Date(String(row.created_at)).getTime() };
+                if (processedIds.current.has(msg.id)) return;
+                processedIds.current.add(msg.id);
+                setMessages(prev => [...prev.filter(item => item.id !== msg.id), msg].slice(-100));
             })
             .on('broadcast', { event: 'admin_ban' }, (payload) => {
                 const bannedId = payload.payload.user_id;
@@ -90,26 +82,17 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
 
     const sendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newMessage.trim() || !channel || isBanned) return;
-        
-        const userName = currentUser?.name || `Anon_${Math.floor(Math.random() * 1000)}`;
-        const userId = currentUser?.id || `visitor_${Math.floor(Math.random() * 1000000)}`;
-
-        const payload: Message = {
-            id: Math.random().toString(36).substr(2, 9),
-            user_id: userId,
-            user_name: userName,
-            message: newMessage,
-            timestamp: Date.now()
-        };
-
-        setNewMessage(''); 
-
-        await channel.send({
-            type: 'broadcast',
-            event: 'new_message',
-            payload: payload
-        });
+        if (!currentUser?.id || !newMessage.trim() || !channel || isBanned) return;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) return;
+        const text = newMessage.trim();
+        setNewMessage('');
+        const response = await fetch('/api/live/chat', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ liveId, message: text }) });
+        if (!response.ok) { setNewMessage(text); return; }
+        const saved = (await response.json()).message;
+        const payload = { ...saved, timestamp: new Date(saved.created_at).getTime() } as Message;
+        processedIds.current.add(payload.id);
+        setMessages(prev => [...prev.filter(item => item.id !== payload.id), payload].slice(-100));
     };
 
     const handleBan = async (msg: Message) => {
@@ -185,11 +168,11 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
                                             </button>
                                         )}
                                     </>
-                                ) : (
+                                ) : currentUser?.id ? (
                                     <button onClick={() => handleReport(msg)} className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 text-amber-500 hover:bg-amber-500 hover:text-white transition-colors" title="Denunciar Comentário">
                                         ⚠️
                                     </button>
-                                )}
+                                ) : null}
                             </div>
                         </div>
                     ))
@@ -202,14 +185,16 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
                 <div className="p-4 bg-rose-950/50 border-t border-rose-900/50 text-center">
                     <span className="text-xs font-bold text-rose-500 uppercase tracking-widest">🛑 Você foi silenciado nesta live</span>
                 </div>
+            ) : !currentUser?.id ? (
+                <div className={`${variant === 'overlay' ? 'p-1' : 'border-t border-slate-800/80 bg-slate-900/80 p-3'}`}><a href="/auth/login" className="block rounded-xl border border-white/15 bg-black/45 px-3 py-2 text-center text-[10px] font-black uppercase tracking-widest text-white backdrop-blur">Entre para comentar</a></div>
             ) : (
                 <form onSubmit={sendMessage} className={`flex shrink-0 gap-2 ${variant === 'overlay' ? 'p-1' : 'border-t border-slate-800/80 bg-slate-900/80 p-3'}`}>
                     <input 
                         type="text" 
                         value={newMessage}
                         onChange={e => setNewMessage(e.target.value)}
-                        placeholder={currentUser ? "Envie uma mensagem..." : "Assista ao vivo!"}
-                        disabled={!channel}
+                        placeholder="Envie uma mensagem..."
+                        disabled={!channel || !currentUser?.id}
                         className={`flex-1 rounded-xl border px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500/50 transition-colors ${variant === 'overlay' ? 'border-white/15 bg-black/40 backdrop-blur-md placeholder:text-white/45' : 'border-slate-800 bg-slate-950 placeholder-slate-600'}`}
                     />
                     <button 

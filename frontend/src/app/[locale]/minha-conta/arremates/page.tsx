@@ -16,6 +16,9 @@ interface Arremate {
         price: number;
         image_url: string;
         is_live?: boolean;
+        live_id?: string;
+        lot_number?: number;
+        item_type?: string;
     }>;
     live_auctions?: {
         current_item_name: string;
@@ -80,9 +83,10 @@ function ArremateCard({ arremate }: { arremate: Arremate }) {
                             <div>
                                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Data e Hora</p>
                                 <p className="text-[11px] font-bold text-slate-400">
-                                    {date.toLocaleDateString('pt-BR')} às {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {date.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} às {date.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                 </p>
                             </div>
+                            {item.lot_number && <div><p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Lote da live</p><p className="text-[11px] font-bold text-slate-400">#{item.lot_number}</p></div>}
                             <div>
                                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Status</p>
                                 <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
@@ -101,9 +105,7 @@ function ArremateCard({ arremate }: { arremate: Arremate }) {
                         <p className="text-[10px] text-slate-500 font-bold">
                             #{arremate.order_number || arremate.id.split('-')[0].toUpperCase()}
                         </p>
-                        <Link href={`/minha-conta/pedidos/${arremate.id}`} className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:translate-x-1 transition-transform">
-                            Ver Detalhes do Pedido →
-                        </Link>
+                        <div className="flex items-center gap-4">{item.live_id && <Link href={`/live/${item.live_id}`} className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white">Ver live</Link>}<Link href={`/minha-conta/pedidos/${arremate.id}`} className="text-[10px] font-black text-rose-500 uppercase tracking-widest hover:translate-x-1 transition-transform">Ver Pedido →</Link></div>
                     </div>
                 </div>
             </div>
@@ -124,7 +126,6 @@ export default function MeusArrematesPage() {
                 return;
             }
 
-            // Buscamos por type = 'LIVE_AUCTION' ou payment_method = 'live_credits' (legado)
             const { data, error } = await supabase
                 .from('purchases')
                 .select(`
@@ -135,7 +136,7 @@ export default function MeusArrematesPage() {
                     )
                 `)
                 .eq('user_id', user.id)
-                .or('type.eq.LIVE_AUCTION,payment_method.eq.live_credits')
+                .eq('payment_method', 'live_credits')
                 .order('created_at', { ascending: false });
 
             if (error) {
