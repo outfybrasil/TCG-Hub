@@ -54,7 +54,7 @@ export default async function RootLayout({
             <main className="min-h-screen">
               {/* Promo bar */}
               <div
-                className="px-6 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em]"
+                className="promo-bar px-6 py-2 text-center text-[10px] font-black uppercase tracking-[0.2em]"
                 style={{
                   background: "linear-gradient(90deg, #be0037, #e11d48, #be0037)",
                   color: "#fff",
