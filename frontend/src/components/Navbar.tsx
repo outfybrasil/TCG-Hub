@@ -7,9 +7,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from '@/i18n/routing';
 import UserNav from '@/components/UserNav';
 import GlobalSearchBar from '@/components/GlobalSearchBar';
+import { usePathname } from 'next/navigation';
 
 export default function Navbar() {
+  const pathname = usePathname();
   const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
+
+  if (pathname.includes('/admin')) return null;
 
   const menuItems = [
     { id: 'cartas', label: 'Cartas', hasMegaMenu: true },

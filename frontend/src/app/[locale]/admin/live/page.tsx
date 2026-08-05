@@ -154,35 +154,35 @@ export default function AdminLiveDashboard() {
         } finally { setIsProcessing(false); }
     };
 
-    const inputClass = "w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm font-medium text-white focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600 outline-none transition-all placeholder:text-slate-600";
+    const inputClass = "min-h-12 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base font-medium text-white outline-none transition-all placeholder:text-slate-500 focus:border-rose-600 focus:ring-2 focus:ring-rose-500/20 sm:text-sm";
     const labelClass = "text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block";
 
     return (
         <>
             <div className="min-h-screen bg-slate-900 text-white selection:bg-rose-500/30">
                 {/* HEADER */}
-                <div className="px-8 py-5 flex items-center justify-between sticky top-0 z-40 bg-slate-900/95 backdrop-blur-xl border-b border-white/5">
-                    <div className="flex items-center gap-3">
+                <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-40 flex flex-col gap-3 border-b border-white/5 bg-slate-900/95 px-4 py-3 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:top-0 lg:px-8 lg:py-5">
+                    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                         {liveData?.status === 'LIVE' && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>}
-                        <h1 className="font-black uppercase tracking-tighter text-lg text-white">📡 Cabine de Comando</h1>
-                        {liveData && <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">{liveData.title}</span>}
+                        <h1 className="shrink-0 text-sm font-black uppercase tracking-tighter text-white sm:text-lg">Cabine de Comando</h1>
+                        {liveData && <span className="min-w-0 truncate rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-wider text-rose-500 sm:px-3 sm:text-[10px] sm:tracking-widest">{liveData.title}</span>}
                     </div>
                     {liveData && liveData.status !== 'ENDED' && (
-                        <div className="flex items-center gap-3">
-                            <button onClick={() => window.open(`/live/${liveData.id}`, '_blank')} className="h-10 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/5 text-slate-300 border border-white/10 hover:bg-white/10 transition-all">
-                                👁️ Ver Arena
+                        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+                            <button onClick={() => window.open(`/live/${liveData.id}`, '_blank')} className="min-h-11 rounded-xl border border-white/10 bg-white/5 px-4 text-[10px] font-black uppercase tracking-wider text-slate-200 transition-all hover:bg-white/10 sm:px-5 sm:tracking-widest">
+                                Ver Arena
                             </button>
-                            <button onClick={() => setIsEndConfirmOpen(true)} className="h-10 px-5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-rose-600 text-white hover:bg-rose-700 transition-all shadow-lg shadow-rose-600/20">
-                                🛑 Encerrar
+                            <button onClick={() => setIsEndConfirmOpen(true)} className="min-h-11 rounded-xl bg-rose-600 px-4 text-[10px] font-black uppercase tracking-wider text-white shadow-lg shadow-rose-600/20 transition-all hover:bg-rose-700 sm:px-5 sm:tracking-widest">
+                                Encerrar
                             </button>
                         </div>
                     )}
                 </div>
 
-                <div className="max-w-7xl mx-auto p-8 animate-fade-up">
+                <div className="mx-auto max-w-7xl px-4 pb-28 pt-5 sm:px-6 sm:pt-8 lg:p-8 animate-fade-up">
                     {!liveData || liveData.status === 'ENDED' ? (
-                        <div className="max-w-md mx-auto mt-20">
-                            <div className="bg-white/5 border border-white/10 rounded-[40px] p-12 shadow-2xl relative overflow-hidden">
+                        <div className="mx-auto mt-6 max-w-md sm:mt-20">
+                            <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-6 shadow-2xl sm:rounded-[40px] sm:p-12">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-rose-600/5 blur-[60px] -z-10"></div>
                                 <div className="text-center mb-10">
                                     <div className="text-4xl mb-4">📡</div>
@@ -205,12 +205,12 @@ export default function AdminLiveDashboard() {
                             </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-12 gap-8">
+                        <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 xl:gap-8">
                             {/* LEFT PANEL */}
-                            <div className="col-span-4 space-y-8">
-                                <div className="bg-white/5 border border-white/10 rounded-[32px] p-8 shadow-2xl relative overflow-hidden">
+                            <div className="order-2 space-y-4 xl:order-1 xl:col-span-4 xl:space-y-8">
+                                <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-2xl sm:p-6 xl:rounded-[32px] xl:p-8">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-rose-600/5 blur-[60px] -z-10"></div>
-                                    <div className="flex items-center gap-2 mb-8">
+                                    <div className="mb-5 flex items-center gap-2 xl:mb-8">
                                         <div className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse shadow-[0_0_8px_rgba(225,29,72,0.6)]"></div>
                                         <h3 className="text-[10px] font-black uppercase tracking-widest text-rose-500">Painel de Lotes</h3>
                                     </div>
@@ -227,12 +227,12 @@ export default function AdminLiveDashboard() {
                                             <label className={labelClass}>Imagem (URL ou Câmera)</label>
                                             <div className="flex gap-2">
                                                 <input type="text" value={itemForm.image} onChange={e => setItemForm({ ...itemForm, image: e.target.value })} className={inputClass} placeholder="Cole a URL ou tire foto" />
-                                                <button type="button" onClick={startCamera} className="shrink-0 h-11 w-11 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center hover:bg-white/10 transition-all active:scale-90">
+                                                <button type="button" onClick={startCamera} aria-label="Abrir câmera" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition-all hover:bg-white/10 active:scale-90">
                                                     📷
                                                 </button>
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 gap-4 min-[390px]:grid-cols-2">
                                             <div>
                                                 <label className={labelClass}>Tipo</label>
                                                 <select value={itemForm.type} onChange={e => setItemForm({ ...itemForm, type: e.target.value })} className={inputClass}>
@@ -293,7 +293,7 @@ export default function AdminLiveDashboard() {
                                     </div>
                                 )}
 
-                                <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 h-[400px] flex flex-col shadow-2xl relative overflow-hidden">
+                                <div className="relative flex h-[min(58vh,400px)] min-h-80 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 shadow-2xl sm:p-6 xl:rounded-[32px]">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-[60px] -z-10"></div>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4 px-2">💬 Chat Operacional</p>
                                     <div className="flex-1 min-h-0 bg-slate-950/30 rounded-2xl border border-white/5">
@@ -303,17 +303,17 @@ export default function AdminLiveDashboard() {
                             </div>
 
                             {/* RIGHT PANEL */}
-                            <div className="col-span-8 space-y-8">
-                                <div className="bg-white/5 border border-white/10 rounded-[48px] p-12 relative overflow-hidden shadow-2xl min-h-[400px]">
+                            <div className="order-1 space-y-4 xl:order-2 xl:col-span-8 xl:space-y-8">
+                                <div className="relative min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 shadow-2xl sm:p-6 xl:min-h-[400px] xl:rounded-[48px] xl:p-12">
                                     <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_80%_20%,rgba(225,29,72,0.1),transparent_60%)]"></div>
                                     <div className="relative z-10">
-                                        <div className="flex items-start justify-between mb-12">
-                                            <div className="flex-1">
+                                        <div className="mb-6 flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between xl:mb-12">
+                                            <div className="min-w-0 flex-1">
                                                 <div className="inline-flex items-center gap-2 bg-rose-500/10 px-3 py-1 rounded-full border border-rose-500/20 mb-4">
                                                     <span className="h-1 w-1 rounded-full bg-rose-600"></span>
                                                     <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">Lote em Negociação</span>
                                                 </div>
-                                                <h2 className="text-6xl font-black uppercase tracking-tighter text-white leading-tight">
+                                                <h2 className="break-words text-[clamp(1.75rem,9vw,3.75rem)] font-black uppercase leading-[0.95] tracking-[-0.03em] text-white">
                                                     {liveData.current_item_name || 'Aguardando Lote...'}
                                                 </h2>
                                                 {liveData.current_item_type && (
@@ -322,28 +322,28 @@ export default function AdminLiveDashboard() {
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="text-right">
+                                            <div className="text-left sm:shrink-0 sm:text-right">
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Tempo Restante</p>
-                                                <div className={`text-7xl font-black font-mono tabular-nums tracking-tighter ${timeLeft < 10 ? 'text-rose-600 drop-shadow-[0_0_20px_rgba(225,29,72,0.4)] animate-pulse' : 'text-white'}`}>
+                                                <div className={`font-mono text-5xl font-black tabular-nums tracking-tighter sm:text-6xl xl:text-7xl ${timeLeft < 10 ? 'text-rose-600 drop-shadow-[0_0_20px_rgba(225,29,72,0.4)] animate-pulse' : 'text-white'}`}>
                                                     {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-6 mt-auto">
-                                            <div className="bg-white/5 border border-white/10 rounded-[32px] p-8">
+                                        <div className="mt-auto grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 xl:gap-6">
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 xl:rounded-[32px] xl:p-8">
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Maior Lance</p>
-                                                <p className="text-5xl font-black tabular-nums text-amber-500 tracking-tighter">
+                                                <p className="break-words text-3xl font-black tabular-nums tracking-tighter text-amber-500 sm:text-4xl xl:text-5xl">
                                                     R$ {Number(liveData.current_bid || 0).toFixed(2).replace('.', ',')}
                                                 </p>
                                             </div>
-                                            <div className="bg-white/5 border border-white/10 rounded-[32px] p-8">
+                                            <div className="rounded-2xl border border-white/10 bg-white/5 p-5 xl:rounded-[32px] xl:p-8">
                                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Vencedor Atual</p>
                                                 <div className="flex items-center gap-4">
                                                     <div className={`h-12 w-12 rounded-2xl flex items-center justify-center text-2xl ${liveData.winning_user_id ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-white/5 text-slate-600'}`}>
                                                         {liveData.winning_user_id ? '👑' : '⏳'}
                                                     </div>
-                                                    <p className={`text-3xl font-black uppercase tracking-tighter truncate ${liveData.winning_user_id ? 'text-emerald-500' : 'text-slate-600'}`}>
+                                                    <p className={`min-w-0 truncate text-xl font-black uppercase tracking-tighter sm:text-2xl xl:text-3xl ${liveData.winning_user_id ? 'text-emerald-500' : 'text-slate-600'}`}>
                                                         {liveData.winning_user_name || 'Aguardando...'}
                                                     </p>
                                                 </div>
@@ -351,8 +351,8 @@ export default function AdminLiveDashboard() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl">
-                                    <div className="mb-4 flex items-center justify-between"><div><h3 className="text-sm font-black text-white">Histórico de arremates</h3><p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-500">Registro oficial com horário de Brasília</p></div><span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-400">Atualização automática</span></div>
+                                <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-2xl sm:p-6 xl:rounded-[32px]">
+                                    <div className="mb-4 flex flex-col gap-3 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between"><div><h3 className="text-sm font-black text-white">Histórico de arremates</h3><p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-500">Registro oficial com horário de Brasília</p></div><span className="w-fit rounded-full bg-emerald-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-400">Atualização automática</span></div>
                                     <LiveSalesHistory liveId={liveData.id} compact />
                                 </div>
                             </div>
@@ -363,7 +363,7 @@ export default function AdminLiveDashboard() {
                 {/* MODAL: Disparar */}
                 {isStartConfirmOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-fade-in">
-                        <div className="bg-slate-900 border border-white/10 rounded-[40px] p-12 max-w-sm w-full shadow-2xl text-center">
+                        <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-slate-900 p-6 text-center shadow-2xl sm:rounded-[40px] sm:p-12">
                             <div className="text-5xl mb-6">🔨</div>
                             <h3 className="text-2xl font-black uppercase tracking-tighter text-white mb-2">Bater o Martelo?</h3>
                             <p className="text-sm font-bold text-slate-500 uppercase tracking-tight leading-relaxed mb-10">
@@ -380,7 +380,7 @@ export default function AdminLiveDashboard() {
                 {/* MODAL: Encerrar */}
                 {isEndConfirmOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl animate-fade-in">
-                        <div className="bg-slate-900 border border-rose-500/20 rounded-[40px] p-12 max-w-sm w-full shadow-2xl text-center">
+                        <div className="w-full max-w-sm rounded-3xl border border-rose-500/20 bg-slate-900 p-6 text-center shadow-2xl sm:rounded-[40px] sm:p-12">
                             <div className="text-5xl mb-6">🛑</div>
                             <h3 className="text-2xl font-black uppercase tracking-tighter text-rose-500 mb-2">Encerrar Live?</h3>
                             <p className="text-sm font-bold text-slate-500 uppercase tracking-tight leading-relaxed mb-10">
