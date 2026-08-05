@@ -1,420 +1,148 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, BellRing, ChevronUp, Clock3, Radio, ShieldCheck, Users, Wallet, Wifi, WifiOff, X } from 'lucide-react';
 import LiveChat from '@/components/LiveChat';
+import { supabase } from '@/lib/supabase';
+
+type LiveAuction = {
+    id: string; title: string; status: string; video_url?: string | null; ends_at?: string | null;
+    current_item_name?: string | null; current_item_type?: string | null; current_item_image?: string | null;
+    current_item_description?: string | null; current_bid: number; starting_bid: number; min_bid_increment?: number;
+    bid_count?: number; winning_user_id?: string | null; winning_user_name?: string | null;
+};
+type Bid = { id: string; user_id: string; user_name?: string | null; amount: number; created_at: string };
 
 export default function LiveRoomPage() {
-    const params = useParams();
+    const { id } = useParams<{ id: string }>();
     const router = useRouter();
-    const liveId = params.id as string;
-    
-    const [liveData, setLiveData] = useState<any>(null);
+    const [live, setLive] = useState<LiveAuction | null>(null);
+    const [bids, setBids] = useState<Bid[]>([]);
     const [loading, setLoading] = useState(true);
-    const [bidding, setBidding] = useState(false);
-    const [timeLeft, setTimeLeft] = useState<number>(0);
-    const [userId, setUserId] = useState<string | null>(null);
-    const [userName, setUserName] = useState<string>('');
-    const [winnerHistory, setWinnerHistory] = useState<any[]>([]);
-    const [userBalance, setUserBalance] = useState<number | null>(null);
-    const [customBid, setCustomBid] = useState<string>('');
-    const [viewerCount, setViewerCount] = useState<number>(1);
+    const [connected, setConnected] = useState(false);
+    const [user, setUser] = useState<{ id: string; name: string } | null>(null);
+    const [balance, setBalance] = useState<number | null>(null);
+    const [viewerCount, setViewerCount] = useState(1);
+    const [now, setNow] = useState(0);
+    const [customBid, setCustomBid] = useState('');
+    const [pendingBid, setPendingBid] = useState<number | null>(null);
+    const [submitting, setSubmitting] = useState(false);
+    const [notice, setNotice] = useState('');
+    const [chatOpen, setChatOpen] = useState(false);
 
-    useEffect(() => {
-        loadSession();
-
-        const timer = setInterval(() => {
-            setLiveData((prev: any) => {
-                if (!prev || !prev.ends_at) return prev;
-                const msLeft = new Date(prev.ends_at).getTime() - Date.now();
-                const secondsLeft = Math.max(0, Math.floor(msLeft / 1000));
-                setTimeLeft(secondsLeft);
-                return prev;
-            });
-        }, 1000);
-
-        const channel = supabase.channel(`live_bids_${liveId}`)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_auctions', filter: `id=eq.${liveId}` }, (payload) => {
-                setLiveData(payload.new);
-                if (payload.new.ends_at) {
-                    const msLeft = new Date(payload.new.ends_at).getTime() - Date.now();
-                    setTimeLeft(Math.max(0, Math.floor(msLeft / 1000)));
-                } else {
-                    setTimeLeft(0);
-                }
-            })
-            .subscribe();
-
-        const historyChannel = supabase.channel(`live_history_${liveId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_auction_history', filter: `live_id=eq.${liveId}` }, (payload) => {
-                setWinnerHistory(prev => {
-                    // Deduplica: ignora se já existe um item com o mesmo id
-                    if (prev.some(h => h.id === payload.new.id)) return prev;
-                    return [payload.new, ...prev].slice(0, 5);
-                });
-            })
-            .subscribe();
-
-        return () => {
-            clearInterval(timer);
-            supabase.removeChannel(channel);
-            supabase.removeChannel(historyChannel);
-        };
-    }, [liveId]);
-
-    // Track Realtime Presence (Viewer Count)
-    useEffect(() => {
-        const presenceChannel = supabase.channel(`live_presence_${liveId}`, {
-            config: { presence: { key: userId || Math.random().toString() } }
-        });
-
-        presenceChannel
-            .on('presence', { event: 'sync' }, () => {
-                const state = presenceChannel.presenceState();
-                setViewerCount(Math.max(1, Object.keys(state).length));
-            })
-            .subscribe(async (status) => {
-                if (status === 'SUBSCRIBED') {
-                    await presenceChannel.track({ online_at: new Date().toISOString() });
-                }
-            });
-
-        return () => {
-            supabase.removeChannel(presenceChannel);
-        };
-    }, [liveId, userId]);
-
-    const fetchHistory = async () => {
-        try {
-            const res = await fetch(`/api/live/history?liveId=${liveId}`);
-            if (res.ok) {
-                const json = await res.json();
-                setWinnerHistory(json.history || []);
-            }
-        } catch (err) {
-            console.error('Erro ao buscar historico:', err);
+    const load = useCallback(async () => {
+        const [{ data: auth }, liveResult, bidResult] = await Promise.all([
+            supabase.auth.getSession(),
+            supabase.from('live_auctions').select('*').eq('id', id).single(),
+            supabase.from('live_bids').select('id,user_id,user_name,amount,created_at').eq('live_id', id).order('created_at', { ascending: false }).limit(12),
+        ]);
+        if (liveResult.error || !liveResult.data) { router.replace('/lives'); return; }
+        setLive(liveResult.data as LiveAuction);
+        setBids((bidResult.data || []) as Bid[]);
+        const sessionUser = auth.session?.user;
+        if (sessionUser) {
+            setUser({ id: sessionUser.id, name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Comprador' });
+            const { data: credits } = await supabase.from('auction_credits').select('balance,locked').eq('user_id', sessionUser.id).maybeSingle();
+            if (credits) setBalance(Number(credits.balance) - Number(credits.locked));
         }
-    };
-
-    const loadSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUserId(session?.user?.id || null);
-        setUserName(session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || '');
-
-        if (session?.user?.id) {
-            const { data: wallet } = await supabase
-                .from('auction_credits')
-                .select('balance, locked')
-                .eq('user_id', session.user.id)
-                .single();
-            if (wallet) setUserBalance(wallet.balance - wallet.locked);
-        }
-
-        const { data, error } = await supabase.from('live_auctions').select('*').eq('id', liveId).single();
-        if (error || !data) { router.push('/lives'); return; }
-
-        setLiveData(data);
-        if (data.ends_at) setTimeLeft(Math.max(0, Math.floor((new Date(data.ends_at).getTime() - Date.now()) / 1000)));
         setLoading(false);
-        
-        // Busca o histórico após carregar os dados da live
-        await fetchHistory();
-    };
+    }, [id, router]);
 
-    const placeBid = async (amount: number, isAbsolute: boolean = false) => {
-        if (!userId) { alert('Faça login para participar.'); router.push('/auth/login'); return; }
-        if (timeLeft <= 0) { alert('Lote encerrado.'); return; }
-        if (!liveData || bidding) return;
+    useEffect(() => { void load(); }, [load]);
+    useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer); }, []);
+    useEffect(() => {
+        const room = supabase.channel(`live-room-${id}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_auctions', filter: `id=eq.${id}` }, ({ new: next }) => setLive(next as LiveAuction))
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_bids', filter: `live_id=eq.${id}` }, ({ new: bid }) => setBids((old) => [bid as Bid, ...old.filter((item) => item.id !== bid.id)].slice(0, 12)))
+            .subscribe((status) => setConnected(status === 'SUBSCRIBED'));
+        return () => { void supabase.removeChannel(room); };
+    }, [id]);
+    useEffect(() => {
+        const presence = supabase.channel(`live_presence_${id}`, { config: { presence: { key: user?.id || crypto.randomUUID() } } });
+        presence.on('presence', { event: 'sync' }, () => setViewerCount(Math.max(1, Object.keys(presence.presenceState()).length)))
+            .subscribe((status) => { if (status === 'SUBSCRIBED') void presence.track({ joined_at: new Date().toISOString() }); });
+        return () => { void supabase.removeChannel(presence); };
+    }, [id, user?.id]);
 
-        setBidding(true);
-        const nextBid = isAbsolute ? amount : Number(liveData.current_bid) + amount;
+    const secondsLeft = Math.max(0, Math.ceil(((live?.ends_at ? new Date(live.ends_at).getTime() : 0) - now) / 1000));
+    const waiting = !live?.ends_at || !live.current_item_name || live.current_item_name === 'Aguardando Lote...';
+    const ended = live?.status === 'ENDED';
+    const increment = Number(live?.min_bid_increment || 1);
+    const minimumBid = Number(live?.current_bid || 0) + increment;
+    const winning = !!user && live?.winning_user_id === user.id;
+    const videoUrl = useMemo(() => normalizeVideoUrl(live?.video_url), [live?.video_url]);
 
-        if (nextBid <= Number(liveData.current_bid)) {
-            alert('O lance deve ser maior que o lance atual.');
-            setBidding(false);
-            return;
+    async function confirmBid() {
+        if (!pendingBid || !live) return;
+        if (!user) { router.push('/auth/login'); return; }
+        setSubmitting(true); setNotice('');
+        const { data, error } = await supabase.rpc('place_live_bid', { p_live_id: id, p_user_id: user.id, p_amount: pendingBid, p_user_name: user.name });
+        const result = data as { success?: boolean; message?: string; current_bid?: number; ends_at?: string; bid_count?: number } | null;
+        if (error || !result?.success) setNotice(result?.message || error?.message || 'Não foi possível registrar o lance.');
+        else {
+            setLive((old) => old ? { ...old, current_bid: Number(result.current_bid), ends_at: result.ends_at, bid_count: result.bid_count, winning_user_id: user.id, winning_user_name: user.name } : old);
+            setCustomBid(''); setPendingBid(null); setNotice('Lance confirmado. Você está na frente!');
+            const { data: credits } = await supabase.from('auction_credits').select('balance,locked').eq('user_id', user.id).maybeSingle();
+            if (credits) setBalance(Number(credits.balance) - Number(credits.locked));
         }
+        setSubmitting(false);
+    }
 
-        const { data, error } = await supabase.rpc('place_live_bid', {
-            p_live_id: liveId,
-            p_user_id: userId,
-            p_amount: nextBid,
-            p_user_name: userName
-        });
+    function requestBid(amount: number) {
+        if (!user) { router.push('/auth/login'); return; }
+        if (waiting || secondsLeft <= 0 || amount < minimumBid) return setNotice(`O lance mínimo é ${money(minimumBid)}.`);
+        if (balance !== null && amount > balance + (winning ? Number(live?.current_bid || 0) : 0)) return setNotice('Saldo livre insuficiente para esse lance.');
+        setNotice(''); setPendingBid(amount);
+    }
 
-        if (error) {
-            alert(`Erro: ${error.message}`);
-        } else if (data && !data.success) {
-            alert('Não foi possível processar: ' + data.message);
-        } else {
-            setCustomBid('');
-            // Anti-sniper
-            const msLeft = new Date(liveData.ends_at).getTime() - Date.now();
-            if (msLeft > 0 && msLeft <= 15000) {
-                await supabase.from('live_auctions').update({ ends_at: new Date(Date.now() + 15000).toISOString() }).eq('id', liveId);
-            }
-            const { data: wallet } = await supabase.from('auction_credits').select('balance, locked').eq('user_id', userId).single();
-            if (wallet) setUserBalance(wallet.balance - wallet.locked);
-        }
-        setBidding(false);
-    };
+    if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#070d1f] text-sm font-black uppercase tracking-widest text-white/50"><Radio className="mr-3 animate-pulse text-rose-500" />Conectando à arena</div>;
+    if (!live) return null;
 
-    if (loading) return (
-        <div className="h-screen flex items-center justify-center" style={{ background: '#0c1324' }}>
-            <div className="text-center">
-                <div className="w-16 h-16 border-4 border-t-rose-600 border-white/10 rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-white/50 font-black uppercase tracking-widest text-xs">Conectando à Arena...</p>
-            </div>
-        </div>
-    );
-    if (liveData?.status === 'ENDED') return (
-        <div className="h-screen flex flex-col items-center justify-center" style={{ background: '#0c1324' }}>
-            <span className="text-6xl mb-4">📺</span>
-            <h2 className="text-white font-black uppercase tracking-widest text-xl">Transmissão Encerrada</h2>
-            <p className="text-white/40 mt-2 text-sm">Obrigado por participar!</p>
-        </div>
-    );
+    return <div className="min-h-dvh bg-[#070d1f] text-white lg:h-dvh lg:overflow-hidden">
+        <header className="flex h-14 items-center justify-between border-b border-white/10 bg-[#0c1324]/95 px-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3"><button onClick={() => router.push('/lives')} aria-label="Voltar" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white"><ArrowLeft className="h-4 w-4" /></button><span className="flex items-center gap-2 rounded-md bg-rose-600 px-2 py-1 text-[9px] font-black uppercase tracking-widest"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Ao vivo</span><h1 className="truncate text-xs font-black sm:text-sm">{live.title}</h1></div>
+            <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400"><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{viewerCount}</span><span title={connected ? 'Tempo real conectado' : 'Reconectando'} className={connected ? 'text-emerald-400' : 'text-amber-400'}>{connected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}</span></div>
+        </header>
 
-    const isSold = timeLeft <= 0 && liveData?.current_item_name && liveData?.current_item_name !== 'Aguardando Lote...';
-    const isWaiting = !liveData?.ends_at || liveData?.current_item_name === 'Aguardando Lote...';
-    const timerColor = timeLeft <= 10 ? '#e11d48' : timeLeft <= 30 ? '#f59e0b' : '#ffffff';
+        <main className="grid lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(320px,1.15fr)_minmax(360px,.85fr)_320px]">
+            <section className="relative min-h-[32vh] overflow-hidden border-b border-white/10 bg-black lg:min-h-0 lg:border-b-0 lg:border-r">
+                {videoUrl ? <iframe src={videoUrl} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute inset-0 h-full w-full border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
+                <div className="absolute bottom-3 left-3 flex gap-2"><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">{connected ? 'Sincronizado' : 'Reconectando...'}</span><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">Anti-sniper +15s</span></div>
+            </section>
 
-    return (
-        <div className="h-screen flex flex-col overflow-hidden" style={{ background: '#0c1324', fontFamily: 'Inter, sans-serif' }}>
-
-            {/* TOP BAR */}
-            <div className="flex items-center justify-between px-6 py-3 border-b shrink-0" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(12,19,36,0.95)', backdropFilter: 'blur(20px)' }}>
-                <div className="flex items-center gap-3">
-                    <div className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-pulse shadow-[0_0_12px_#e11d48]"></div>
-                    <span className="text-white font-black uppercase tracking-widest text-xs">TCG MEGASTORE</span>
-                    <span className="text-white/30 font-bold text-xs">·</span>
-                    <span className="text-white/50 font-medium text-xs truncate max-w-[300px]">{liveData?.title}</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs font-black" style={{ color: '#6ee591' }}>
-                    <span>●</span>
-                    <span>{viewerCount} Online</span>
-                </div>
-            </div>
-
-            {/* MAIN CONTENT */}
-            <div className="flex flex-1 min-h-0">
-
-                {/* LEFT: VIDEO */}
-                <div className="flex flex-col" style={{ width: '38%', background: '#070d1f', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-                    <div className="flex-1 relative overflow-hidden">
-                        {liveData?.video_url ? (
-                            <iframe
-                                src={liveData.video_url.includes('twitch.tv')
-                                    ? `https://player.twitch.tv/?channel=${liveData.video_url.split('/').pop()}&parent=${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}`
-                                    : liveData.video_url}
-                                className="w-full h-full border-0"
-                                allowFullScreen
-                            />
-                        ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center gap-4" style={{ color: 'rgba(255,255,255,0.2)' }}>
-                                <span className="text-5xl">📡</span>
-                                <p className="font-black uppercase tracking-widest text-xs">Aguardando Sinal...</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* ÚLTIMOS ARREMATES */}
-                    <div className="shrink-0" style={{ height: '220px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                            <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Últimos Arremates</span>
-                        </div>
-                        <div className="overflow-y-auto custom-scrollbar" style={{ height: '165px' }}>
-                            {winnerHistory.length === 0 ? (
-                                <div className="h-full flex items-center justify-center">
-                                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.2)' }}>Sem arremates ainda</p>
-                                </div>
-                            ) : winnerHistory.map((item) => (
-                                <div key={item.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors">
-                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 overflow-hidden" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                                        {item.item_image ? <img src={item.item_image} alt="" className="w-full h-full object-contain" /> : <span className="text-lg">{item.item_type === 'Carta' ? '🎴' : '📦'}</span>}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-black text-white truncate uppercase tracking-tight">{item.item_name}</p>
-                                        <p className="text-xs font-bold truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>{item.winner_name}</p>
-                                    </div>
-                                    <span className="text-xs font-black tabular-nums shrink-0" style={{ color: '#f59e0b' }}>R$ {Number(item.final_bid).toFixed(2)}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+            <section className="flex min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(225,29,72,.10),transparent_45%)]">
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                    {ended ? <State icon="📺" title="Transmissão encerrada" text="Os arremates continuarão disponíveis na sua conta." /> : waiting ? <State icon="🔨" title="Próximo lote em preparação" text="Você verá o item aqui assim que o apresentador iniciar a disputa." /> : <>
+                        <div className="flex items-start gap-4"><div className="flex h-28 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5 sm:h-36 sm:w-28">{live.current_item_image ? <img src={live.current_item_image} alt={live.current_item_name || 'Lote'} className="h-full w-full object-contain" /> : <span className="text-4xl">🎴</span>}</div><div className="min-w-0"><p className="text-[9px] font-black uppercase tracking-[.2em] text-rose-400">Lote em disputa · {live.current_item_type || 'TCG'}</p><h2 className="mt-2 text-2xl font-black leading-tight sm:text-3xl">{live.current_item_name}</h2>{live.current_item_description && <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-400">{live.current_item_description}</p>}</div></div>
+                        <div className="mt-6 grid grid-cols-2 gap-3"><div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-4"><p className="text-[9px] font-black uppercase tracking-widest text-amber-300">Maior lance</p><p className="mt-1 text-3xl font-black text-amber-300">{money(Number(live.current_bid))}</p><p className="mt-1 text-[10px] text-amber-100/60">{live.bid_count || bids.length} lance(s)</p></div><div className={`rounded-2xl border p-4 ${secondsLeft <= 10 ? 'border-rose-400/40 bg-rose-500/15' : 'border-white/10 bg-white/5'}`}><p className="flex items-center gap-1 text-[9px] font-black uppercase tracking-widest text-slate-400"><Clock3 className="h-3 w-3" />Encerra em</p><p className={`mt-1 font-mono text-3xl font-black ${secondsLeft <= 10 ? 'animate-pulse text-rose-400' : ''}`}>{formatTime(secondsLeft)}</p><p className="mt-1 text-[10px] text-slate-500">horário do servidor</p></div></div>
+                        <div className={`mt-3 rounded-xl border px-4 py-3 text-xs font-bold ${winning ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300' : 'border-white/10 bg-white/[.03] text-slate-400'}`}>{winning ? '👑 Você está ganhando este lote.' : live.winning_user_name ? `Na frente: ${live.winning_user_name}` : 'Seja o primeiro a dar um lance.'}</div>
+                        <div className="mt-5"><div className="flex items-center justify-between"><h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Últimos lances</h3><span className="text-[9px] text-slate-600">atualização automática</span></div><div className="mt-2 space-y-1">{bids.slice(0, 5).map((bid, index) => <div key={bid.id} className="flex items-center justify-between rounded-xl bg-white/[.03] px-3 py-2 text-xs"><span className="truncate text-slate-400">{index === 0 && <ChevronUp className="mr-1 inline h-3 w-3 text-emerald-400" />}{bid.user_id === user?.id ? 'Você' : bid.user_name || 'Comprador'}</span><span className="font-black text-white">{money(Number(bid.amount))}</span></div>)}{bids.length === 0 && <p className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-slate-600">Nenhum lance neste lote.</p>}</div></div>
+                    </>}
                 </div>
 
-                {/* CENTER: AUCTION */}
-                <div className="flex-1 flex flex-col relative overflow-hidden">
-                    {/* Ambient glow */}
-                    <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 50% 30%, rgba(225,29,72,0.08) 0%, transparent 70%)' }}></div>
+                {!ended && <div className="border-t border-white/10 bg-[#0c1324] p-4"><div className="mb-3 flex items-center justify-between"><span className="flex items-center gap-2 text-[10px] font-bold text-slate-400"><Wallet className="h-4 w-4" />Saldo livre: <b className="text-emerald-400">{balance === null ? 'Entre para consultar' : money(balance)}</b></span><span className="text-[9px] text-slate-500">mínimo {money(minimumBid)}</span></div><div className="grid grid-cols-3 gap-2">{[1, 2, 5].map((multiplier) => { const value = Number(live.current_bid || 0) + increment * multiplier; return <button key={multiplier} disabled={waiting || secondsLeft <= 0 || submitting} onClick={() => requestBid(value)} className="rounded-xl border border-rose-400/25 bg-rose-500/10 py-3 text-xs font-black text-rose-200 hover:bg-rose-500/20 disabled:opacity-30">{money(value)}</button>; })}</div><div className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-white/5"><span className="px-3 py-3 text-xs font-bold text-slate-500">R$</span><input inputMode="decimal" value={customBid} onChange={(event) => setCustomBid(event.target.value)} placeholder="Outro valor" className="min-w-0 flex-1 bg-transparent px-1 text-sm font-bold outline-none" /><button onClick={() => requestBid(Number(customBid.replace(',', '.')))} className="bg-white/10 px-4 text-[10px] font-black uppercase hover:bg-white/15">Revisar</button></div>{notice && <p className="mt-2 text-center text-xs text-amber-300">{notice}</p>}</div>}
+            </section>
 
-                    <div className="flex-1 flex flex-col items-center justify-center p-8 relative">
-                        {isWaiting ? (
-                            <div className="text-center">
-                                <div className="w-24 h-24 border-4 rounded-full mx-auto mb-6 flex items-center justify-center" style={{ borderColor: 'rgba(225,29,72,0.2)', borderTopColor: '#e11d48', animation: 'spin 3s linear infinite' }}>
-                                    <span className="text-3xl">🔨</span>
-                                </div>
-                                <h2 className="text-white font-black uppercase tracking-widest text-2xl mb-2">Aguardando Lote...</h2>
-                                <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.4)' }}>O streamer está preparando o próximo item</p>
-                            </div>
-                        ) : (
-                            <div className="w-full max-w-lg">
-                                {/* Item badge */}
-                                <div className="flex items-center gap-2 mb-4 justify-center">
-                                    <div className="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></div>
-                                    <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#e11d48' }}>LOTE EM DISPUTA</span>
-                                    <span className="px-2 py-0.5 rounded text-xs font-black uppercase" style={{ background: 'rgba(225,29,72,0.15)', color: '#e11d48' }}>{liveData?.current_item_type || 'Geral'}</span>
-                                </div>
+            <aside className={`${chatOpen ? 'fixed inset-0 z-40 flex' : 'hidden'} min-h-0 flex-col border-l border-white/10 bg-[#070d1f] lg:static lg:flex`}><div className="flex h-12 items-center justify-between border-b border-white/10 px-4"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chat da live</span><button onClick={() => setChatOpen(false)} className="lg:hidden"><X className="h-5 w-5" /></button></div><div className="min-h-0 flex-1 p-2"><LiveChat liveId={id} currentUser={user} /></div></aside>
+        </main>
 
-                                {/* Item image */}
-                                {liveData?.current_item_image && (
-                                    <div className="mx-auto mb-6 rounded-2xl overflow-hidden" style={{ width: '200px', height: '200px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(225,29,72,0.3)', boxShadow: '0 0 40px rgba(225,29,72,0.15)' }}>
-                                        <img src={liveData.current_item_image} alt="Item" className="w-full h-full object-contain" />
-                                    </div>
-                                )}
+        <button onClick={() => setChatOpen(true)} className="fixed bottom-4 right-4 z-30 rounded-full bg-rose-600 px-5 py-3 text-xs font-black shadow-xl lg:hidden">Abrir chat</button>
+        {pendingBid !== null && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"><div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#191f31] p-6"><div className="flex items-center gap-3 text-emerald-400"><ShieldCheck className="h-6 w-6" /><h3 className="text-lg font-black text-white">Confirmar lance</h3></div><p className="mt-4 text-sm leading-6 text-slate-400">Você está oferecendo <b className="text-xl text-white">{money(pendingBid)}</b>. Esse valor ficará reservado até você ser superado ou o lote ser concluído.</p><div className="mt-4 rounded-xl bg-amber-400/10 p-3 text-[10px] text-amber-200">Lances são compromissos de compra e não podem ser desfeitos durante a disputa.</div><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={() => setPendingBid(null)} disabled={submitting} className="rounded-xl bg-white/5 py-3 text-xs font-black text-slate-400">Cancelar</button><button onClick={confirmBid} disabled={submitting} className="rounded-xl bg-rose-600 py-3 text-xs font-black text-white disabled:opacity-50">{submitting ? 'Registrando...' : 'Confirmar lance'}</button></div></div></div>}
+        <style jsx global>{`nav, footer { display:none!important } body { overflow-x:hidden!important; background:#070d1f!important; padding-bottom:0!important }`}</style>
+    </div>;
+}
 
-                                {/* Item name */}
-                                <h1 className="text-center text-white font-black uppercase text-3xl tracking-tighter leading-tight mb-8" style={{ textShadow: '0 0 40px rgba(225,29,72,0.3)' }}>
-                                    {liveData?.current_item_name}
-                                </h1>
-
-                                {/* Stats grid */}
-                                <div className="grid grid-cols-3 gap-3 mb-6">
-                                    <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Lance Atual</p>
-                                        <p className="text-2xl font-black tabular-nums" style={{ color: '#f59e0b' }}>R$ {Number(liveData?.current_bid || 0).toFixed(2).replace('.', ',')}</p>
-                                    </div>
-                                    <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${timeLeft <= 10 ? 'rgba(225,29,72,0.4)' : 'rgba(255,255,255,0.08)'}` }}>
-                                        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Encerra em</p>
-                                        <p className="text-2xl font-black tabular-nums font-mono" style={{ color: timerColor, textShadow: timeLeft <= 10 ? '0 0 20px rgba(225,29,72,0.5)' : 'none', animation: timeLeft <= 10 ? 'pulse 1s infinite' : 'none' }}>
-                                            {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                        <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Novo Dono</p>
-                                        <p className="text-lg font-black truncate" style={{ color: '#6ee591' }}>{liveData?.winning_user_name || '—'}</p>
-                                    </div>
-                                </div>
-
-                                {/* Você está ganhando */}
-                                {liveData?.winning_user_id === userId && userId && (
-                                    <div className="text-center py-2.5 rounded-xl font-black uppercase text-xs tracking-widest mb-4 animate-pulse" style={{ background: 'rgba(110,229,145,0.1)', color: '#6ee591', border: '1px solid rgba(110,229,145,0.2)' }}>
-                                        👑 VOCÊ ESTÁ GANHANDO!
-                                    </div>
-                                )}
-
-                                {/* Anti-sniper badge */}
-                                <div className="flex justify-center">
-                                    <span className="text-xs px-3 py-1 rounded-full font-bold" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)' }}>
-                                        🛡️ Anti-Sniper Ativo (+15s)
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* VENDIDO OVERLAY */}
-                    {isSold && (
-                        <div className="absolute inset-0 flex items-center justify-center z-20" style={{ background: 'rgba(7,13,31,0.85)', backdropFilter: 'blur(12px)' }}>
-                            <div className="text-center p-10 rounded-[40px] max-w-sm w-full" style={{ background: 'rgba(25,31,49,0.95)', border: '1px solid rgba(225,29,72,0.3)', boxShadow: '0 30px 80px rgba(225,29,72,0.2)' }}>
-                                <div className="text-6xl mb-4">💎</div>
-                                <h3 className="text-5xl font-black uppercase tracking-tighter text-white mb-2">VENDIDO!</h3>
-                                {liveData?.winning_user_id ? (
-                                    <>
-                                        <p className="text-sm font-bold mb-6" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                                            Arrematado por <span style={{ color: '#f59e0b' }}>R$ {Number(liveData.current_bid).toFixed(2).replace('.', ',')}</span>
-                                        </p>
-                                        <div className="py-4 rounded-2xl" style={{ background: 'rgba(110,229,145,0.08)', border: '1px solid rgba(110,229,145,0.2)' }}>
-                                            <p className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.4)' }}>Novo Dono</p>
-                                            <p className="text-2xl font-black uppercase tracking-tight" style={{ color: '#6ee591' }}>{liveData.winning_user_name}</p>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <p className="text-sm font-medium mt-4" style={{ color: 'rgba(255,255,255,0.4)' }}>Nenhuma oferta. Aguarde o próximo lote!</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* BIDDING BAR */}
-                    <div className="shrink-0 px-6 py-4 flex items-center gap-4 flex-wrap" style={{ background: 'rgba(7,13,31,0.95)', borderTop: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(20px)' }}>
-                        {userId && userBalance !== null && (
-                            <div className="rounded-xl px-4 py-2 shrink-0" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                <p className="text-xs font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Saldo</p>
-                                <p className="text-lg font-black tabular-nums" style={{ color: '#6ee591' }}>R$ {userBalance.toFixed(2).replace('.', ',')}</p>
-                            </div>
-                        )}
-
-                        {/* Custom bid */}
-                        <div className="flex items-center rounded-xl overflow-hidden shrink-0" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                            <span className="px-3 font-black text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>R$</span>
-                            <input
-                                type="number"
-                                value={customBid}
-                                onChange={(e) => setCustomBid(e.target.value)}
-                                placeholder="Livre..."
-                                className="bg-transparent text-white font-black text-sm outline-none w-20 py-2.5 tabular-nums"
-                                style={{ caretColor: '#e11d48' }}
-                            />
-                            <button
-                                disabled={bidding || timeLeft <= 0 || !customBid || Number(customBid) <= Number(liveData?.current_bid)}
-                                onClick={() => placeBid(Number(customBid), true)}
-                                className="px-4 py-2.5 font-black uppercase text-xs tracking-widest transition-all"
-                                style={{ background: bidding || !customBid ? 'rgba(255,255,255,0.1)' : '#e11d48', color: bidding || !customBid ? 'rgba(255,255,255,0.3)' : 'white' }}
-                            >
-                                Enviar
-                            </button>
-                        </div>
-
-                        {/* Quick bids */}
-                        <div className="flex gap-2 flex-wrap">
-                            {[5, 10, 50, 100].map(amt => {
-                                const total = (Number(liveData?.current_bid) || 0) + amt;
-                                return (
-                                    <button
-                                        key={amt}
-                                        disabled={bidding || timeLeft <= 0}
-                                        onClick={() => placeBid(amt)}
-                                        className="flex flex-col items-center px-4 py-2 rounded-xl font-black transition-all active:scale-95"
-                                        style={{
-                                            background: bidding || timeLeft <= 0 ? 'rgba(255,255,255,0.05)' : 'rgba(225,29,72,0.1)',
-                                            border: `1px solid ${bidding || timeLeft <= 0 ? 'rgba(255,255,255,0.08)' : 'rgba(225,29,72,0.3)'}`,
-                                            color: bidding || timeLeft <= 0 ? 'rgba(255,255,255,0.3)' : 'white'
-                                        }}
-                                    >
-                                        <span className="text-xs font-bold opacity-60">+{amt}</span>
-                                        <span className="text-sm font-black" style={{ color: bidding || timeLeft <= 0 ? 'rgba(255,255,255,0.3)' : '#f59e0b' }}>R$ {total}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </div>
-
-                {/* RIGHT: CHAT */}
-                <div className="flex flex-col shrink-0" style={{ width: '280px', borderLeft: '1px solid rgba(255,255,255,0.06)', background: '#070d1f' }}>
-                    <div className="px-4 py-3 shrink-0 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                        <span className="text-xs font-black uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Chat Ao Vivo</span>
-                        <span className="text-xs font-black px-2 py-0.5 rounded" style={{ background: 'rgba(110,229,145,0.1)', color: '#6ee591' }}>● Msg Simultâneas</span>
-                    </div>
-                    <div className="flex-1 min-h-0">
-                        <LiveChat liveId={liveId} currentUser={userId ? { id: userId, name: userName } : null} />
-                    </div>
-                </div>
-            </div>
-
-            <style jsx global>{`
-                nav, footer { display: none !important; }
-                body { overflow: hidden !important; background: #0c1324 !important; padding-bottom: 0 !important; }
-                main { padding-top: 0 !important; min-height: 100dvh !important; }
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 20px; }
-                @keyframes spin { to { transform: rotate(360deg); } }
-                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-            `}</style>
-        </div>
-    );
+function State({ icon, title, text }: { icon: string; title: string; text: string }) { return <div className="flex h-full min-h-80 flex-col items-center justify-center px-6 text-center"><span className="text-5xl">{icon}</span><h2 className="mt-5 text-2xl font-black">{title}</h2><p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">{text}</p><BellRing className="mt-6 h-5 w-5 text-rose-400" /></div>; }
+function money(value: number) { return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+function formatTime(seconds: number) { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; }
+function normalizeVideoUrl(value?: string | null) {
+    if (!value) return null;
+    try {
+        const url = new URL(value);
+        if (url.hostname === 'twitch.tv' || url.hostname === 'www.twitch.tv') return `https://player.twitch.tv/?channel=${url.pathname.split('/').filter(Boolean)[0]}&parent=${window.location.hostname}`;
+        if (url.hostname === 'youtu.be') return `https://www.youtube.com/embed/${url.pathname.slice(1)}?autoplay=1`;
+        if (url.hostname.includes('youtube.com')) { const id = url.searchParams.get('v'); return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : value; }
+        return value;
+    } catch { return null; }
 }

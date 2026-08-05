@@ -14,7 +14,7 @@ export default function AdminLiveDashboard() {
     const [isEndConfirmOpen, setIsEndConfirmOpen] = useState(false);
     const [isStartConfirmOpen, setIsStartConfirmOpen] = useState(false);
     const [form, setForm] = useState({ title: 'Leilão TCG MEGASTORE!', video_url: '' });
-    const [itemForm, setItemForm] = useState({ name: '', type: 'Carta', image: '', starting_bid: 10, timer_seconds: 60 });
+    const [itemForm, setItemForm] = useState({ name: '', description: '', type: 'Carta', image: '', starting_bid: 10, min_bid_increment: 1, timer_seconds: 60 });
     const [timeLeft, setTimeLeft] = useState(0);
 
     const [showCamera, setShowCamera] = useState(false);
@@ -122,7 +122,7 @@ export default function AdminLiveDashboard() {
                 await finalizarArremate(liveData);
             }
             const endDate = new Date(Date.now() + (itemForm.timer_seconds * 1000)).toISOString();
-            const { error } = await supabase.from('live_auctions').update({ current_item_name: itemForm.name, current_item_type: itemForm.type, current_item_image: itemForm.image, starting_bid: itemForm.starting_bid, current_bid: itemForm.starting_bid, winning_user_id: null, winning_user_name: null, ends_at: endDate, status: 'LIVE' }).eq('id', liveData.id);
+            const { error } = await supabase.from('live_auctions').update({ current_item_name: itemForm.name, current_item_description: itemForm.description || null, current_item_type: itemForm.type, current_item_image: itemForm.image, starting_bid: itemForm.starting_bid, current_bid: itemForm.starting_bid, min_bid_increment: itemForm.min_bid_increment, bid_count: 0, lot_number: Number(liveData.lot_number || 0) + 1, winning_user_id: null, winning_user_name: null, ends_at: endDate, status: 'LIVE' }).eq('id', liveData.id);
             if (error) alert('Erro: ' + error.message);
         } finally { setIsProcessing(false); }
     };
@@ -219,6 +219,10 @@ export default function AdminLiveDashboard() {
                                             <input required type="text" value={itemForm.name} onChange={e => setItemForm({ ...itemForm, name: e.target.value })} className={inputClass} placeholder="Nome da carta ou lote" />
                                         </div>
                                         <div>
+                                            <label className={labelClass}>Descrição e condição</label>
+                                            <textarea value={itemForm.description} maxLength={500} rows={3} onChange={e => setItemForm({ ...itemForm, description: e.target.value })} className={inputClass} placeholder="Condição, idioma, acabamento e observações visíveis ao comprador" />
+                                        </div>
+                                        <div>
                                             <label className={labelClass}>Imagem (URL ou Câmera)</label>
                                             <div className="flex gap-2">
                                                 <input type="text" value={itemForm.image} onChange={e => setItemForm({ ...itemForm, image: e.target.value })} className={inputClass} placeholder="Cole a URL ou tire foto" />
@@ -250,6 +254,12 @@ export default function AdminLiveDashboard() {
                                                 <option value={60} className="bg-slate-900 text-white">1 Minuto</option>
                                                 <option value={120} className="bg-slate-900 text-white">2 Minutos</option>
                                                 <option value={300} className="bg-slate-900 text-white">5 Minutos</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Incremento mínimo por lance</label>
+                                            <select value={itemForm.min_bid_increment} onChange={e => setItemForm({ ...itemForm, min_bid_increment: Number(e.target.value) })} className={inputClass}>
+                                                {[1, 2, 5, 10, 25, 50].map(value => <option key={value} value={value} className="bg-slate-900 text-white">R$ {value},00</option>)}
                                             </select>
                                         </div>
                                         <button type="submit" disabled={isProcessing} className="w-full h-14 bg-rose-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-rose-700 transition-all shadow-xl shadow-rose-600/20 active:scale-95 disabled:opacity-50">
