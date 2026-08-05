@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, BellRing, ChevronUp, Clock3, Crown, History, Radio, Share2, ShieldCheck, Users, Wallet, Wifi, WifiOff, X } from 'lucide-react';
+import { ArrowLeft, BellRing, ChevronUp, Clock3, Crown, History, Radio, RefreshCw, Share2, ShieldCheck, Users, Wallet, Wifi, WifiOff, X } from 'lucide-react';
 import LiveChat from '@/components/LiveChat';
 import LiveSalesHistory from '@/components/LiveSalesHistory';
 import { supabase } from '@/lib/supabase';
@@ -32,8 +32,11 @@ export default function LiveRoomPage() {
     const [notice, setNotice] = useState('');
     const [isDesktop, setIsDesktop] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [videoReloadKey, setVideoReloadKey] = useState(0);
+    const [videoLoading, setVideoLoading] = useState(true);
     const settlementRequested = useRef(false);
     const currentLot = useRef<number | null>(null);
+    const hiddenAt = useRef<number | null>(null);
 
     const load = useCallback(async () => {
         const [{ data: auth }, liveResult] = await Promise.all([
@@ -63,6 +66,16 @@ export default function LiveRoomPage() {
         return () => media.removeEventListener('change', syncViewport);
     }, []);
     useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer); }, []);
+    useEffect(() => {
+        const reloadVideo = () => { setVideoLoading(true); setVideoReloadKey(key => key + 1); };
+        const onVisibility = () => {
+            if (document.hidden) hiddenAt.current = Date.now();
+            else if (hiddenAt.current && Date.now() - hiddenAt.current > 15_000) reloadVideo();
+        };
+        window.addEventListener('online', reloadVideo);
+        document.addEventListener('visibilitychange', onVisibility);
+        return () => { window.removeEventListener('online', reloadVideo); document.removeEventListener('visibilitychange', onVisibility); };
+    }, []);
     useEffect(() => {
         const room = supabase.channel(`live-room-${id}`)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_auctions', filter: `id=eq.${id}` }, ({ new: next }) => { const nextLot = Number(next.lot_number || 0); if (currentLot.current !== nextLot) setBids([]); currentLot.current = nextLot; setLive(next as LiveAuction); })
@@ -126,6 +139,8 @@ export default function LiveRoomPage() {
         }
     }
 
+    function reloadVideo() { setVideoLoading(true); setVideoReloadKey(key => key + 1); }
+
     if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#070d1f] text-sm font-black uppercase tracking-widest text-white/50"><Radio className="mr-3 animate-pulse text-rose-500" />Conectando à arena</div>;
     if (!live) return null;
 
@@ -136,13 +151,13 @@ export default function LiveRoomPage() {
         </header>
 
         <section className="relative h-dvh overflow-hidden bg-black lg:hidden">
-            {videoUrl ? <iframe src={videoUrl} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute left-1/2 top-1/2 h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d1f] text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
+            {videoUrl ? <iframe key={`mobile-${videoReloadKey}`} src={videoUrl} onLoad={() => setVideoLoading(false)} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute left-1/2 top-1/2 h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d1f] text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/95" />
 
             <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))]">
                 <button onClick={() => router.push('/lives')} aria-label="Voltar" className="rounded-full bg-black/35 p-2.5 backdrop-blur-md"><ArrowLeft className="h-5 w-5" /></button>
                 <div className="flex items-center gap-2"><span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-widest ${live.is_demo ? 'bg-blue-600' : 'bg-rose-600'}`}><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />{live.is_demo ? 'Demo' : 'Ao vivo'}</span><span className="flex items-center gap-1 rounded-full bg-black/35 px-3 py-1.5 text-[10px] font-bold backdrop-blur-md"><Users className="h-3.5 w-3.5" />{viewerCount}</span></div>
-                <span className={`rounded-full bg-black/35 p-2.5 backdrop-blur-md ${connected ? 'text-emerald-400' : 'text-amber-400'}`}>{connected ? <Wifi className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}</span>
+                <button onClick={reloadVideo} title="Recarregar somente o vídeo" aria-label="Recarregar vídeo" className={`rounded-full bg-black/35 p-2.5 backdrop-blur-md ${videoLoading ? 'text-amber-400' : connected ? 'text-emerald-400' : 'text-amber-400'}`}><RefreshCw className={`h-5 w-5 ${videoLoading ? 'animate-spin' : ''}`} /></button>
             </div>
 
             <div className="absolute bottom-0 left-0 right-16 z-10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -173,8 +188,8 @@ export default function LiveRoomPage() {
 
         <main className="hidden lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(320px,1.15fr)_minmax(360px,.85fr)_320px] lg:grid">
             <section className="relative min-h-[32vh] overflow-hidden border-b border-white/10 bg-black lg:min-h-0 lg:border-b-0 lg:border-r">
-                {videoUrl ? <iframe src={videoUrl} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute inset-0 h-full w-full border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
-                <div className="absolute bottom-3 left-3 flex gap-2"><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">{connected ? 'Sincronizado' : 'Reconectando...'}</span><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">Anti-sniper +15s</span></div>
+                {videoUrl ? <iframe key={`desktop-${videoReloadKey}`} src={videoUrl} onLoad={() => setVideoLoading(false)} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute inset-0 h-full w-full border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
+                <div className="absolute bottom-3 left-3 flex gap-2"><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">{connected ? 'Sincronizado' : 'Reconectando...'}</span><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">Anti-sniper +15s</span><button onClick={reloadVideo} className="flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur"><RefreshCw className={`h-3 w-3 ${videoLoading ? 'animate-spin' : ''}`} />Recarregar vídeo</button></div>
             </section>
 
             <section className="flex min-h-0 flex-col bg-[radial-gradient(circle_at_top,rgba(225,29,72,.10),transparent_45%)]">
@@ -207,8 +222,9 @@ function normalizeVideoUrl(value?: string | null) {
     try {
         const url = new URL(value);
         if (url.hostname === 'twitch.tv' || url.hostname === 'www.twitch.tv') return `https://player.twitch.tv/?channel=${url.pathname.split('/').filter(Boolean)[0]}&parent=${window.location.hostname}`;
-        if (url.hostname === 'youtu.be') return `https://www.youtube.com/embed/${url.pathname.slice(1)}?autoplay=1&mute=1&playsinline=1`;
-        if (url.hostname.includes('youtube.com')) { const id = url.searchParams.get('v'); return id ? `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&playsinline=1` : value; }
+        const playerParams = `autoplay=1&mute=1&playsinline=1&rel=0&origin=${encodeURIComponent(window.location.origin)}`;
+        if (url.hostname === 'youtu.be') return `https://www.youtube.com/embed/${url.pathname.slice(1)}?${playerParams}`;
+        if (url.hostname.includes('youtube.com')) { const id = url.searchParams.get('v'); return id ? `https://www.youtube.com/embed/${id}?${playerParams}` : value; }
         return value;
     } catch { return null; }
 }
