@@ -10,7 +10,7 @@ type LiveAuction = {
     id: string; title: string; status: string; video_url?: string | null; ends_at?: string | null;
     current_item_name?: string | null; current_item_type?: string | null; current_item_image?: string | null;
     current_item_description?: string | null; current_bid: number; starting_bid: number; min_bid_increment?: number;
-    bid_count?: number; winning_user_id?: string | null; winning_user_name?: string | null;
+    bid_count?: number; winning_user_id?: string | null; winning_user_name?: string | null; is_demo?: boolean;
 };
 type Bid = { id: string; user_id: string; user_name?: string | null; amount: number; created_at: string };
 
@@ -92,7 +92,7 @@ export default function LiveRoomPage() {
     function requestBid(amount: number) {
         if (!user) { router.push('/auth/login'); return; }
         if (waiting || secondsLeft <= 0 || amount < minimumBid) return setNotice(`O lance mínimo é ${money(minimumBid)}.`);
-        if (balance !== null && amount > balance + (winning ? Number(live?.current_bid || 0) : 0)) return setNotice('Saldo livre insuficiente para esse lance.');
+        if (!live.is_demo && balance !== null && amount > balance + (winning ? Number(live?.current_bid || 0) : 0)) return setNotice('Saldo livre insuficiente para esse lance.');
         setNotice(''); setPendingBid(amount);
     }
 

@@ -15,12 +15,15 @@ export async function POST(req: Request) {
         // Check ownership
         const { data: liveData } = await supabaseAdmin
             .from('live_auctions')
-            .select('streamer_id, current_bid, winning_user_id, winning_user_name, status')
+            .select('streamer_id, current_bid, winning_user_id, winning_user_name, status, is_demo')
             .eq('id', liveId)
             .single();
             
         if (!liveData || (liveData.streamer_id !== auth.user.id && !auth.isAdmin)) {
             return NextResponse.json({ error: 'Acesso negado. Apenas o dono da live ou admin pode finalizá-la.' }, { status: 403 });
+        }
+        if (liveData.is_demo) {
+            return NextResponse.json({ error: 'Lives de demonstração não geram cobrança ou pedido.' }, { status: 409 });
         }
 
         if (!liveId || !winnerId || !itemName) {
