@@ -44,7 +44,7 @@ export default function LiveRoomPage() {
         if (sessionUser) {
             setUser({ id: sessionUser.id, name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Comprador' });
             const { data: credits } = await supabase.from('auction_credits').select('balance,locked').eq('user_id', sessionUser.id).maybeSingle();
-            if (credits) setBalance(Number(credits.balance) - Number(credits.locked));
+            setBalance(credits ? Number(credits.balance) - Number(credits.locked) : 0);
         }
         setLoading(false);
     }, [id, router]);
@@ -84,7 +84,7 @@ export default function LiveRoomPage() {
             setLive((old) => old ? { ...old, current_bid: Number(result.current_bid), ends_at: result.ends_at, bid_count: result.bid_count, winning_user_id: user.id, winning_user_name: user.name } : old);
             setCustomBid(''); setPendingBid(null); setNotice('Lance confirmado. Você está na frente!');
             const { data: credits } = await supabase.from('auction_credits').select('balance,locked').eq('user_id', user.id).maybeSingle();
-            if (credits) setBalance(Number(credits.balance) - Number(credits.locked));
+            setBalance(credits ? Number(credits.balance) - Number(credits.locked) : 0);
         }
         setSubmitting(false);
     }
@@ -92,7 +92,7 @@ export default function LiveRoomPage() {
     function requestBid(amount: number) {
         if (!user) { router.push('/auth/login'); return; }
         if (waiting || secondsLeft <= 0 || amount < minimumBid) return setNotice(`O lance mínimo é ${money(minimumBid)}.`);
-        if (!live.is_demo && balance !== null && amount > balance + (winning ? Number(live?.current_bid || 0) : 0)) return setNotice('Saldo livre insuficiente para esse lance.');
+        if (!live.is_demo && (balance === null || amount > balance + (winning ? Number(live?.current_bid || 0) : 0))) return setNotice('Saldo livre insuficiente. Adicione créditos à carteira antes de dar este lance.');
         setNotice(''); setPendingBid(amount);
     }
 

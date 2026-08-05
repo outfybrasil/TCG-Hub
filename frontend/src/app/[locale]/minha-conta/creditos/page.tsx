@@ -125,8 +125,8 @@ export default function CreditosPage() {
             return;
         }
 
-        if (!depositAmount || parseFloat(depositAmount) < 0.01) {
-            setDepositError('Valor minimo: R$ 0,01');
+        if (!depositAmount || parseFloat(depositAmount) < 10) {
+            setDepositError('Valor mínimo: R$ 10,00');
             return;
         }
 
@@ -264,7 +264,7 @@ export default function CreditosPage() {
                         <div className="space-y-6 animate-fade-in">
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quanto deseja adicionar?</p>
                             <div className="grid grid-cols-3 gap-3">
-                                {[0.01, 10, 50, 100, 200, 500].map((value) => (
+                                {[10, 25, 50, 100, 200, 500].map((value) => (
                                     <button
                                         key={value}
                                         onClick={() => setDepositAmount(String(value))}
@@ -289,7 +289,7 @@ export default function CreditosPage() {
                             </div>
                             <button
                                 onClick={handleGeneratePreference}
-                                disabled={depositing || !depositAmount || parseFloat(depositAmount) < 0.01}
+                                disabled={depositing || !depositAmount || parseFloat(depositAmount) < 10}
                                 className="h-14 w-full rounded-2xl bg-rose-600 text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-rose-900/20 transition-all hover:bg-rose-500 disabled:opacity-50"
                             >
                                 {depositing ? 'Gerando checkout...' : 'Continuar para pagamento'}
@@ -404,7 +404,7 @@ export default function CreditosPage() {
                         <ul className="space-y-3">
                             <li className="flex gap-3 text-[10px] font-bold text-slate-300">
                                 <span className="text-rose-500">*</span>
-                                Valor minimo de recarga: R$ 0,01
+                                Valor mínimo de recarga: R$ 10,00
                             </li>
                             <li className="flex gap-3 text-[10px] font-bold text-slate-300">
                                 <span className="text-rose-500">*</span>
