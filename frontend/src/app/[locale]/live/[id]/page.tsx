@@ -158,7 +158,7 @@ export default function LiveRoomPage() {
             </div>
 
             <div className="absolute bottom-6 right-3 z-20 flex w-14 flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]">
-                <div className="w-full rounded-2xl bg-black/50 px-1.5 py-2 text-center backdrop-blur-md" title={live.winning_user_name || 'Sem líder'}><Crown className={`mx-auto h-4 w-4 ${live.winning_user_id ? 'text-amber-300' : 'text-white/35'}`} /><p className="mt-1 truncate text-[8px] font-black text-white">{live.winning_user_name || 'Sem líder'}</p></div>
+                <div className="w-28 -translate-x-7 rounded-2xl bg-black/50 px-2 py-2 text-center backdrop-blur-md" title={live.winning_user_name || 'Sem líder'}><Crown className={`mx-auto h-4 w-4 ${live.winning_user_id ? 'text-amber-300' : 'text-white/35'}`} /><p className="mt-1 line-clamp-2 text-[8px] font-black leading-tight text-white">{live.winning_user_name || 'Sem líder'}</p></div>
                 <button onClick={shareLive} aria-label="Compartilhar live" className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur active:scale-95"><Share2 className="h-5 w-5" /></button>
                 <button onClick={() => setShowHistory(true)} aria-label="Histórico de arremates" className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur active:scale-95"><History className="h-5 w-5" /></button>
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/45 text-[9px] font-black backdrop-blur"><ChevronUp className="h-4 w-4 text-emerald-400" />{live.bid_count || bids.length}</div>
