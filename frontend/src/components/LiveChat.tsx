@@ -170,7 +170,7 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
                             <span className={`font-black mr-2 ${msg.user_id === 'admin' ? 'text-emerald-400 bg-emerald-400/10 px-1 py-0.5 rounded' : variant === 'overlay' ? 'text-white' : 'text-rose-400'}`}>
                                 {msg.user_name}:
                             </span>
-                            <span className={`text-slate-300 break-words ${variant === 'overlay' ? 'line-clamp-1 inline' : ''}`}>{msg.message}</span>
+                            <span className={`break-words text-slate-300 ${variant === 'overlay' ? 'line-clamp-2' : ''}`}>{msg.message}</span>
 
                             {/* Moderação Actions (Hover) */}
                             <div className={`${variant === 'overlay' ? 'hidden' : 'flex'} absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity items-center gap-1 bg-slate-900 border border-slate-700/50 p-1 rounded-lg shadow-lg`}>

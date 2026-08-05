@@ -139,7 +139,7 @@ export default function LiveRoomPage() {
             <div className="absolute bottom-6 right-3 z-20 flex flex-col items-center gap-4 pb-[env(safe-area-inset-bottom)]">
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/45 text-[9px] font-black backdrop-blur"><ChevronUp className="h-4 w-4 text-emerald-400" />{live.bid_count || bids.length}</div>
             </div>
-            {!isDesktop && <div className="absolute bottom-[250px] left-3 right-20 z-20 h-40 pointer-events-auto">
+            {!isDesktop && <div className="pointer-events-auto absolute bottom-[245px] left-3 right-20 z-30 h-56">
                 <LiveChat liveId={id} currentUser={user} variant="overlay" />
             </div>}
         </section>
