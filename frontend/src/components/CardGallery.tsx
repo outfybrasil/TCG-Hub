@@ -35,7 +35,7 @@ const getGradeColor = (grade: string | undefined) => {
     return 'bg-slate-400';
 };
 
-const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, marketPriceLinks, language, addItem, onDelete, onEditCard }: CardProps) => {
+const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, marketPriceLinks, language, addItem, onDelete, onEditCard, mobileDensity = 'comfortable' }: CardProps & { mobileDensity?: 'comfortable' | 'compact' }) => {
     const [currentImageUrl, setCurrentImageUrl] = React.useState(imageUrl);
     const [imageError, setImageError] = React.useState(false);
     const [selectedQty, setSelectedQty] = React.useState(1);
@@ -56,10 +56,10 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
     };
 
     return (
-        <div className={`group relative bg-[#191f31]/60 backdrop-blur-xl border border-white/5 p-6 transition-all hover:border-rose-500/50 hover:shadow-[0_20px_50px_rgba(225,29,72,0.1)] hover:-translate-y-1.5 rounded-[2rem] overflow-hidden ${isOutOfStock ? 'opacity-75 grayscale-[0.5]' : ''}`}>
+        <article className={`group relative overflow-hidden border border-white/5 bg-[#191f31] transition-colors hover:border-rose-500/50 ${mobileDensity === 'compact' ? 'rounded-xl p-1.5 sm:rounded-2xl sm:p-5' : 'rounded-2xl p-3 sm:p-5'} ${isOutOfStock ? 'opacity-75 grayscale-[0.5]' : ''}`}>
 
             {/* Header Info: Promo, Finish & Grade */}
-            <div className="flex justify-between items-start mb-4 px-1">
+            <div className={`${mobileDensity === 'compact' ? 'hidden sm:flex' : 'flex'} mb-3 items-start justify-between gap-1 px-0.5 sm:mb-4 sm:px-1`}>
                 <div className="flex flex-wrap gap-1.5 items-center">
                     {isPromo && (
                         <span className="px-2 py-0.5 bg-rose-600 text-[8px] font-black text-white uppercase tracking-widest rounded-md shadow-sm">
@@ -96,7 +96,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                                     onDelete(id);
                                 }
                             }}
-                            className="h-8 w-8 bg-slate-100 text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-full flex items-center justify-center transition-all border border-transparent hover:border-rose-100 shadow-sm"
+                            className="flex h-8 w-8 items-center justify-center rounded-full border border-transparent bg-white/5 text-slate-400 transition-all hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-400"
                             title="Remover do Inventário"
                         >
                             <span className="text-xs">✕</span>
@@ -111,7 +111,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
             </div>
 
             {/* Card Artwork Container */}
-            <Link href={`/marketplace/card/${id}`} className="block relative aspect-[3/4] overflow-hidden mb-6 bg-black/20 border border-white/5 rounded-2xl cursor-pointer">
+            <Link href={`/marketplace/card/${id}`} className={`relative block aspect-[3/4] cursor-pointer overflow-hidden border border-white/5 bg-black/20 ${mobileDensity === 'compact' ? 'mb-1.5 rounded-lg' : 'mb-3 rounded-xl'} sm:mb-5 sm:rounded-xl`}>
                 <img
                     src={currentImageUrl}
                     alt={name}
@@ -129,7 +129,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                             }
                         }
                     }}
-                    className="h-full w-full object-contain p-1 transition-transform duration-700 group-hover:scale-110"
+                    className="h-full w-full object-contain p-0.5 transition-transform duration-500 group-hover:scale-[1.03] sm:p-1"
                 />
                 {/* Overlay Gradient on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 justify-center">
@@ -138,15 +138,15 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
             </Link>
 
             {/* Card Info Section (Center-aligned) */}
-            <div className="flex flex-col items-center text-center space-y-3 pb-6">
+            <div className={`flex flex-col ${mobileDensity === 'compact' ? 'items-start space-y-1 pb-1 text-left' : 'items-center space-y-2 pb-2 text-center'} sm:items-center sm:space-y-3 sm:pb-5 sm:text-center`}>
                 <div className="space-y-1">
-                    <h3 className="min-h-[2.75rem] text-base font-black leading-tight tracking-[-0.03em] text-white transition-colors group-hover:text-rose-600 sm:text-lg">
+                    <h3 className={`${mobileDensity === 'compact' ? 'line-clamp-2 min-h-7 text-[9px]' : 'line-clamp-2 min-h-9 text-xs'} font-black leading-tight tracking-[-0.03em] text-white transition-colors group-hover:text-rose-500 sm:min-h-[2.75rem] sm:text-base`}>
                         {name}
                     </h3>
                     {cardNumber && (
-                        <p className="text-[11px] font-bold text-slate-400">({cardNumber})</p>
+                        <p className={`${mobileDensity === 'compact' ? 'hidden sm:block' : ''} text-[10px] font-bold text-slate-400`}>({cardNumber})</p>
                     )}
-                    <p className="text-[11px] font-medium text-slate-500">
+                    <p className={`${mobileDensity === 'compact' ? 'hidden sm:block' : 'line-clamp-1'} text-[10px] font-medium text-slate-400`}>
                         {set}
                     </p>
                 </div>
@@ -155,37 +155,25 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                 <div className="space-y-2 w-full">
                     <div className="flex flex-col items-center">
                         {originalPrice && price && originalPrice > price && (
-                            <span className="text-[10px] font-bold text-slate-500 line-through opacity-60">
+                            <span className={`${mobileDensity === 'compact' ? 'hidden sm:inline' : ''} text-[10px] font-bold text-slate-400 line-through opacity-70`}>
                                 R$ {originalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </span>
                         )}
-                        <span className={`text-[1.65rem] font-black tracking-[-0.04em] ${originalPrice && price && originalPrice > price ? 'text-rose-600' : 'text-white'}`}>
+                        <span className={`${mobileDensity === 'compact' ? 'text-[11px]' : 'text-lg'} font-black tracking-[-0.04em] sm:text-2xl ${originalPrice && price && originalPrice > price ? 'text-rose-500' : 'text-white'}`}>
                             R$ {(price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </span>
                     </div>
 
-                    <PriceComparison
-                        cardId={id}
-                        cardName={name}
-                        cardSet={set}
-                        cardNumber={cardNumber}
-                        condition={grade}
-                        finish={finish}
-                        language={language}
-                        prices={marketPrices}
-                        priceLinks={marketPriceLinks}
-                        currentPrice={price}
-                        size="sm"
-                    />
+                    <div className="hidden sm:block"><PriceComparison cardId={id} cardName={name} cardSet={set} cardNumber={cardNumber} condition={grade} finish={finish} language={language} prices={marketPrices} priceLinks={marketPriceLinks} currentPrice={price} size="sm" /></div>
                 </div>
             </div>
 
             {/* Action Bar (Hub Identity - Dark Premium) */}
-            <div className="mt-auto pt-4">
+            <div className={`${mobileDensity === 'compact' ? 'hidden sm:block' : 'block'} mt-auto pt-2 sm:pt-4`}>
                 <div className="flex flex-col space-y-3">
                     {/* Quantity Picker (Hub minimalist style) */}
                     {!onDelete && (
-                        <div className="flex items-center justify-between px-4 h-11 bg-white/5 border border-white/5 rounded-xl">
+                        <div className="hidden h-11 items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 sm:flex">
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Qtd.</span>
                             <div className="flex items-center gap-4">
                                 <button
@@ -226,10 +214,10 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                                 }
                             }}
                             disabled={isOutOfStock && !onDelete}
-                            className={`${onEditCard ? 'flex-1' : 'w-full'} h-12 rounded-xl uppercase font-black tracking-widest text-[11px] transition-all flex items-center justify-center active:scale-[0.98] ${isOutOfStock && !onDelete
+                            className={`${onEditCard ? 'flex-1' : 'w-full'} flex h-11 items-center justify-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all active:scale-[0.98] sm:h-12 sm:text-[11px] sm:tracking-widest ${isOutOfStock && !onDelete
                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                                 : onDelete
-                                    ? 'bg-slate-100 text-slate-900 hover:bg-rose-50 hover:text-rose-600 border border-transparent hover:border-rose-100'
+                                    ? 'border border-transparent bg-white/10 text-white hover:border-rose-500/20 hover:bg-rose-500/10 hover:text-rose-300'
                                     : 'bg-slate-900 text-white hover:bg-rose-600 shadow-lg shadow-slate-900/10 hover:shadow-rose-600/20'
                                 }`}
                         >
@@ -238,16 +226,16 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                     </div>
                 </div>
             </div>
-        </div>
+        </article>
     );
 };
 
-export default function CardGallery({ cards, onDelete, onEditCard }: { cards: CardProps[]; onDelete?: (id: string) => void, onEditCard?: (id: string, newPrice: number, originalPrice?: number, quantity?: number) => void }) {
+export default function CardGallery({ cards, onDelete, onEditCard, mobileColumns = 2 }: { cards: CardProps[]; onDelete?: (id: string) => void, onEditCard?: (id: string, newPrice: number, originalPrice?: number, quantity?: number) => void; mobileColumns?: 2 | 4 }) {
     const { addItem } = useCart();
     return (
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className={`grid ${mobileColumns === 4 ? 'grid-cols-4 gap-1.5' : 'grid-cols-2 gap-3'} sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4`}>
             {cards.map((card) => (
-                <ProductCard key={card.id} {...card} addItem={addItem} onDelete={onDelete} onEditCard={onEditCard} />
+                <ProductCard key={card.id} {...card} addItem={addItem} onDelete={onDelete} onEditCard={onEditCard} mobileDensity={mobileColumns === 4 ? 'compact' : 'comfortable'} />
             ))}
         </div>
     );

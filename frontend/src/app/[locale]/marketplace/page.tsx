@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { Columns2, Grid2X2, Search, SlidersHorizontal, X } from 'lucide-react';
 
 import CardGallery from '@/components/CardGallery';
 import FilterSidebar from '@/components/FilterSidebar';
@@ -31,10 +32,6 @@ interface InventoryCard {
     language?: string;
 }
 
-function buildCardLookupKey(name?: string | null, setName?: string | null) {
-    return `${(name || '').trim().toLowerCase()}::${(setName || '').trim().toLowerCase()}`;
-}
-
 export default function MarketplacePage() {
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
@@ -52,6 +49,8 @@ export default function MarketplacePage() {
     const [selectedRarities, setSelectedRarities] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<'price_desc' | 'price_asc' | 'newest'>('price_desc');
     const [isSortModalOpen, setIsSortModalOpen] = useState(false);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [mobileColumns, setMobileColumns] = useState<2 | 4>(2);
 
     const sortOptions: Array<{ id: 'price_desc' | 'price_asc' | 'newest'; label: string }> = [
         { id: 'price_desc', label: 'Maior valor' },
@@ -173,48 +172,13 @@ export default function MarketplacePage() {
 
     const activeFilters = selectedSets.length + selectedRarities.length;
     const availableCards = cards.filter((card) => (card.quantity || 0) > 0).length;
-    const averagePrice = cards.length > 0
-        ? cards.reduce((acc, card) => acc + (card.price || 0), 0) / cards.length
-        : 0;
-
     return (
-        <div className="animate-fade-up pb-20 pt-10" style={{ background: '#0c1324' }}>
+        <div className="animate-fade-up bg-brand-bg pb-20 pt-5 sm:pt-10">
             {/* Page header */}
-            <section className="page-frame space-y-6 pb-10 pt-6">
-                <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
-                    <div className="max-w-3xl space-y-4">
-                        <div className="eyebrow">Marketplace Premium</div>
-                        <h1
-                            className="font-black leading-[0.92] tracking-tight text-white"
-                            style={{ fontSize: 'clamp(36px, 5vw, 56px)' }}
-                        >
-                            Catálogo Completo
-                        </h1>
-                        <p className="text-sm leading-relaxed" style={{ color: '#8b95b5' }}>
-                            Busque, filtre e compre diretamente. Estoque exclusivo de Pokémon TCG.
-                        </p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-3">
-                        {[
-                            ['Disponíveis', `${availableCards}`],
-                            ['Filtros', activeFilters > 0 ? `${activeFilters} ativos` : 'Nenhum'],
-                            ['Preço Médio', averagePrice > 0 ? `R$ ${averagePrice.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—'],
-                        ].map(([label, value]) => (
-                            <div
-                                key={label}
-                                className="p-4 transition-all hover:scale-[1.02]"
-                                style={{
-                                    background: '#191f31',
-                                    border: '1px solid rgba(255,255,255,0.06)',
-                                    borderRadius: '1rem',
-                                }}
-                            >
-                                <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: '#8b95b5' }}>{label}</p>
-                                <p className="mt-2 text-lg font-black tracking-tight text-white">{value}</p>
-                            </div>
-                        ))}
-                    </div>
+            <section className="page-frame space-y-6 pb-6 pt-5 sm:pb-10 sm:pt-6">
+                <div className="max-w-3xl">
+                    <h1 className="text-[clamp(2.25rem,10vw,3.5rem)] font-black leading-[0.95] tracking-[-0.04em] text-white">Loja de cartas</h1>
+                    <p className="mt-3 text-sm leading-6 text-brand-muted sm:text-base">Compare preços e encontre cartas disponíveis para envio. {availableCards} itens em estoque.</p>
                 </div>
 
                 {/* Active set code banner */}
@@ -236,25 +200,16 @@ export default function MarketplacePage() {
                 )}
 
                 {/* Search + Sort */}
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_200px]">
+                <div className="grid gap-2 sm:gap-3 lg:grid-cols-[minmax(0,1fr)_200px]">
                     <div className="relative">
                         <input
                             type="text"
                             placeholder="Buscar por nome, edição, número ou grau PSA..."
-                            className="input-dark pl-14!"
+                            className="input-dark pl-12! text-base"
                             value={searchTerm}
                             onChange={(event) => setSearchTerm(event.target.value)}
                         />
-                        <svg
-                            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                            style={{ color: '#8b95b5' }}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2.5}
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
                     </div>
 
                     <button
@@ -279,8 +234,10 @@ export default function MarketplacePage() {
                 </div>
             </section>
 
-            <section className="page-frame mt-6 grid gap-6 pb-20 lg:grid-cols-[260px_minmax(0,1fr)]">
-                <aside className="lg:sticky lg:top-24 lg:self-start">
+            <section className="page-frame mt-2 grid gap-6 pb-20 lg:mt-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+                {isFilterOpen && <button aria-label="Fechar filtros" onClick={() => setIsFilterOpen(false)} className="fixed inset-0 z-[119] bg-black/70 lg:hidden" />}
+                <aside className={`${isFilterOpen ? 'fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-[120] block max-h-[72dvh] overflow-y-auto rounded-2xl bg-brand-surface shadow-2xl' : 'hidden'} lg:sticky lg:top-24 lg:block lg:self-start`}>
+                    <div className="flex items-center justify-between border-b border-white/10 px-5 py-3 lg:hidden"><span className="font-bold text-white">Filtrar cartas</span><button onClick={() => setIsFilterOpen(false)} aria-label="Fechar filtros" className="flex h-11 w-11 items-center justify-center rounded-xl text-brand-muted"><X className="h-5 w-5" /></button></div>
                     <FilterSidebar
                         options={filterOptions}
                         selected={{ sets: selectedSets, rarities: selectedRarities }}
@@ -291,23 +248,20 @@ export default function MarketplacePage() {
 
                 <main className="space-y-4">
                     {/* Result count bar */}
-                    <div
-                        className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-                        style={{
-                            background: '#191f31',
-                            border: '1px solid rgba(255,255,255,0.06)',
-                            borderRadius: '0.875rem',
-                        }}
-                    >
+                    <div className="flex items-center justify-between gap-3 rounded-2xl bg-brand-surface px-4 py-3 sm:px-5 sm:py-4">
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.22em]" style={{ color: '#8b95b5' }}>Resultado atual</p>
-                            <h2 className="mt-1 text-xl font-black tracking-tight text-white">
+                            <h2 className="text-sm font-bold text-white sm:text-xl">
                                 {sortedCards.length} carta{sortedCards.length === 1 ? '' : 's'} disponíveis
                             </h2>
+                            {activeFilters > 0 && <p className="mt-0.5 text-xs text-brand-muted">{activeFilters} filtro{activeFilters === 1 ? '' : 's'} ativo{activeFilters === 1 ? '' : 's'}</p>}
                         </div>
-                        <p className="text-sm" style={{ color: '#8b95b5' }}>
-                            Preços com comparativo de mercado nos cards
-                        </p>
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => setIsFilterOpen(true)} aria-label="Abrir filtros" className="flex h-11 w-11 items-center justify-center rounded-xl text-brand-muted hover:bg-white/5 hover:text-white lg:hidden"><SlidersHorizontal className="h-5 w-5" /></button>
+                            <div className="flex rounded-xl bg-black/20 p-1 lg:hidden" aria-label="Quantidade de cartas por linha">
+                                <button onClick={() => setMobileColumns(2)} aria-label="Duas cartas por linha" aria-pressed={mobileColumns === 2} className={`flex h-9 w-9 items-center justify-center rounded-lg ${mobileColumns === 2 ? 'bg-white/10 text-white' : 'text-brand-muted'}`}><Columns2 className="h-4 w-4" /></button>
+                                <button onClick={() => setMobileColumns(4)} aria-label="Quatro cartas por linha" aria-pressed={mobileColumns === 4} className={`flex h-9 w-9 items-center justify-center rounded-lg ${mobileColumns === 4 ? 'bg-white/10 text-white' : 'text-brand-muted'}`}><Grid2X2 className="h-4 w-4" /></button>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Sort modal */}
@@ -358,11 +312,11 @@ export default function MarketplacePage() {
                     )}
 
                     {loading ? (
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <div className={`grid ${mobileColumns === 4 ? 'grid-cols-4 gap-1.5' : 'grid-cols-2 gap-3'} sm:grid-cols-2 sm:gap-5 lg:grid-cols-3`}>
                             {[1, 2, 3, 4, 5, 6].map((item) => (
                                 <div
                                     key={item}
-                                    className="h-80 animate-pulse rounded-[1.25rem]"
+                                    className="aspect-[3/5] animate-pulse rounded-xl sm:h-80 sm:aspect-auto sm:rounded-2xl"
                                     style={{ background: '#191f31' }}
                                 />
                             ))}
@@ -391,6 +345,7 @@ export default function MarketplacePage() {
                         </div>
                     ) : (
                         <CardGallery
+                            mobileColumns={mobileColumns}
                             cards={sortedCards.map((card) => ({
                                 id: card.id,
                                 name: card.official_name ?? card.name ?? 'Desconhecido',
