@@ -130,8 +130,10 @@ export default function LiveRoomPage() {
             </div>
 
             <div className="absolute bottom-6 right-3 z-20 flex flex-col items-center gap-4 pb-[env(safe-area-inset-bottom)]">
-                <button onClick={() => setChatOpen(true)} className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-xl shadow-lg backdrop-blur">💬</button>
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/45 text-[9px] font-black backdrop-blur"><ChevronUp className="h-4 w-4 text-emerald-400" />{live.bid_count || bids.length}</div>
+            </div>
+            <div className="absolute bottom-[250px] left-3 right-20 z-20 h-40 pointer-events-auto">
+                <LiveChat liveId={id} currentUser={user} variant="overlay" />
             </div>
         </section>
 
@@ -157,7 +159,6 @@ export default function LiveRoomPage() {
             <aside className={`${chatOpen ? 'fixed inset-0 z-40 flex' : 'hidden'} min-h-0 flex-col border-l border-white/10 bg-[#070d1f] lg:static lg:flex`}><div className="flex h-12 items-center justify-between border-b border-white/10 px-4"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chat da live</span><button onClick={() => setChatOpen(false)} className="lg:hidden"><X className="h-5 w-5" /></button></div><div className="min-h-0 flex-1 p-2"><LiveChat liveId={id} currentUser={user} /></div></aside>
         </main>
 
-        {chatOpen && <div className="fixed inset-0 z-40 flex flex-col bg-[#070d1f] lg:hidden"><div className="flex h-14 items-center justify-between border-b border-white/10 px-4"><span className="text-xs font-black uppercase tracking-widest">Chat ao vivo</span><button onClick={() => setChatOpen(false)} className="rounded-full bg-white/5 p-2"><X className="h-5 w-5" /></button></div><div className="min-h-0 flex-1 p-2 pb-[env(safe-area-inset-bottom)]"><LiveChat liveId={id} currentUser={user} /></div></div>}
         {pendingBid !== null && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"><div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#191f31] p-6"><div className="flex items-center gap-3 text-emerald-400"><ShieldCheck className="h-6 w-6" /><h3 className="text-lg font-black text-white">Confirmar lance</h3></div><p className="mt-4 text-sm leading-6 text-slate-400">Você está oferecendo <b className="text-xl text-white">{money(pendingBid)}</b>. Esse valor ficará reservado até você ser superado ou o lote ser concluído.</p><div className="mt-4 rounded-xl bg-amber-400/10 p-3 text-[10px] text-amber-200">Lances são compromissos de compra e não podem ser desfeitos durante a disputa.</div><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={() => setPendingBid(null)} disabled={submitting} className="rounded-xl bg-white/5 py-3 text-xs font-black text-slate-400">Cancelar</button><button onClick={confirmBid} disabled={submitting} className="rounded-xl bg-rose-600 py-3 text-xs font-black text-white disabled:opacity-50">{submitting ? 'Registrando...' : 'Confirmar lance'}</button></div></div></div>}
         <style jsx global>{`nav, footer { display:none!important } body { overflow-x:hidden!important; background:#070d1f!important; padding-bottom:0!important }`}</style>
     </div>;

@@ -12,7 +12,7 @@ interface Message {
     timestamp: number;
 }
 
-export default function LiveChat({ liveId, currentUser }: { liveId: string, currentUser?: { id: string | null, name: string } | null }) {
+export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { liveId: string, currentUser?: { id: string | null, name: string } | null, variant?: 'panel' | 'overlay' }) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [bannedUsers, setBannedUsers] = useState<Set<string>>(new Set());
@@ -148,9 +148,9 @@ export default function LiveChat({ liveId, currentUser }: { liveId: string, curr
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-950/90 backdrop-blur-2xl border border-slate-800 rounded-3xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+        <div className={`flex h-full flex-col overflow-hidden ${variant === 'overlay' ? 'bg-transparent' : 'rounded-3xl border border-slate-800 bg-slate-950/90 shadow-[0_0_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl'}`}>
             {/* Header */}
-            <div className="bg-slate-900/50 border-b border-slate-800/50 p-4 flex justify-between items-center shrink-0">
+            <div className={`${variant === 'overlay' ? 'hidden' : 'flex'} bg-slate-900/50 border-b border-slate-800/50 p-4 justify-between items-center shrink-0`}>
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     Chat Ao Vivo
@@ -159,21 +159,21 @@ export default function LiveChat({ liveId, currentUser }: { liveId: string, curr
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 mask-fade-top scrollbar-hide flex flex-col justify-end">
+            <div className={`flex flex-1 flex-col justify-end overflow-y-auto mask-fade-top scrollbar-hide ${variant === 'overlay' ? 'space-y-1.5 p-1' : 'space-y-4 p-4'}`}>
                 {messages.length === 0 ? (
                     <div className="text-center text-xs text-slate-500 mt-auto mb-4 italic">
                         Bem-vindo(a) ao chat! Nenhuma mensagem recente.
                     </div>
                 ) : (
                     messages.map((msg) => (
-                        <div key={msg.id} className="text-xs leading-relaxed group relative p-2 -mx-2 rounded-xl hover:bg-slate-900/50 transition-colors">
-                            <span className={`font-black mr-2 ${msg.user_id === 'admin' ? 'text-emerald-400 bg-emerald-400/10 px-1 py-0.5 rounded' : 'text-rose-400'}`}>
+                        <div key={msg.id} className={`text-xs leading-relaxed group relative transition-colors ${variant === 'overlay' ? 'w-fit max-w-[92%] rounded-xl bg-black/35 px-2.5 py-1.5 text-shadow-sm backdrop-blur-sm' : 'p-2 -mx-2 rounded-xl hover:bg-slate-900/50'}`}>
+                            <span className={`font-black mr-2 ${msg.user_id === 'admin' ? 'text-emerald-400 bg-emerald-400/10 px-1 py-0.5 rounded' : variant === 'overlay' ? 'text-white' : 'text-rose-400'}`}>
                                 {msg.user_name}:
                             </span>
                             <span className="text-slate-300 break-words">{msg.message}</span>
 
                             {/* Moderação Actions (Hover) */}
-                            <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-slate-900 border border-slate-700/50 p-1 rounded-lg shadow-lg">
+                            <div className={`${variant === 'overlay' ? 'hidden' : 'flex'} absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity items-center gap-1 bg-slate-900 border border-slate-700/50 p-1 rounded-lg shadow-lg`}>
                                 {isAdmin ? (
                                     <>
                                         <button onClick={() => handleDeleteMessage(msg)} className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors" title="Apagar Mensagem">
@@ -203,19 +203,19 @@ export default function LiveChat({ liveId, currentUser }: { liveId: string, curr
                     <span className="text-xs font-bold text-rose-500 uppercase tracking-widest">🛑 Você foi silenciado nesta live</span>
                 </div>
             ) : (
-                <form onSubmit={sendMessage} className="p-3 bg-slate-900/80 border-t border-slate-800/80 flex gap-2 shrink-0">
+                <form onSubmit={sendMessage} className={`flex shrink-0 gap-2 ${variant === 'overlay' ? 'p-1' : 'border-t border-slate-800/80 bg-slate-900/80 p-3'}`}>
                     <input 
                         type="text" 
                         value={newMessage}
                         onChange={e => setNewMessage(e.target.value)}
                         placeholder={currentUser ? "Envie uma mensagem..." : "Assista ao vivo!"}
                         disabled={!channel}
-                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500/50 transition-colors placeholder-slate-600"
+                        className={`flex-1 rounded-xl border px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500/50 transition-colors ${variant === 'overlay' ? 'border-white/15 bg-black/40 backdrop-blur-md placeholder:text-white/45' : 'border-slate-800 bg-slate-950 placeholder-slate-600'}`}
                     />
                     <button 
                         type="submit" 
                         disabled={!newMessage.trim() || !channel}
-                        className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:hover:bg-emerald-600 cursor-pointer disabled:cursor-not-allowed text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                        className={`${variant === 'overlay' ? 'bg-rose-600 px-4' : 'bg-emerald-600 hover:bg-emerald-500 disabled:hover:bg-emerald-600 px-5'} cursor-pointer disabled:cursor-not-allowed disabled:opacity-30 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all`}
                     >
                         Enviar
                     </button>
