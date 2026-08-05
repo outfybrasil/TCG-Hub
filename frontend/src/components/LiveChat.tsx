@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
+import Link from 'next/link';
+import { Ban, CircleSlash2, Flag, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface Message {
@@ -133,19 +135,19 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
     return (
         <div className={`flex h-full flex-col overflow-hidden ${variant === 'overlay' ? 'bg-transparent' : 'rounded-3xl border border-slate-800 bg-slate-950/90 shadow-[0_0_40px_rgba(0,0,0,0.5)] backdrop-blur-2xl'}`}>
             {/* Header */}
-            <div className={`${variant === 'overlay' ? 'hidden' : 'flex'} bg-slate-900/50 border-b border-slate-800/50 p-4 justify-between items-center shrink-0`}>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 flex items-center gap-2">
+            <div className={`${variant === 'overlay' ? 'hidden' : 'flex'} shrink-0 items-center justify-between border-b border-slate-800/50 bg-slate-900/50 p-4`}>
+                <span className="flex items-center gap-2 text-[11px] font-bold text-emerald-300">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     Chat Ao Vivo
                 </span>
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">{messages.length} msg simultâneas</span>
+                <span className="text-[10px] font-medium text-slate-400">{messages.length} mensagens</span>
             </div>
 
             {/* Messages Area */}
             <div className={`flex flex-1 flex-col justify-end overflow-y-auto mask-fade-top scrollbar-hide ${variant === 'overlay' ? 'space-y-1 p-1' : 'space-y-4 p-4'}`}>
                 {messages.length === 0 ? (
-                    <div className="text-center text-xs text-slate-500 mt-auto mb-4 italic">
-                        Bem-vindo(a) ao chat! Nenhuma mensagem recente.
+                    <div className="mb-4 mt-auto text-center text-xs text-slate-400">
+                        O chat ainda está vazio.
                     </div>
                 ) : (
                     (variant === 'overlay' ? messages.slice(-6) : messages).map((msg) => (
@@ -156,21 +158,21 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
                             <span className={`break-words text-slate-300 ${variant === 'overlay' ? 'line-clamp-2' : ''}`}>{msg.message}</span>
 
                             {/* Moderação Actions (Hover) */}
-                            <div className={`${variant === 'overlay' ? 'hidden' : 'flex'} absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity items-center gap-1 bg-slate-900 border border-slate-700/50 p-1 rounded-lg shadow-lg`}>
+                            <div className={`${variant === 'overlay' ? 'hidden' : 'flex'} absolute right-2 top-1/2 -translate-y-1/2 items-center gap-1 rounded-lg border border-slate-700/50 bg-slate-900 p-1 opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100`}>
                                 {isAdmin ? (
                                     <>
-                                        <button onClick={() => handleDeleteMessage(msg)} className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 text-rose-400 hover:bg-rose-500 hover:text-white transition-colors" title="Apagar Mensagem">
-                                            🗑️
+                                        <button onClick={() => handleDeleteMessage(msg)} className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800 text-rose-300 transition-colors hover:bg-rose-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400" title="Apagar mensagem" aria-label={`Apagar mensagem de ${msg.user_name}`}>
+                                            <Trash2 className="h-4 w-4" />
                                         </button>
                                         {msg.user_id !== 'admin' && (
-                                            <button onClick={() => handleBan(msg)} className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 text-rose-500 hover:bg-rose-600 hover:text-white transition-colors" title="Banir Usuário">
-                                                🚫
+                                            <button onClick={() => handleBan(msg)} className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800 text-rose-300 transition-colors hover:bg-rose-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400" title="Silenciar usuário" aria-label={`Silenciar ${msg.user_name}`}>
+                                                <Ban className="h-4 w-4" />
                                             </button>
                                         )}
                                     </>
                                 ) : currentUser?.id ? (
-                                    <button onClick={() => handleReport(msg)} className="w-6 h-6 flex items-center justify-center rounded bg-slate-800 text-amber-500 hover:bg-amber-500 hover:text-white transition-colors" title="Denunciar Comentário">
-                                        ⚠️
+                                    <button onClick={() => handleReport(msg)} className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-800 text-amber-300 transition-colors hover:bg-amber-500 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300" title="Denunciar comentário" aria-label={`Denunciar comentário de ${msg.user_name}`}>
+                                        <Flag className="h-4 w-4" />
                                     </button>
                                 ) : null}
                             </div>
@@ -182,11 +184,11 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
 
             {/* Input Area */}
             {isBanned ? (
-                <div className="p-4 bg-rose-950/50 border-t border-rose-900/50 text-center">
-                    <span className="text-xs font-bold text-rose-500 uppercase tracking-widest">🛑 Você foi silenciado nesta live</span>
+                <div className="flex items-center justify-center gap-2 border-t border-rose-900/50 bg-rose-950/50 p-4 text-center">
+                    <CircleSlash2 className="h-4 w-4 text-rose-300" /><span className="text-xs font-bold text-rose-300">Você foi silenciado nesta live</span>
                 </div>
             ) : !currentUser?.id ? (
-                <div className={`${variant === 'overlay' ? 'p-1' : 'border-t border-slate-800/80 bg-slate-900/80 p-3'}`}><a href="/auth/login" className="block rounded-xl border border-white/15 bg-black/45 px-3 py-2 text-center text-[10px] font-black uppercase tracking-widest text-white backdrop-blur">Entre para comentar</a></div>
+                <div className={`${variant === 'overlay' ? 'p-1' : 'border-t border-slate-800/80 bg-slate-900/80 p-3'}`}><Link href="/auth/login" className="flex min-h-11 items-center justify-center rounded-xl border border-white/20 bg-black/55 px-3 py-2 text-center text-[10px] font-black uppercase tracking-wide text-white">Entre para comentar</Link></div>
             ) : (
                 <form onSubmit={sendMessage} className={`flex shrink-0 gap-2 ${variant === 'overlay' ? 'p-1' : 'border-t border-slate-800/80 bg-slate-900/80 p-3'}`}>
                     <input 
@@ -195,12 +197,12 @@ export default function LiveChat({ liveId, currentUser, variant = 'panel' }: { l
                         onChange={e => setNewMessage(e.target.value)}
                         placeholder="Envie uma mensagem..."
                         disabled={!channel || !currentUser?.id}
-                        className={`flex-1 rounded-xl border px-4 py-2 text-sm text-white focus:outline-none focus:border-rose-500/50 transition-colors ${variant === 'overlay' ? 'border-white/15 bg-black/40 backdrop-blur-md placeholder:text-white/45' : 'border-slate-800 bg-slate-950 placeholder-slate-600'}`}
+                        className={`live-chat-input min-h-11 min-w-0 flex-1 rounded-xl border px-3 py-2 text-base text-white transition-colors focus:border-rose-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50 ${variant === 'overlay' ? 'border-white/20 bg-black/55 placeholder:text-white/55' : 'border-slate-800 bg-slate-950 placeholder-slate-500'}`}
                     />
                     <button 
                         type="submit" 
                         disabled={!newMessage.trim() || !channel}
-                        className={`${variant === 'overlay' ? 'bg-rose-600 px-4' : 'bg-emerald-600 hover:bg-emerald-500 disabled:hover:bg-emerald-600 px-5'} cursor-pointer disabled:cursor-not-allowed disabled:opacity-30 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all`}
+                        className={`${variant === 'overlay' ? 'bg-rose-600 px-4' : 'bg-emerald-600 hover:bg-emerald-500 disabled:hover:bg-emerald-600 px-5'} min-h-11 min-w-12 cursor-pointer rounded-xl py-2 text-[10px] font-black uppercase tracking-wide text-white transition-colors disabled:cursor-not-allowed disabled:opacity-30`}
                     >
                         Enviar
                     </button>

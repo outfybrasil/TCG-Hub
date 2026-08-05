@@ -75,25 +75,52 @@ body {
   min-height: 100vh;
 }
 
-/* Live vertical: adapts to iPhone safe areas and short screens. */
+/* Live vertical: content-driven zones, safe areas and thumb-sized controls. */
+.live-mobile-room {
+  --live-auction-height: clamp(13.75rem, 30dvh, 16rem);
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  overscroll-behavior: none;
+}
+
 .live-mobile-chat {
-  bottom: calc(15.75rem + env(safe-area-inset-bottom));
-  height: clamp(10rem, 29dvh, 16rem);
+  bottom: calc(var(--live-auction-height) + env(safe-area-inset-bottom));
+  height: clamp(9.5rem, 28dvh, 15rem);
+  transition: bottom .2s ease-out, height .2s ease-out;
+}
+
+.live-mobile-actions { bottom: max(.75rem, env(safe-area-inset-bottom)); }
+.live-mobile-actions > button,
+.live-mobile-actions > div { min-width: 44px; min-height: 44px; }
+
+.live-mobile-room:has(.live-chat-input:focus) .live-mobile-auction,
+.live-mobile-room:has(.live-chat-input:focus) .live-mobile-actions { opacity: 0; pointer-events: none; }
+.live-mobile-room:has(.live-chat-input:focus) .live-mobile-chat {
+  inset-inline: .5rem;
+  bottom: max(.5rem, env(safe-area-inset-bottom));
+  height: min(48dvh, 20rem);
 }
 
 @media (max-width: 390px) {
-  .live-mobile-auction { right: 3.5rem; padding-left: .65rem; padding-right: .35rem; }
+  .live-mobile-room { --live-auction-height: 13.25rem; }
+  .live-mobile-auction { right: 3.75rem; padding: .65rem .35rem max(.65rem, env(safe-area-inset-bottom)) .65rem; }
   .live-mobile-auction h2 { font-size: .95rem; line-height: 1.15rem; }
-  .live-mobile-auction button { padding-top: .55rem; padding-bottom: .55rem; font-size: .6rem; }
-  .live-mobile-actions { right: .35rem; transform: scale(.88); transform-origin: bottom right; }
-  .live-mobile-chat { left: .5rem; right: 4rem; bottom: calc(14.25rem + env(safe-area-inset-bottom)); height: clamp(9rem, 27dvh, 13rem); }
+  .live-mobile-auction button { min-height: 44px; padding-block: .5rem; font-size: .65rem; }
+  .live-mobile-actions { right: .35rem; gap: .5rem; }
+  .live-mobile-chat { left: .5rem; right: 4rem; height: clamp(8.75rem, 26dvh, 12rem); }
 }
 
-@media (max-height: 700px) and (max-width: 1023px) {
-  .live-mobile-chat { bottom: calc(13.5rem + env(safe-area-inset-bottom)); height: 9.75rem; }
-  .live-mobile-auction { padding-bottom: max(.45rem, env(safe-area-inset-bottom)); }
-  .live-mobile-auction .h-20 { height: 3.5rem; width: 2.75rem; }
-  .live-mobile-actions { bottom: .25rem; gap: .4rem; transform: scale(.78); transform-origin: bottom right; }
+@media (max-height: 700px) and (max-width: 1023px) and (orientation: portrait) {
+  .live-mobile-room { --live-auction-height: 12.5rem; }
+  .live-mobile-chat { height: 11rem; }
+  .live-mobile-auction .h-20 { height: 3.25rem; width: 2.5rem; }
+  .live-mobile-auction { padding-top: .35rem; }
+  .live-mobile-actions { gap: .35rem; }
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 1023px) {
+  .live-mobile-auction { right: 52%; max-width: 48rem; padding-bottom: max(.5rem, env(safe-area-inset-bottom)); }
+  .live-mobile-chat { left: 52%; right: 4rem; bottom: max(.5rem, env(safe-area-inset-bottom)); height: min(52dvh, 13rem); }
+  .live-mobile-actions { right: max(.35rem, env(safe-area-inset-right)); }
 }
 
 @media (display-mode: standalone) {
