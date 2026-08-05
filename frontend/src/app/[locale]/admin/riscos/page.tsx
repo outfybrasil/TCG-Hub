@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, ShieldAlert, ShieldX } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 type RiskListing = {
     id: string; card_name: string; card_set: string | null; price: number;
@@ -14,7 +15,8 @@ export default function RiskListingsPage() {
     const [loading, setLoading] = useState(true);
     const load = useCallback(async () => {
         setLoading(true);
-        const response = await fetch('/api/admin/risk-listings');
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch('/api/admin/risk-listings', { headers: session ? { Authorization: `Bearer ${session.access_token}` } : {} });
         const data = await response.json();
         setListings(data.listings || []);
         setLoading(false);
@@ -23,7 +25,9 @@ export default function RiskListingsPage() {
 
     async function decide(listingId: string, action: string) {
         const reason = window.prompt('Motivo da decisão (opcional):') || '';
-        await fetch('/api/admin/risk-listings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ listingId, action, reason }) });
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        await fetch('/api/admin/risk-listings', { method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }, body: JSON.stringify({ listingId, action, reason }) });
         await load();
     }
 

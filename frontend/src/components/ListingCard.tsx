@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { Listing } from '@/types/marketplace';
+import ReportListingButton from '@/components/ReportListingButton';
 
 interface ListingCardProps {
     listing: Listing;
@@ -134,6 +135,7 @@ export default function ListingCard({ listing, onBuy }: ListingCardProps) {
                         Preço fora do padrão · não influencia o índice
                     </div>
                 )}
+                <ReportListingButton listingId={listing.id} sellerId={listing.seller_id} />
 
                 {/* Referência de vendas internas */}
                 {market && (

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { BadgeCheck, BarChart3, BookOpen, ShieldCheck, TrendingUp } from 'lucide-react';
+import PriceAlertButton from '@/components/PriceAlertButton';
 
 type IndexValue = {
     price: number | null;
@@ -109,6 +110,7 @@ export default function CardMarketOverview({ cardId }: { cardId: string }) {
                             <p className="mt-2 text-[10px] font-bold text-emerald-100/70">
                                 Faixa justa {money(data.current.fairLow)} — {money(data.current.fairHigh)}
                             </p>
+                            <PriceAlertButton cardId={cardId} currentPrice={data.current.price} condition={filters.condition} finish={filters.finish} language={filters.language} />
                         </div>
                     </div>
                 </div>

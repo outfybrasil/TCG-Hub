@@ -11,13 +11,15 @@ import {
   Home,
   LogOut,
   Package,
-  ShieldAlert
+  ShieldAlert,
+  Flag
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const navItems = [
   { id: 'vendas', label: 'Vendas', href: '/admin/vendas', icon: BarChart3 },
   { id: 'riscos', label: 'Antifraude', href: '/admin/riscos', icon: ShieldAlert },
+  { id: 'denuncias', label: 'Denúncias', href: '/admin/denuncias', icon: Flag },
   { id: 'live', label: 'Live Dashboard', href: '/admin/live', icon: Radio },
   { id: 'estoque', label: 'Meu Estoque', href: '/minha-conta/inventario', icon: Package },
   { id: 'sync', label: 'Sincronização', href: '/admin/sync', icon: RefreshCcw },
