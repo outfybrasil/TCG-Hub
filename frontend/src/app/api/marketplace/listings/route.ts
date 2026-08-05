@@ -152,6 +152,7 @@ export async function POST(req: Request) {
         reference_price: reference.price,
         index_eligible: priceRisk.level === 'normal',
         risk_assessed_at: new Date().toISOString(),
+        moderation_status: priceRisk.level === 'normal' ? 'clear' : 'pending',
     };
 
     let { data, error } = await supabaseAdmin

@@ -74,6 +74,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         updates.reference_price = reference.price;
         updates.index_eligible = risk.level === 'normal';
         updates.risk_assessed_at = new Date().toISOString();
+        updates.moderation_status = risk.level === 'normal' ? 'clear' : 'pending';
     }
 
     let { data, error } = await supabaseAdmin
