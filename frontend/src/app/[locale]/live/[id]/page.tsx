@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, BellRing, ChevronUp, Clock3, Radio, ShieldCheck, Users, Wallet, Wifi, WifiOff, X } from 'lucide-react';
+import { ArrowLeft, BellRing, ChevronUp, Clock3, Radio, ShieldCheck, Users, Wallet, Wifi, WifiOff } from 'lucide-react';
 import LiveChat from '@/components/LiveChat';
 import { supabase } from '@/lib/supabase';
 
@@ -29,7 +29,7 @@ export default function LiveRoomPage() {
     const [pendingBid, setPendingBid] = useState<number | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [notice, setNotice] = useState('');
-    const [chatOpen, setChatOpen] = useState(false);
+    const [isDesktop, setIsDesktop] = useState(false);
 
     const load = useCallback(async () => {
         const [{ data: auth }, liveResult, bidResult] = await Promise.all([
@@ -50,6 +50,13 @@ export default function LiveRoomPage() {
     }, [id, router]);
 
     useEffect(() => { void load(); }, [load]);
+    useEffect(() => {
+        const media = window.matchMedia('(min-width: 1024px)');
+        const syncViewport = () => setIsDesktop(media.matches);
+        syncViewport();
+        media.addEventListener('change', syncViewport);
+        return () => media.removeEventListener('change', syncViewport);
+    }, []);
     useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer); }, []);
     useEffect(() => {
         const room = supabase.channel(`live-room-${id}`)
@@ -132,9 +139,9 @@ export default function LiveRoomPage() {
             <div className="absolute bottom-6 right-3 z-20 flex flex-col items-center gap-4 pb-[env(safe-area-inset-bottom)]">
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/45 text-[9px] font-black backdrop-blur"><ChevronUp className="h-4 w-4 text-emerald-400" />{live.bid_count || bids.length}</div>
             </div>
-            <div className="absolute bottom-[250px] left-3 right-20 z-20 h-40 pointer-events-auto">
+            {!isDesktop && <div className="absolute bottom-[250px] left-3 right-20 z-20 h-40 pointer-events-auto">
                 <LiveChat liveId={id} currentUser={user} variant="overlay" />
-            </div>
+            </div>}
         </section>
 
         <main className="hidden lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(320px,1.15fr)_minmax(360px,.85fr)_320px] lg:grid">
@@ -156,7 +163,7 @@ export default function LiveRoomPage() {
                 {!ended && <div className="border-t border-white/10 bg-[#0c1324] p-4"><div className="mb-3 flex items-center justify-between"><span className="flex items-center gap-2 text-[10px] font-bold text-slate-400"><Wallet className="h-4 w-4" />Saldo livre: <b className="text-emerald-400">{balance === null ? 'Entre para consultar' : money(balance)}</b></span><span className="text-[9px] text-slate-500">mínimo {money(minimumBid)}</span></div><div className="grid grid-cols-3 gap-2">{[1, 2, 5].map((multiplier) => { const value = Number(live.current_bid || 0) + increment * multiplier; return <button key={multiplier} disabled={waiting || secondsLeft <= 0 || submitting} onClick={() => requestBid(value)} className="rounded-xl border border-rose-400/25 bg-rose-500/10 py-3 text-xs font-black text-rose-200 hover:bg-rose-500/20 disabled:opacity-30">{money(value)}</button>; })}</div><div className="mt-2 flex overflow-hidden rounded-xl border border-white/10 bg-white/5"><span className="px-3 py-3 text-xs font-bold text-slate-500">R$</span><input inputMode="decimal" value={customBid} onChange={(event) => setCustomBid(event.target.value)} placeholder="Outro valor" className="min-w-0 flex-1 bg-transparent px-1 text-sm font-bold outline-none" /><button onClick={() => requestBid(Number(customBid.replace(',', '.')))} className="bg-white/10 px-4 text-[10px] font-black uppercase hover:bg-white/15">Revisar</button></div>{notice && <p className="mt-2 text-center text-xs text-amber-300">{notice}</p>}</div>}
             </section>
 
-            <aside className={`${chatOpen ? 'fixed inset-0 z-40 flex' : 'hidden'} min-h-0 flex-col border-l border-white/10 bg-[#070d1f] lg:static lg:flex`}><div className="flex h-12 items-center justify-between border-b border-white/10 px-4"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chat da live</span><button onClick={() => setChatOpen(false)} className="lg:hidden"><X className="h-5 w-5" /></button></div><div className="min-h-0 flex-1 p-2"><LiveChat liveId={id} currentUser={user} /></div></aside>
+            <aside className="hidden min-h-0 flex-col border-l border-white/10 bg-[#070d1f] lg:flex"><div className="flex h-12 items-center justify-between border-b border-white/10 px-4"><span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chat da live</span></div><div className="min-h-0 flex-1 p-2">{isDesktop && <LiveChat liveId={id} currentUser={user} />}</div></aside>
         </main>
 
         {pendingBid !== null && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"><div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#191f31] p-6"><div className="flex items-center gap-3 text-emerald-400"><ShieldCheck className="h-6 w-6" /><h3 className="text-lg font-black text-white">Confirmar lance</h3></div><p className="mt-4 text-sm leading-6 text-slate-400">Você está oferecendo <b className="text-xl text-white">{money(pendingBid)}</b>. Esse valor ficará reservado até você ser superado ou o lote ser concluído.</p><div className="mt-4 rounded-xl bg-amber-400/10 p-3 text-[10px] text-amber-200">Lances são compromissos de compra e não podem ser desfeitos durante a disputa.</div><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={() => setPendingBid(null)} disabled={submitting} className="rounded-xl bg-white/5 py-3 text-xs font-black text-slate-400">Cancelar</button><button onClick={confirmBid} disabled={submitting} className="rounded-xl bg-rose-600 py-3 text-xs font-black text-white disabled:opacity-50">{submitting ? 'Registrando...' : 'Confirmar lance'}</button></div></div></div>}
