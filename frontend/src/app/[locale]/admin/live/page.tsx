@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import LiveChat from '@/components/LiveChat';
+import LiveSalesHistory from '@/components/LiveSalesHistory';
 
 
 export default function AdminLiveDashboard() {
@@ -349,6 +350,10 @@ export default function AdminLiveDashboard() {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                <div className="rounded-[32px] border border-white/10 bg-white/5 p-6 shadow-2xl">
+                                    <div className="mb-4 flex items-center justify-between"><div><h3 className="text-sm font-black text-white">Histórico de arremates</h3><p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-slate-500">Registro oficial com horário de Brasília</p></div><span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-400">Atualização automática</span></div>
+                                    <LiveSalesHistory liveId={liveData.id} compact />
                                 </div>
                             </div>
                         </div>

@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, BellRing, ChevronUp, Clock3, Radio, ShieldCheck, Users, Wallet, Wifi, WifiOff } from 'lucide-react';
+import { ArrowLeft, BellRing, ChevronUp, Clock3, Crown, History, Radio, Share2, ShieldCheck, Users, Wallet, Wifi, WifiOff, X } from 'lucide-react';
 import LiveChat from '@/components/LiveChat';
+import LiveSalesHistory from '@/components/LiveSalesHistory';
 import { supabase } from '@/lib/supabase';
 
 type LiveAuction = {
@@ -30,6 +31,7 @@ export default function LiveRoomPage() {
     const [submitting, setSubmitting] = useState(false);
     const [notice, setNotice] = useState('');
     const [isDesktop, setIsDesktop] = useState(false);
+    const [showHistory, setShowHistory] = useState(false);
     const settlementRequested = useRef(false);
 
     const load = useCallback(async () => {
@@ -111,13 +113,24 @@ export default function LiveRoomPage() {
         setNotice(''); setPendingBid(amount);
     }
 
+    async function shareLive() {
+        const shareData = { title: live?.title || 'Leilão ao vivo TCG Megastore', text: 'Acompanhe este leilão ao vivo na TCG Megastore!', url: window.location.href };
+        try {
+            if (navigator.share) await navigator.share(shareData);
+            else { await navigator.clipboard.writeText(window.location.href); setNotice('Link da live copiado!'); }
+        } catch (error) {
+            if (error instanceof DOMException && error.name === 'AbortError') return;
+            setNotice('Não foi possível compartilhar agora.');
+        }
+    }
+
     if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#070d1f] text-sm font-black uppercase tracking-widest text-white/50"><Radio className="mr-3 animate-pulse text-rose-500" />Conectando à arena</div>;
     if (!live) return null;
 
     return <div className="min-h-dvh bg-[#070d1f] text-white lg:h-dvh lg:overflow-hidden">
         <header className="hidden h-14 items-center justify-between border-b border-white/10 bg-[#0c1324]/95 px-3 sm:px-5 lg:flex">
             <div className="flex min-w-0 items-center gap-3"><button onClick={() => router.push('/lives')} aria-label="Voltar" className="rounded-lg p-2 text-slate-400 hover:bg-white/5 hover:text-white"><ArrowLeft className="h-4 w-4" /></button><span className="flex items-center gap-2 rounded-md bg-rose-600 px-2 py-1 text-[9px] font-black uppercase tracking-widest"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />Ao vivo</span><h1 className="truncate text-xs font-black sm:text-sm">{live.title}</h1></div>
-            <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400"><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{viewerCount}</span><span title={connected ? 'Tempo real conectado' : 'Reconectando'} className={connected ? 'text-emerald-400' : 'text-amber-400'}>{connected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}</span></div>
+            <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400"><button onClick={() => setShowHistory(true)} className="flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-white/5"><History className="h-3.5 w-3.5" />Arremates</button><button onClick={shareLive} className="flex items-center gap-1 rounded-lg px-2 py-1.5 hover:bg-white/5"><Share2 className="h-3.5 w-3.5" />Compartilhar</button><span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{viewerCount}</span><span title={connected ? 'Tempo real conectado' : 'Reconectando'} className={connected ? 'text-emerald-400' : 'text-amber-400'}>{connected ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}</span></div>
         </header>
 
         <section className="relative h-dvh overflow-hidden bg-black lg:hidden">
@@ -144,7 +157,10 @@ export default function LiveRoomPage() {
                 {(waiting || ended) && <div className="rounded-2xl bg-black/45 p-4 backdrop-blur-md"><p className="text-lg font-black">{ended ? 'Transmissão encerrada' : 'Próximo lote em preparação'}</p><p className="mt-1 text-xs text-white/60">{ended ? 'Obrigado por acompanhar.' : 'O apresentador iniciará a próxima disputa em breve.'}</p></div>}
             </div>
 
-            <div className="absolute bottom-6 right-3 z-20 flex flex-col items-center gap-4 pb-[env(safe-area-inset-bottom)]">
+            <div className="absolute bottom-6 right-3 z-20 flex w-14 flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]">
+                <div className="w-full rounded-2xl bg-black/50 px-1.5 py-2 text-center backdrop-blur-md" title={live.winning_user_name || 'Sem líder'}><Crown className={`mx-auto h-4 w-4 ${live.winning_user_id ? 'text-amber-300' : 'text-white/35'}`} /><p className="mt-1 truncate text-[8px] font-black text-white">{live.winning_user_name || 'Sem líder'}</p></div>
+                <button onClick={shareLive} aria-label="Compartilhar live" className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur active:scale-95"><Share2 className="h-5 w-5" /></button>
+                <button onClick={() => setShowHistory(true)} aria-label="Histórico de arremates" className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 backdrop-blur active:scale-95"><History className="h-5 w-5" /></button>
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/45 text-[9px] font-black backdrop-blur"><ChevronUp className="h-4 w-4 text-emerald-400" />{live.bid_count || bids.length}</div>
             </div>
             {!isDesktop && <div className="pointer-events-auto absolute bottom-[270px] left-3 right-20 z-30 h-72">
@@ -175,6 +191,7 @@ export default function LiveRoomPage() {
         </main>
 
         {pendingBid !== null && <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"><div className="w-full max-w-sm rounded-3xl border border-white/10 bg-[#191f31] p-6"><div className="flex items-center gap-3 text-emerald-400"><ShieldCheck className="h-6 w-6" /><h3 className="text-lg font-black text-white">Confirmar lance</h3></div><p className="mt-4 text-sm leading-6 text-slate-400">Você está oferecendo <b className="text-xl text-white">{money(pendingBid)}</b>. Esse valor ficará reservado até você ser superado ou o lote ser concluído.</p><div className="mt-4 rounded-xl bg-amber-400/10 p-3 text-[10px] text-amber-200">Lances são compromissos de compra e não podem ser desfeitos durante a disputa.</div><div className="mt-5 grid grid-cols-2 gap-2"><button onClick={() => setPendingBid(null)} disabled={submitting} className="rounded-xl bg-white/5 py-3 text-xs font-black text-slate-400">Cancelar</button><button onClick={confirmBid} disabled={submitting} className="rounded-xl bg-rose-600 py-3 text-xs font-black text-white disabled:opacity-50">{submitting ? 'Registrando...' : 'Confirmar lance'}</button></div></div></div>}
+        {showHistory && <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/75 p-3 backdrop-blur-sm sm:items-center"><div className="flex max-h-[80dvh] w-full max-w-lg flex-col rounded-3xl border border-white/10 bg-[#111827] shadow-2xl"><div className="flex items-center justify-between border-b border-white/10 p-5"><div><h3 className="font-black">Histórico de arremates</h3><p className="mt-1 text-[10px] text-slate-500">Horário oficial do servidor · Brasília</p></div><button onClick={() => setShowHistory(false)} className="rounded-full bg-white/5 p-2" aria-label="Fechar histórico"><X className="h-5 w-5" /></button></div><div className="overflow-y-auto p-4"><LiveSalesHistory liveId={id} /></div></div></div>}
         <style jsx global>{`nav, footer { display:none!important } body { overflow-x:hidden!important; background:#070d1f!important; padding-bottom:0!important }`}</style>
     </div>;
 }
