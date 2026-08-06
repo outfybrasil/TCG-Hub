@@ -9,7 +9,11 @@ SET search_path = public, pg_temp
 AS $$
     SELECT coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') = 'admin'
         OR lower(coalesce(auth.jwt() ->> 'email', '')) IN ('admin@tcghub.com.br', 'contato@tcgmegastore.com.br')
-        OR EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_admin = true);
+        OR EXISTS (
+            SELECT 1 FROM public.profiles
+            WHERE id = auth.uid()
+              AND lower(coalesce(to_jsonb(profiles) ->> 'is_admin', 'false')) = 'true'
+        );
 $$;
 REVOKE ALL ON FUNCTION public.is_admin() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
