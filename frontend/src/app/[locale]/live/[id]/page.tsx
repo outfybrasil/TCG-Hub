@@ -22,11 +22,13 @@ export default function LiveRoomPage() {
     const [live, setLive] = useState<LiveAuction | null>(null);
     const [bids, setBids] = useState<Bid[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const [connected, setConnected] = useState(false);
     const [user, setUser] = useState<{ id: string; name: string } | null>(null);
     const [balance, setBalance] = useState<number | null>(null);
     const [viewerCount, setViewerCount] = useState(1);
     const [now, setNow] = useState(0);
+    const [serverOffset, setServerOffset] = useState(0);
     const [customBid, setCustomBid] = useState('');
     const [pendingBid, setPendingBid] = useState<number | null>(null);
     const [submitting, setSubmitting] = useState(false);
@@ -35,17 +37,20 @@ export default function LiveRoomPage() {
     const [showHistory, setShowHistory] = useState(false);
     const [videoReloadKey, setVideoReloadKey] = useState(0);
     const [videoLoading, setVideoLoading] = useState(true);
+    const [videoAttempts, setVideoAttempts] = useState(0);
     const [videoFill, setVideoFill] = useState(true);
     const settlementRequested = useRef(false);
     const currentLot = useRef<number | null>(null);
     const hiddenAt = useRef<number | null>(null);
 
     const load = useCallback(async () => {
+        setLoading(true);
+        setLoadError('');
         const [{ data: auth }, liveResult] = await Promise.all([
             supabase.auth.getSession(),
             supabase.from('live_auctions').select('*').eq('id', id).single(),
         ]);
-        if (liveResult.error || !liveResult.data) { router.replace('/lives'); return; }
+        if (liveResult.error || !liveResult.data) { setLoadError('Não foi possível entrar na arena. Verifique sua conexão e tente novamente.'); setLoading(false); return; }
         currentLot.current = Number(liveResult.data.lot_number || 0);
         const bidResult = await supabase.from('live_bids').select('id,lot_number,user_id,user_name,amount,created_at').eq('live_id', id).eq('lot_number', currentLot.current).order('created_at', { ascending: false }).limit(12);
         setLive(liveResult.data as LiveAuction);
@@ -57,7 +62,7 @@ export default function LiveRoomPage() {
             setBalance(credits ? Number(credits.balance) - Number(credits.locked) : 0);
         }
         setLoading(false);
-    }, [id, router]);
+    }, [id]);
 
     useEffect(() => { void load(); }, [load]);
     useEffect(() => {
@@ -67,7 +72,23 @@ export default function LiveRoomPage() {
         media.addEventListener('change', syncViewport);
         return () => media.removeEventListener('change', syncViewport);
     }, []);
-    useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 250); return () => window.clearInterval(timer); }, []);
+    useEffect(() => { const timer = window.setInterval(() => setNow(Date.now() + serverOffset), 250); return () => window.clearInterval(timer); }, [serverOffset]);
+    useEffect(() => {
+        let active = true;
+        const syncClock = async () => {
+            const startedAt = Date.now();
+            try {
+                const response = await fetch('/api/live/time', { cache: 'no-store' });
+                if (!response.ok) return;
+                const { serverNow } = await response.json() as { serverNow: number };
+                const midpoint = startedAt + ((Date.now() - startedAt) / 2);
+                if (active) setServerOffset(serverNow - midpoint);
+            } catch { /* Mantém o último desvio conhecido durante falhas breves. */ }
+        };
+        void syncClock();
+        const timer = window.setInterval(syncClock, 30_000);
+        return () => { active = false; window.clearInterval(timer); };
+    }, []);
     useEffect(() => {
         const reloadVideo = () => { setVideoLoading(true); setVideoReloadKey(key => key + 1); };
         const onVisibility = () => {
@@ -78,6 +99,14 @@ export default function LiveRoomPage() {
         document.addEventListener('visibilitychange', onVisibility);
         return () => { window.removeEventListener('online', reloadVideo); document.removeEventListener('visibilitychange', onVisibility); };
     }, []);
+    useEffect(() => {
+        if (!videoLoading || !live?.video_url || videoAttempts >= 3) return;
+        const timer = window.setTimeout(() => {
+            setVideoAttempts((value) => value + 1);
+            setVideoReloadKey((key) => key + 1);
+        }, Math.min(8_000 * (videoAttempts + 1), 20_000));
+        return () => window.clearTimeout(timer);
+    }, [live?.video_url, videoAttempts, videoLoading]);
     useEffect(() => {
         const room = supabase.channel(`live-room-${id}`)
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_auctions', filter: `id=eq.${id}` }, ({ new: next }) => { const nextLot = Number(next.lot_number || 0); if (currentLot.current !== nextLot) setBids([]); currentLot.current = nextLot; setLive(next as LiveAuction); })
@@ -141,9 +170,11 @@ export default function LiveRoomPage() {
         }
     }
 
-    function reloadVideo() { setVideoLoading(true); setVideoReloadKey(key => key + 1); }
+    function reloadVideo() { setVideoLoading(true); setVideoAttempts(0); setVideoReloadKey(key => key + 1); }
+    function markVideoLoaded() { setVideoLoading(false); setVideoAttempts(0); }
 
     if (loading) return <div className="flex min-h-screen items-center justify-center bg-[#070d1f] text-sm font-black uppercase tracking-widest text-white/50"><Radio className="mr-3 animate-pulse text-rose-500" />Conectando à arena</div>;
+    if (loadError) return <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#070d1f] px-6 text-center text-white"><Radio className="h-10 w-10 text-rose-500" /><h1 className="text-2xl font-black">A arena não carregou.</h1><p className="max-w-md text-sm text-slate-400">{loadError}</p><button onClick={() => void load()} className="min-h-11 rounded-xl bg-rose-600 px-5 text-sm font-black">Tentar novamente</button></div>;
     if (!live) return null;
 
     return <div className="min-h-dvh bg-[#070d1f] text-white lg:h-dvh lg:overflow-hidden">
@@ -153,7 +184,7 @@ export default function LiveRoomPage() {
         </header>
 
         <section className="live-mobile-room relative h-dvh overflow-hidden bg-black lg:hidden">
-            {videoUrl ? <iframe key={`mobile-${videoReloadKey}`} src={videoUrl} onLoad={() => setVideoLoading(false)} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className={videoFill ? 'absolute left-1/2 top-1/2 h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0' : 'absolute inset-0 h-full w-full border-0'} /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d1f] text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
+            {videoUrl ? <iframe key={`mobile-${videoReloadKey}`} src={videoUrl} onLoad={markVideoLoaded} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className={videoFill ? 'absolute left-1/2 top-1/2 h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2 border-0' : 'absolute inset-0 h-full w-full border-0'} /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#070d1f] text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-black/95" />
 
             <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-between p-4 pt-[max(1rem,env(safe-area-inset-top))]">
@@ -189,7 +220,7 @@ export default function LiveRoomPage() {
 
         <main className="hidden lg:h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(320px,1.15fr)_minmax(360px,.85fr)_320px] lg:grid">
             <section className="relative min-h-[32vh] overflow-hidden border-b border-white/10 bg-black lg:min-h-0 lg:border-b-0 lg:border-r">
-                {videoUrl ? <iframe key={`desktop-${videoReloadKey}`} src={videoUrl} onLoad={() => setVideoLoading(false)} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute inset-0 h-full w-full border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
+                {videoUrl ? <iframe key={`desktop-${videoReloadKey}`} src={videoUrl} onLoad={markVideoLoaded} title={`Transmissão ${live.title}`} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen className="absolute inset-0 h-full w-full border-0" /> : <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-600"><Radio className="h-12 w-12" /><p className="text-[10px] font-black uppercase tracking-[.25em]">Aguardando sinal de vídeo</p></div>}
                 <div className="absolute bottom-3 left-3 flex gap-2"><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">{connected ? 'Sincronizado' : 'Reconectando...'}</span><span className="rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur">Anti-sniper +15s</span><button onClick={reloadVideo} className="flex items-center gap-1 rounded-lg bg-black/70 px-2 py-1 text-[9px] font-bold backdrop-blur"><RefreshCw className={`h-3 w-3 ${videoLoading ? 'animate-spin' : ''}`} />Recarregar vídeo</button></div>
             </section>
 
