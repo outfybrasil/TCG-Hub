@@ -4,11 +4,23 @@ interface FilterSidebarProps {
   options: {
     sets: string[];
     rarities: string[];
+    languages: string[];
+    conditions: string[];
+    grades: string[];
+    finishes: string[];
   };
   selected: {
     sets: string[];
     rarities: string[];
+    languages: string[];
+    conditions: string[];
+    grades: string[];
+    finishes: string[];
   };
+  priceRange: { min: string; max: string };
+  availableOnly: boolean;
+  onPriceChange: (field: 'min' | 'max', value: string) => void;
+  onAvailabilityChange: (value: boolean) => void;
   onToggle: (category: string, value: string) => void;
   onClear: () => void;
 }
@@ -106,6 +118,10 @@ function FilterSection({
 export default function FilterSidebar({
   options,
   selected,
+  priceRange,
+  availableOnly,
+  onPriceChange,
+  onAvailabilityChange,
   onToggle,
   onClear,
 }: FilterSidebarProps) {
@@ -167,6 +183,27 @@ export default function FilterSidebar({
         values={selected.rarities}
         onToggle={onToggle}
       />
+      <FilterSection category="languages" items={options.languages} title="Idioma" values={selected.languages} onToggle={onToggle} />
+      <FilterSection category="conditions" items={options.conditions} title="Condição" values={selected.conditions} onToggle={onToggle} />
+      <FilterSection category="grades" items={options.grades} title="Graduação" values={selected.grades} onToggle={onToggle} />
+      <FilterSection category="finishes" items={options.finishes} title="Acabamento" values={selected.finishes} onToggle={onToggle} />
+
+      <section className="space-y-3">
+        <h3 className="text-[10px] font-black uppercase tracking-[0.24em] text-[#8b95b5]">Faixa de preço</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="space-y-1 text-[10px] font-bold text-[#8b95b5]">Mínimo
+            <input type="number" min="0" step="0.01" inputMode="decimal" value={priceRange.min} onChange={(event) => onPriceChange('min', event.target.value)} className="input-dark h-11! w-full px-3! text-base" placeholder="R$ 0" />
+          </label>
+          <label className="space-y-1 text-[10px] font-bold text-[#8b95b5]">Máximo
+            <input type="number" min="0" step="0.01" inputMode="decimal" value={priceRange.max} onChange={(event) => onPriceChange('max', event.target.value)} className="input-dark h-11! w-full px-3! text-base" placeholder="Sem limite" />
+          </label>
+        </div>
+      </section>
+
+      <label className="flex min-h-11 cursor-pointer items-center justify-between gap-3 rounded-xl bg-white/5 px-3 text-sm font-bold text-white">
+        Somente disponíveis
+        <input type="checkbox" checked={availableOnly} onChange={(event) => onAvailabilityChange(event.target.checked)} className="h-5 w-5 accent-rose-600" />
+      </label>
     </div>
   );
 }

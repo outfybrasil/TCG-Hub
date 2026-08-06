@@ -30,6 +30,9 @@ interface InventoryCard {
     marketPriceLinks?: Record<string, string>;
     rarity?: string;
     language?: string;
+    condition?: string;
+    grading_company?: string;
+    grading_score?: number;
 }
 
 const PAGE_SIZE = 24;
@@ -37,7 +40,7 @@ const PAGE_SIZE = 24;
 interface CatalogResponse {
     cards: InventoryCard[];
     total: number;
-    facets?: { sets: string[]; rarities: string[] };
+    facets?: { sets: string[]; rarities: string[]; languages: string[]; conditions: string[]; grades: string[]; finishes: string[] };
     error?: string;
 }
 
@@ -93,11 +96,17 @@ export default function MarketplacePage() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [loadError, setLoadError] = useState('');
     const [totalCards, setTotalCards] = useState(0);
-    const [filterOptions, setFilterOptions] = useState({ sets: [] as string[], rarities: [] as string[] });
+    const [filterOptions, setFilterOptions] = useState({ sets: [] as string[], rarities: [] as string[], languages: [] as string[], conditions: [] as string[], grades: [] as string[], finishes: [] as string[] });
     const [retryKey, setRetryKey] = useState(0);
     const hasLoadedFacets = useRef(false);
     const [selectedSets, setSelectedSets] = useState<string[]>([]);
     const [selectedRarities, setSelectedRarities] = useState<string[]>([]);
+    const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+    const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
+    const [selectedGrades, setSelectedGrades] = useState<string[]>([]);
+    const [selectedFinishes, setSelectedFinishes] = useState<string[]>([]);
+    const [priceRange, setPriceRange] = useState({ min: '', max: '' });
+    const [availableOnly, setAvailableOnly] = useState(false);
     const [sortBy, setSortBy] = useState<'price_desc' | 'price_asc' | 'newest'>('price_desc');
     const [isSortModalOpen, setIsSortModalOpen] = useState(false);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -138,6 +147,13 @@ export default function MarketplacePage() {
             if (activeSetCode) params.set('setCode', activeSetCode);
             selectedSets.forEach((value) => params.append('set', value));
             selectedRarities.forEach((value) => params.append('rarity', value));
+            selectedLanguages.forEach((value) => params.append('language', value));
+            selectedConditions.forEach((value) => params.append('condition', value));
+            selectedGrades.forEach((value) => params.append('grade', value));
+            selectedFinishes.forEach((value) => params.append('finish', value));
+            if (priceRange.min) params.set('minPrice', priceRange.min);
+            if (priceRange.max) params.set('maxPrice', priceRange.max);
+            if (availableOnly) params.set('available', '1');
 
             try {
                 const payload = await fetchCatalog(params, controller.signal);
@@ -158,7 +174,7 @@ export default function MarketplacePage() {
             window.clearTimeout(timeout);
             controller.abort();
         };
-    }, [activeSetCode, retryKey, searchTerm, selectedRarities, selectedSets, sortBy]);
+    }, [activeSetCode, availableOnly, priceRange.max, priceRange.min, retryKey, searchTerm, selectedConditions, selectedFinishes, selectedGrades, selectedLanguages, selectedRarities, selectedSets, sortBy]);
 
     const loadMoreCards = async () => {
         setLoadingMore(true);
@@ -168,6 +184,13 @@ export default function MarketplacePage() {
         if (activeSetCode) params.set('setCode', activeSetCode);
         selectedSets.forEach((value) => params.append('set', value));
         selectedRarities.forEach((value) => params.append('rarity', value));
+        selectedLanguages.forEach((value) => params.append('language', value));
+        selectedConditions.forEach((value) => params.append('condition', value));
+        selectedGrades.forEach((value) => params.append('grade', value));
+        selectedFinishes.forEach((value) => params.append('finish', value));
+        if (priceRange.min) params.set('minPrice', priceRange.min);
+        if (priceRange.max) params.set('maxPrice', priceRange.max);
+        if (availableOnly) params.set('available', '1');
         try {
             const payload = await fetchCatalog(params);
             setCards((current) => [...current, ...payload.cards.filter((card) => !current.some((item) => item.id === card.id))]);
@@ -183,6 +206,10 @@ export default function MarketplacePage() {
         const setters: Record<string, [string[], React.Dispatch<React.SetStateAction<string[]>>]> = {
             sets: [selectedSets, setSelectedSets],
             rarities: [selectedRarities, setSelectedRarities],
+            languages: [selectedLanguages, setSelectedLanguages],
+            conditions: [selectedConditions, setSelectedConditions],
+            grades: [selectedGrades, setSelectedGrades],
+            finishes: [selectedFinishes, setSelectedFinishes],
         };
 
         const [selected, setSelected] = setters[category];
@@ -192,10 +219,16 @@ export default function MarketplacePage() {
     const clearFilters = () => {
         setSelectedSets([]);
         setSelectedRarities([]);
+        setSelectedLanguages([]);
+        setSelectedConditions([]);
+        setSelectedGrades([]);
+        setSelectedFinishes([]);
+        setPriceRange({ min: '', max: '' });
+        setAvailableOnly(false);
         setSearchTerm('');
     };
 
-    const activeFilters = selectedSets.length + selectedRarities.length;
+    const activeFilters = selectedSets.length + selectedRarities.length + selectedLanguages.length + selectedConditions.length + selectedGrades.length + selectedFinishes.length + Number(Boolean(priceRange.min || priceRange.max)) + Number(availableOnly);
     const availableCards = totalCards;
     return (
         <div className="animate-fade-up bg-brand-bg pb-20 pt-5 sm:pt-10">
@@ -265,7 +298,11 @@ export default function MarketplacePage() {
                     <div className="flex items-center justify-between border-b border-white/10 px-5 py-3 lg:hidden"><span className="font-bold text-white">Filtrar cartas</span><button onClick={() => setIsFilterOpen(false)} aria-label="Fechar filtros" className="flex h-11 w-11 items-center justify-center rounded-xl text-brand-muted"><X className="h-5 w-5" /></button></div>
                     <FilterSidebar
                         options={filterOptions}
-                        selected={{ sets: selectedSets, rarities: selectedRarities }}
+                        selected={{ sets: selectedSets, rarities: selectedRarities, languages: selectedLanguages, conditions: selectedConditions, grades: selectedGrades, finishes: selectedFinishes }}
+                        priceRange={priceRange}
+                        availableOnly={availableOnly}
+                        onPriceChange={(field, value) => setPriceRange((current) => ({ ...current, [field]: value }))}
+                        onAvailabilityChange={setAvailableOnly}
                         onToggle={toggleFilter}
                         onClear={clearFilters}
                     />
