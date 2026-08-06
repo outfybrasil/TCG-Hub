@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Columns2, Grid2X2, Search, SlidersHorizontal, X } from 'lucide-react';
 
@@ -32,6 +32,51 @@ interface InventoryCard {
     language?: string;
 }
 
+const PAGE_SIZE = 24;
+
+interface CatalogResponse {
+    cards: InventoryCard[];
+    total: number;
+    facets?: { sets: string[]; rarities: string[] };
+    error?: string;
+}
+
+async function fetchCatalog(params: URLSearchParams, signal?: AbortSignal) {
+    const response = await fetch(`/api/marketplace/catalog?${params.toString()}`, { signal, cache: 'no-store' });
+    const payload = await response.json() as CatalogResponse;
+    if (!response.ok) throw new Error(payload.error || 'Nao foi possivel carregar o catalogo.');
+
+    if (payload.cards.length === 0) return payload;
+    const summaryRes = await fetch('/api/prices/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            cards: payload.cards.map((card) => ({
+                id: card.id,
+                name: card.name,
+                official_name: card.official_name,
+                set: card.set,
+                official_set_name: card.official_set_name,
+                number: card.number,
+                grade: card.grade,
+                finish: card.finish,
+                language: card.language,
+            })),
+        }),
+        signal,
+    });
+    const summaryJson = summaryRes.ok ? await summaryRes.json() : { summaries: {} };
+
+    return {
+        ...payload,
+        cards: payload.cards.map((card) => ({
+            ...card,
+            marketPrices: summaryJson.summaries?.[card.id]?.storePrices || {},
+            marketPriceLinks: summaryJson.summaries?.[card.id]?.storeUrls || {},
+        })),
+    };
+}
+
 export default function MarketplacePage() {
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState(() => searchParams.get('q') ?? '');
@@ -45,6 +90,12 @@ export default function MarketplacePage() {
     }, [searchParams]);
     const [cards, setCards] = useState<InventoryCard[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
+    const [loadError, setLoadError] = useState('');
+    const [totalCards, setTotalCards] = useState(0);
+    const [filterOptions, setFilterOptions] = useState({ sets: [] as string[], rarities: [] as string[] });
+    const [retryKey, setRetryKey] = useState(0);
+    const hasLoadedFacets = useRef(false);
     const [selectedSets, setSelectedSets] = useState<string[]>([]);
     const [selectedRarities, setSelectedRarities] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<'price_desc' | 'price_asc' | 'newest'>('price_desc');
@@ -59,51 +110,6 @@ export default function MarketplacePage() {
     ];
 
     useEffect(() => {
-        const fetchCards = async () => {
-            const { data } = await supabase
-                .from('enriched_inventory')
-                .select('*')
-                .order('price', { ascending: false });
-
-            if (data) {
-                const summaryRes = await fetch('/api/prices/summary', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        cards: data.map((card) => ({
-                            id: card.id,
-                            name: card.name,
-                            official_name: card.official_name,
-                            set: card.set,
-                            official_set_name: card.official_set_name,
-                            number: card.number,
-                            grade: card.grade,
-                            finish: card.finish,
-                            language: card.language,
-                        })),
-                    }),
-                });
-
-                const summaryJson = summaryRes.ok ? await summaryRes.json() : { summaries: {} };
-                const marketPricesMap = Object.fromEntries(
-                    Object.entries(summaryJson.summaries || {}).map(([cardId, summary]) => [cardId, (summary as { storePrices?: Record<string, number> }).storePrices || {}]),
-                ) as Record<string, Record<string, number>>;
-                const marketPriceLinksMap = Object.fromEntries(
-                    Object.entries(summaryJson.summaries || {}).map(([cardId, summary]) => [cardId, (summary as { storeUrls?: Record<string, string> }).storeUrls || {}]),
-                ) as Record<string, Record<string, string>>;
-
-                setCards(data.map((card) => ({
-                    ...card,
-                    marketPrices: marketPricesMap[card.id] || {},
-                    marketPriceLinks: marketPriceLinksMap[card.id] || {},
-                })));
-            }
-
-            setLoading(false);
-        };
-
-        void fetchCards();
-
         const channel = supabase
             .channel('inventory-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, (payload) => {
@@ -122,9 +128,55 @@ export default function MarketplacePage() {
         };
     }, []);
 
-    const filterOptions = {
-        sets: Array.from(new Set(cards.map((card) => card.official_set_name || card.set).filter(Boolean))) as string[],
-        rarities: Array.from(new Set(cards.map((card) => card.rarity || card.finish).filter(Boolean))) as string[],
+    useEffect(() => {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(async () => {
+            setLoading(true);
+            setLoadError('');
+            const params = new URLSearchParams({ offset: '0', limit: String(PAGE_SIZE), sort: sortBy, facets: hasLoadedFacets.current ? '0' : '1' });
+            if (searchTerm.trim()) params.set('q', searchTerm.trim());
+            if (activeSetCode) params.set('setCode', activeSetCode);
+            selectedSets.forEach((value) => params.append('set', value));
+            selectedRarities.forEach((value) => params.append('rarity', value));
+
+            try {
+                const payload = await fetchCatalog(params, controller.signal);
+                setCards(payload.cards);
+                setTotalCards(payload.total);
+                if (payload.facets) {
+                    setFilterOptions(payload.facets);
+                    hasLoadedFacets.current = true;
+                }
+            } catch (error) {
+                if ((error as Error).name !== 'AbortError') setLoadError('Nao foi possivel carregar as cartas. Verifique sua conexao e tente novamente.');
+            } finally {
+                if (!controller.signal.aborted) setLoading(false);
+            }
+        }, 300);
+
+        return () => {
+            window.clearTimeout(timeout);
+            controller.abort();
+        };
+    }, [activeSetCode, retryKey, searchTerm, selectedRarities, selectedSets, sortBy]);
+
+    const loadMoreCards = async () => {
+        setLoadingMore(true);
+        setLoadError('');
+        const params = new URLSearchParams({ offset: String(cards.length), limit: String(PAGE_SIZE), sort: sortBy });
+        if (searchTerm.trim()) params.set('q', searchTerm.trim());
+        if (activeSetCode) params.set('setCode', activeSetCode);
+        selectedSets.forEach((value) => params.append('set', value));
+        selectedRarities.forEach((value) => params.append('rarity', value));
+        try {
+            const payload = await fetchCatalog(params);
+            setCards((current) => [...current, ...payload.cards.filter((card) => !current.some((item) => item.id === card.id))]);
+            setTotalCards(payload.total);
+        } catch {
+            setLoadError('Nao foi possivel buscar mais cartas. Tente novamente.');
+        } finally {
+            setLoadingMore(false);
+        }
     };
 
     const toggleFilter = (category: string, value: string) => {
@@ -143,35 +195,8 @@ export default function MarketplacePage() {
         setSearchTerm('');
     };
 
-    const filteredCards = cards.filter((card) => {
-        // Filter by set code from /edicoes (supports multiple comma-separated codes)
-        const activeCodes = activeSetCode ? activeSetCode.split(',').map(c => c.trim().toLowerCase()) : [];
-        const matchesSetCode = activeCodes.length === 0 || activeCodes.includes((card.set ?? '').toLowerCase());
-
-        const matchesSearch =
-            !searchTerm ||
-            (card.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (card.official_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (card.set ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (card.official_set_name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (card.number ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (card.local_id ?? '').toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesSet = selectedSets.length === 0 || selectedSets.includes(card.official_set_name || card.set || '');
-        const matchesRarity = selectedRarities.length === 0 || selectedRarities.includes(card.rarity || card.finish || '');
-
-        return matchesSetCode && matchesSearch && matchesSet && matchesRarity;
-    });
-
-    const sortedCards = [...filteredCards].sort((left, right) => {
-        if (sortBy === 'price_desc') return (right.price || 0) - (left.price || 0);
-        if (sortBy === 'price_asc') return (left.price || 0) - (right.price || 0);
-        if (sortBy === 'newest') return right.id.localeCompare(left.id);
-        return 0;
-    });
-
     const activeFilters = selectedSets.length + selectedRarities.length;
-    const availableCards = cards.filter((card) => (card.quantity || 0) > 0).length;
+    const availableCards = totalCards;
     return (
         <div className="animate-fade-up bg-brand-bg pb-20 pt-5 sm:pt-10">
             {/* Page header */}
@@ -251,7 +276,7 @@ export default function MarketplacePage() {
                     <div className="flex items-center justify-between gap-3 rounded-2xl bg-brand-surface px-4 py-3 sm:px-5 sm:py-4">
                         <div>
                             <h2 className="text-sm font-bold text-white sm:text-xl">
-                                {sortedCards.length} carta{sortedCards.length === 1 ? '' : 's'} disponíveis
+                                {totalCards} carta{totalCards === 1 ? '' : 's'} disponíveis
                             </h2>
                             {activeFilters > 0 && <p className="mt-0.5 text-xs text-brand-muted">{activeFilters} filtro{activeFilters === 1 ? '' : 's'} ativo{activeFilters === 1 ? '' : 's'}</p>}
                         </div>
@@ -321,7 +346,13 @@ export default function MarketplacePage() {
                                 />
                             ))}
                         </div>
-                    ) : sortedCards.length === 0 ? (
+                    ) : loadError && cards.length === 0 ? (
+                        <div className="flex min-h-[280px] flex-col items-center justify-center gap-4 rounded-2xl bg-brand-surface p-10 text-center">
+                            <h3 className="text-2xl font-black tracking-tight text-white">O catálogo não carregou.</h3>
+                            <p className="max-w-lg text-sm text-brand-muted">{loadError}</p>
+                            <button onClick={() => setRetryKey((value) => value + 1)} className="btn-primary min-h-11">Tentar novamente</button>
+                        </div>
+                    ) : cards.length === 0 ? (
                         <div
                             className="flex min-h-[280px] flex-col items-center justify-center gap-4 p-10 text-center"
                             style={{
@@ -344,9 +375,10 @@ export default function MarketplacePage() {
                             </button>
                         </div>
                     ) : (
+                        <>
                         <CardGallery
                             mobileColumns={mobileColumns}
-                            cards={sortedCards.map((card) => ({
+                            cards={cards.map((card) => ({
                                 id: card.id,
                                 name: card.official_name ?? card.name ?? 'Desconhecido',
                                 set: card.official_set_name ?? card.set ?? 'Desconhecido',
@@ -363,6 +395,20 @@ export default function MarketplacePage() {
                                 language: card.language,
                             }))}
                         />
+                        {loadError && <p role="alert" className="mt-4 text-center text-sm text-rose-300">{loadError}</p>}
+                        {cards.length < totalCards && (
+                            <div className="mt-6 flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={() => void loadMoreCards()}
+                                    disabled={loadingMore}
+                                    className="btn-primary min-h-11 min-w-48 disabled:cursor-wait disabled:opacity-60"
+                                >
+                                    {loadingMore ? 'Carregando cartas...' : `Carregar mais (${cards.length} de ${totalCards})`}
+                                </button>
+                            </div>
+                        )}
+                        </>
                     )}
                 </main>
             </section>
