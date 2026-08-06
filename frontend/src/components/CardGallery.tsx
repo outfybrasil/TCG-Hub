@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShoppingCart } from 'lucide-react';
 import PriceComparison from '@/components/PriceComparison';
 import { useCart } from '@/context/CartContext';
@@ -36,14 +37,12 @@ const getGradeColor = (grade: string | undefined) => {
     return 'bg-slate-400';
 };
 
-const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, marketPriceLinks, language, addItem, onDelete, onEditCard, mobileDensity = 'comfortable' }: CardProps & { mobileDensity?: 'comfortable' | 'compact' }) => {
+const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isPromo, finish, quantity = 0, cardNumber, marketPrices, marketPriceLinks, language, addItem, onDelete, onEditCard, mobileDensity = 'comfortable', prioritizeImage = false }: CardProps & { mobileDensity?: 'comfortable' | 'compact'; prioritizeImage?: boolean }) => {
     const [currentImageUrl, setCurrentImageUrl] = React.useState(imageUrl);
-    const [imageError, setImageError] = React.useState(false);
     const [selectedQty, setSelectedQty] = React.useState(1);
 
     React.useEffect(() => {
         setCurrentImageUrl(imageUrl);
-        setImageError(false);
     }, [imageUrl]);
 
     const isOutOfStock = quantity <= 0;
@@ -113,24 +112,17 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
 
             {/* Card Artwork Container */}
             <Link href={`/marketplace/card/${id}`} className={`relative block aspect-[3/4] cursor-pointer overflow-hidden border border-white/5 bg-black/20 ${mobileDensity === 'compact' ? 'mb-1.5 rounded-lg' : 'mb-3 rounded-xl'} sm:mb-5 sm:rounded-xl`}>
-                <img
+                <Image
                     src={currentImageUrl}
                     alt={name}
-                    loading="lazy"
-                    decoding="async"
-                    fetchPriority="low"
-                    width={600}
-                    height={840}
+                    fill
+                    priority={prioritizeImage}
+                    sizes={mobileDensity === 'compact' ? '(max-width: 639px) 25vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw' : '(max-width: 639px) 50vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw'}
                     onError={() => {
-                        if (!imageError && currentImageUrl) {
-                            setImageError(true);
-                            if (!currentImageUrl.includes('/pt/')) {
-                                const ptUrl = currentImageUrl.replace(/\/(ja|en)\//, '/pt/');
-                                setCurrentImageUrl(ptUrl);
-                            }
-                        }
+                        const portugueseUrl = currentImageUrl.replace(/\/(ja|en)\//, '/pt/');
+                        setCurrentImageUrl(portugueseUrl !== currentImageUrl ? portugueseUrl : '/card-back.png');
                     }}
-                    className="h-full w-full object-contain p-0.5 transition-transform duration-500 group-hover:scale-[1.03] sm:p-1"
+                    className="object-contain p-0.5 transition-transform duration-500 group-hover:scale-[1.03] sm:p-1"
                 />
                 {/* Overlay Gradient on Hover */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4 justify-center">
@@ -247,8 +239,8 @@ export default function CardGallery({ cards, onDelete, onEditCard, mobileColumns
     const { addItem } = useCart();
     return (
         <div className={`grid ${mobileColumns === 4 ? 'grid-cols-4 gap-1.5' : 'grid-cols-2 gap-3'} sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4`}>
-            {cards.map((card) => (
-                <ProductCard key={card.id} {...card} addItem={addItem} onDelete={onDelete} onEditCard={onEditCard} mobileDensity={mobileColumns === 4 ? 'compact' : 'comfortable'} />
+            {cards.map((card, index) => (
+                <ProductCard key={card.id} {...card} addItem={addItem} onDelete={onDelete} onEditCard={onEditCard} mobileDensity={mobileColumns === 4 ? 'compact' : 'comfortable'} prioritizeImage={index < 4} />
             ))}
         </div>
     );

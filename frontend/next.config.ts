@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
   output: "standalone",
   devIndicators: false,
   poweredByHeader: false,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    remotePatterns: [
+      { protocol: "https", hostname: "images.pokemontcg.io" },
+      { protocol: "https", hostname: "assets.tcgdex.net" },
+      { protocol: "https", hostname: "**.supabase.co" },
+    ],
+  },
   async headers() {
     return [{
       source: "/:path*",
