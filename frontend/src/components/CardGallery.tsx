@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { ShoppingCart } from 'lucide-react';
 import PriceComparison from '@/components/PriceComparison';
 import { useCart } from '@/context/CartContext';
 
@@ -153,7 +154,7 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
 
                 {/* Price Row (Simplified Market comparison) */}
                 <div className="space-y-2 w-full">
-                    <div className="flex flex-col items-center">
+                    <div className={`${mobileDensity === 'compact' ? 'items-start' : 'items-center'} flex flex-col sm:items-center`}>
                         {originalPrice && price && originalPrice > price && (
                             <span className={`${mobileDensity === 'compact' ? 'hidden sm:inline' : ''} text-[10px] font-bold text-slate-400 line-through opacity-70`}>
                                 R$ {originalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -167,6 +168,18 @@ const ProductCard = ({ id, name, set, imageUrl, price, originalPrice, grade, isP
                     <div className="hidden sm:block"><PriceComparison cardId={id} cardName={name} cardSet={set} cardNumber={cardNumber} condition={grade} finish={finish} language={language} prices={marketPrices} priceLinks={marketPriceLinks} currentPrice={price} size="sm" /></div>
                 </div>
             </div>
+
+            {mobileDensity === 'compact' && !onDelete && (
+                <button
+                    type="button"
+                    onClick={() => addItem?.({ id, name, price: price || 0, imageUrl, maxStock: quantity })}
+                    disabled={isOutOfStock}
+                    aria-label={isOutOfStock ? `${name} esgotada` : `Adicionar ${name} ao carrinho`}
+                    className="mt-auto flex min-h-11 w-full items-center justify-center rounded-lg bg-rose-600 text-white transition-colors hover:bg-rose-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 disabled:cursor-not-allowed disabled:bg-white/5 disabled:text-slate-500 sm:hidden"
+                >
+                    <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+                </button>
+            )}
 
             {/* Action Bar (Hub Identity - Dark Premium) */}
             <div className={`${mobileDensity === 'compact' ? 'hidden sm:block' : 'block'} mt-auto pt-2 sm:pt-4`}>
