@@ -51,6 +51,8 @@ export default function CreditosPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [businessRules, setBusinessRules] = useState<BusinessRules>(DEFAULT_BUSINESS_RULES);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
+    const [retryKey, setRetryKey] = useState(0);
 
     const [step, setStep] = useState<1 | 2>(1);
     const [depositAmount, setDepositAmount] = useState('');
@@ -66,7 +68,11 @@ export default function CreditosPage() {
         }
 
         const init = async () => {
-            const { data: { user: authUser } } = await supabase.auth.getUser();
+            setLoading(true);
+            setLoadError('');
+            try {
+            const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+            if (authError) throw authError;
 
             if (!authUser) {
                 router.replace('/auth/login');
@@ -102,12 +108,17 @@ export default function CreditosPage() {
             if (businessRulesRes) {
                 setBusinessRules({ ...DEFAULT_BUSINESS_RULES, ...businessRulesRes });
             }
-
+            const failed = [creditsRes, txRes, profileRes, walletRes].some((result) => result.error);
+            if (failed) setLoadError('Alguns dados da carteira não puderam ser atualizados.');
+            } catch {
+                setLoadError('Não foi possível carregar sua carteira. Verifique sua conexão.');
+            } finally {
             setLoading(false);
+            }
         };
 
         void init();
-    }, [router]);
+    }, [retryKey, router]);
 
     const getAuthHeaders = async (headers: HeadersInit = {}) => {
         const { data: { session } } = await supabase.auth.getSession();
@@ -213,6 +224,7 @@ export default function CreditosPage() {
 
     return (
         <div className="mx-auto max-w-4xl animate-fade-up px-6 py-16">
+            {loadError && <div role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-amber-400/10 px-4 py-3 text-sm text-amber-100"><span>{loadError}</span><button onClick={() => setRetryKey((value) => value + 1)} className="min-h-11 rounded-xl bg-amber-100 px-4 text-xs font-black text-amber-950">Tentar novamente</button></div>}
             <div className="mb-12 space-y-3">
                 <Link href="/minha-conta" className="text-[9px] font-black uppercase tracking-widest text-slate-500 transition-colors hover:text-rose-500">
                     Voltar para Minha Conta

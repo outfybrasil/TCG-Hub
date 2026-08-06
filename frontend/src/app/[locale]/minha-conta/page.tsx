@@ -82,12 +82,15 @@ export default function MinhaContaDashboard() {
     const [achievements, setAchievements] = useState<Achievement[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
+    const [retryKey, setRetryKey] = useState(0);
     const router = useRouter();
 
     useEffect(() => {
         let active = true;
 
         const load = async () => {
+            setLoading(true);
+            setLoadError(false);
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) { router.replace('/auth/login'); return; }
@@ -121,6 +124,8 @@ export default function MinhaContaDashboard() {
                     return achievement ? [{ ...achievement, unlockedAt: row.unlocked_at } as Achievement] : [];
                 });
                 setAchievements(unlocked);
+            } catch {
+                if (active) setLoadError(true);
             } finally {
                 if (active) setLoading(false);
             }
@@ -128,7 +133,7 @@ export default function MinhaContaDashboard() {
 
         void load();
         return () => { active = false; };
-    }, [router]);
+    }, [retryKey, router]);
 
     if (loading) return (
         <div className="flex min-h-[70vh] items-center justify-center bg-brand-bg px-6" role="status">
@@ -163,8 +168,9 @@ export default function MinhaContaDashboard() {
                 </header>
 
                 {loadError && (
-                    <div className="mb-6 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100" role="alert">
-                        Parte dos seus dados não pôde ser atualizada. Tente recarregar a página em alguns instantes.
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100" role="alert">
+                        <span>Parte dos seus dados não pôde ser atualizada.</span>
+                        <button onClick={() => setRetryKey((value) => value + 1)} className="min-h-11 rounded-xl bg-amber-100 px-4 text-xs font-black text-amber-950">Tentar novamente</button>
                     </div>
                 )}
 
