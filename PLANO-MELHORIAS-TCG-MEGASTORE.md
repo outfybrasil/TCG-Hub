@@ -13,6 +13,13 @@ Documento de continuidade para a próxima sessão: **06/08/2026**.
 - Loja com modo de visualização de 2 ou 4 cartas por linha no mobile.
 - Filtros da loja transformados em painel inferior no celular.
 - Build de produção validado após as últimas alterações.
+- Compra rápida adicionada ao modo compacto, com bloqueio de itens esgotados.
+- Catálogo paginado no servidor, com carregamento progressivo, erro e retry.
+- Imagens responsivas em AVIF/WebP, lazy loading e fallback preservado.
+- Filtros avançados combináveis por preço, idioma, condição, graduação, acabamento e disponibilidade.
+- Estados de recuperação padronizados na loja, conta, carteira e live.
+- Live com reconexão automática e cronômetro recalibrado pelo servidor.
+- RLS financeiro reforçado, liquidação atômica e trilha de auditoria adicionada.
 
 ## Próximas tarefas — ordem recomendada
 
@@ -104,7 +111,7 @@ Critérios de conclusão:
 - [ ] Usuário autenticado sem créditos.
 - [ ] Usuário com estoque e pedidos.
 - [ ] Administrador.
-- [ ] Build de produção.
+- [x] Build de produção.
 - [ ] Teste de fluxo de compra e lance.
 
 ## Regra de publicação
