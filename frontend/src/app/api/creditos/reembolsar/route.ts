@@ -69,17 +69,16 @@ export async function POST(req: Request) {
             headers: {
                 Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}`,
                 'Content-Type': 'application/json',
-                'X-Idempotency-Key': `credit_refund_${userId}_${Date.now()}`,
+                'X-Idempotency-Key': `credit_refund_${userId}_${mpPaymentId}_${requestedAmount.toFixed(2)}`,
             },
             body: JSON.stringify({ amount: refundAmount }),
         });
 
-        const mpResult = await response.json();
+        await response.json().catch(() => null);
 
         if (!response.ok) {
             return NextResponse.json({
                 error: 'Erro no Mercado Pago ao processar reembolso.',
-                details: mpResult.message,
             }, { status: response.status });
         }
 
@@ -87,7 +86,8 @@ export async function POST(req: Request) {
         const { error: updateError } = await supabaseAdmin
             .from('auction_credits')
             .update({ balance: updatedBalance })
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .eq('balance', creditRow.balance);
 
         if (updateError) {
             console.error('Credit refund balance update error:', updateError);
