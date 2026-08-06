@@ -5,7 +5,7 @@
 1. Revogue a chave `service_role` antiga do Supabase. Ela esteve versionada e deve ser considerada comprometida.
 2. Gere uma nova chave e configure somente como `SUPABASE_SERVICE_ROLE_KEY` no ambiente do servidor.
 3. Configure `MP_WEBHOOK_SECRET`, `MP_ACCESS_TOKEN`, `SITE_URL`, `NEXT_PUBLIC_SITE_URL` e segredos fortes do PostgreSQL/backend.
-4. Execute no SQL Editor do Supabase a migração `frontend/src/lib/migrations/20260804_security_hardening.sql`.
+4. Aplique todas as migrações pendentes de `supabase/migrations`, incluindo `20260806120000_complete_access_and_financial_audit.sql`.
 5. Configure no Mercado Pago o webhook HTTPS em `/api/webhook/mercadopago` e use o mesmo segredo de assinatura.
 6. Remova o segredo antigo do histórico Git com `git filter-repo` e faça force-push coordenado. Todos os clones antigos devem ser descartados.
 

@@ -50,6 +50,8 @@ CREATE POLICY "Public reads active listings" ON public.seller_listings FOR SELEC
 CREATE POLICY "Sellers insert own listings" ON public.seller_listings FOR INSERT TO authenticated WITH CHECK (seller_id = auth.uid());
 CREATE POLICY "Sellers update own listings" ON public.seller_listings FOR UPDATE TO authenticated USING (seller_id = auth.uid() OR public.is_admin()) WITH CHECK (seller_id = auth.uid() OR public.is_admin());
 CREATE POLICY "Sellers delete own listings" ON public.seller_listings FOR DELETE TO authenticated USING (seller_id = auth.uid() OR public.is_admin());
+REVOKE INSERT, UPDATE, DELETE ON public.seller_listings FROM anon, authenticated;
+GRANT SELECT ON public.seller_listings TO anon, authenticated;
 
 -- Trilha imutável para mudanças de saldo, reembolsos e finalizações.
 CREATE TABLE IF NOT EXISTS public.financial_audit_events (
